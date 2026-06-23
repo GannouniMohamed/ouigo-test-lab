@@ -55,17 +55,33 @@ export default function HubLibrary(): JSX.Element {
 
 	return (
 		<div style={{ padding: "2rem" }}>
-			<h1
+			<div
 				style={{
-					fontFamily: "var(--otl-font)",
-					color: "var(--otl-text)",
+					display: "flex",
+					alignItems: "center",
+					justifyContent: "space-between",
 					marginBottom: "1.5rem",
-					fontSize: "1.5rem",
-					fontWeight: 700,
 				}}
 			>
-				Scénarios
-			</h1>
+				<h1
+					style={{
+						fontFamily: "var(--otl-font)",
+						color: "var(--otl-text)",
+						margin: 0,
+						fontSize: "1.5rem",
+						fontWeight: 700,
+					}}
+				>
+					Scénarios
+				</h1>
+				<button
+					type="button"
+					className="otl-btn-primary"
+					onClick={() => navigate("/scenarios/new")}
+				>
+					+ Nouveau scénario
+				</button>
+			</div>
 
 			<EnvPicker value={envId} onChange={setEnvId} />
 

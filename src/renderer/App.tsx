@@ -4,6 +4,7 @@ import { Sidebar } from "./components/Sidebar";
 import History from "./screens/History";
 import HubLibrary from "./screens/HubLibrary";
 import LiveRun from "./screens/LiveRun";
+import NewScenario from "./screens/NewScenario";
 import Report from "./screens/Report";
 
 function App(): JSX.Element {
@@ -16,6 +17,7 @@ function App(): JSX.Element {
 						<Routes>
 							<Route path="/" element={<Navigate to="/scenarios" replace />} />
 							<Route path="/scenarios" element={<HubLibrary />} />
+							<Route path="/scenarios/new" element={<NewScenario />} />
 							<Route path="/run/:runId" element={<LiveRun />} />
 							<Route path="/report/:runId" element={<Report />} />
 							<Route path="/reports" element={<History />} />
