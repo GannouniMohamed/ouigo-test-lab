@@ -1,0 +1,177 @@
+:root {
+	--otl-bg: #0b0f19;
+	--otl-surface: rgba(255, 255, 255, 0.04);
+	--otl-border: rgba(255, 255, 255, 0.1);
+	--otl-text: #e8edf5;
+	--otl-text-2: #94a3b8;
+	--otl-text-3: #64748b;
+	--otl-cyan: #00c9b1;
+	--otl-blue: #2f6bff;
+	--otl-grad: linear-gradient(135deg, #00c9b1, #2f6bff);
+	--otl-danger: #ff3366;
+	--otl-radius: 12px;
+	--otl-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, monospace;
+	--otl-font: -apple-system, "Segoe UI Variable", "Segoe UI", system-ui,
+		sans-serif;
+}
+
+body {
+	margin: 0;
+	background: var(--otl-bg);
+	color: var(--otl-text);
+	font-family: var(--otl-font);
+}
+
+/* Glassmorphic surface */
+.otl-surface {
+	background: var(--otl-surface);
+	border: 1px solid var(--otl-border);
+	border-radius: var(--otl-radius);
+	backdrop-filter: blur(12px);
+}
+
+/* Gradient button */
+.otl-btn-primary {
+	background: var(--otl-grad);
+	border: none;
+	border-radius: var(--otl-radius);
+	color: #fff;
+	cursor: pointer;
+	font-family: var(--otl-font);
+	font-weight: 600;
+	padding: 0.5rem 1.25rem;
+	transition: opacity 0.15s ease;
+}
+
+.otl-btn-primary:hover {
+	opacity: 0.9;
+}
+
+/* Sidebar */
+.otl-sidebar {
+	background: rgba(255, 255, 255, 0.03);
+	border-right: 1px solid var(--otl-border);
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	width: 84px;
+	min-height: 100vh;
+	padding: 1.25rem 0;
+	gap: 0.5rem;
+	flex-shrink: 0;
+}
+
+.otl-sidebar__nav {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	gap: 0.25rem;
+	flex: 1;
+	width: 100%;
+}
+
+.otl-sidebar__item {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	justify-content: center;
+	width: 64px;
+	height: 56px;
+	border-radius: 10px;
+	font-size: 0.65rem;
+	font-weight: 600;
+	color: var(--otl-text-2);
+	text-decoration: none;
+	cursor: pointer;
+	transition: background 0.15s ease, color 0.15s ease;
+	letter-spacing: 0.02em;
+	user-select: none;
+}
+
+.otl-sidebar__item:hover {
+	background: var(--otl-surface);
+	color: var(--otl-text);
+}
+
+.otl-sidebar__item.active {
+	background: var(--otl-grad);
+	color: #fff;
+}
+
+.otl-sidebar__item--disabled {
+	opacity: 0.35;
+	cursor: not-allowed;
+	color: var(--otl-text-3);
+}
+
+.otl-sidebar__item--disabled:hover {
+	background: transparent;
+	color: var(--otl-text-3);
+}
+
+.otl-sidebar__avatar {
+	width: 36px;
+	height: 36px;
+	border-radius: 50%;
+	background: var(--otl-grad);
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	font-size: 0.7rem;
+	font-weight: 700;
+	color: #fff;
+	margin-top: auto;
+	cursor: pointer;
+}
+
+/* Status badge */
+.otl-badge {
+	display: inline-flex;
+	align-items: center;
+	gap: 0.35rem;
+	font-size: 0.75rem;
+	font-weight: 500;
+}
+
+.otl-badge__dot {
+	width: 7px;
+	height: 7px;
+	border-radius: 50%;
+	flex-shrink: 0;
+}
+
+.otl-badge--passed .otl-badge__dot {
+	background: var(--otl-cyan);
+}
+
+.otl-badge--passed .otl-badge__label {
+	color: var(--otl-cyan);
+}
+
+.otl-badge--failed .otl-badge__dot {
+	background: var(--otl-danger);
+}
+
+.otl-badge--failed .otl-badge__label {
+	color: var(--otl-danger);
+}
+
+.otl-badge--never .otl-badge__dot {
+	background: var(--otl-text-3);
+}
+
+.otl-badge--never .otl-badge__label {
+	color: var(--otl-text-3);
+}
+
+/* App layout */
+.otl-app {
+	display: flex;
+	min-height: 100vh;
+}
+
+.otl-main {
+	flex: 1;
+	padding: 2rem;
+	overflow-y: auto;
+}
