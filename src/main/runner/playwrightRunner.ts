@@ -110,7 +110,14 @@ export const playwrightRunner: TestRunner = {
 		const child = spawn(
 			npxCmd,
 			["playwright", "test", scenario.specFile, "--config", configPath],
-			{ cwd: dirname(configPath), env: childEnv, detached: !isWindows },
+			{
+				cwd: dirname(configPath),
+				env: childEnv,
+				detached: !isWindows,
+				// Windows: spawning npx.cmd requires a shell (Node throws EINVAL on
+				// .cmd/.bat without it since the CVE-2024-27980 patch).
+				shell: isWindows,
+			},
 		);
 
 		const state: RunState = { child, cancelled: false };
