@@ -1,0 +1,42 @@
+{
+	"suites": [
+		{
+			"title": "login.spec.ts",
+			"file": "login.spec.ts",
+			"specs": [
+				{
+					"title": "connexion",
+					"ok": false,
+					"tests": [
+						{
+							"results": [
+								{
+									"status": "failed",
+									"duration": 4200,
+									"error": {
+										"message": "Élément introuvable : bouton « Connexion »"
+									},
+									"steps": [
+										{ "title": "Ouvrir la page d'accueil", "duration": 1200 },
+										{
+											"title": "Cliquer sur Connexion",
+											"duration": 3000,
+											"error": { "message": "locator not found" }
+										}
+									],
+									"attachments": [
+										{
+											"name": "screenshot",
+											"path": "/tmp/test-results/login/test-failed-1.png",
+											"contentType": "image/png"
+										}
+									]
+								}
+							]
+						}
+					]
+				}
+			]
+		}
+	]
+}
