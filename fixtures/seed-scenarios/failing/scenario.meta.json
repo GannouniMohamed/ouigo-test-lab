@@ -1,0 +1,11 @@
+{
+	"id": "failing",
+	"name": "Parcours en échec",
+	"platform": "web",
+	"browser": "chromium",
+	"defaultEnvironmentId": "local",
+	"tags": ["smoke"],
+	"specFile": "failing.spec.ts",
+	"createdAt": "2026-06-23T00:00:00Z",
+	"lastRun": { "status": "never" }
+}

@@ -2,7 +2,7 @@ import { spawn } from "node:child_process";
 import type { ChildProcess } from "node:child_process";
 import { randomUUID } from "node:crypto";
 import { mkdirSync, readFileSync } from "node:fs";
-import { dirname, join } from "node:path";
+import { delimiter, dirname, join, resolve } from "node:path";
 import type {
 	Environment,
 	Report,
@@ -80,12 +80,21 @@ export const playwrightRunner: TestRunner = {
 			process.env.OTL_RUNNER_CONFIG ??
 			join(process.cwd(), "playwright.runner.config.ts");
 
+		// Ensure spec files copied to the workspace can resolve @playwright/test
+		// even though they live outside the project's node_modules directory.
+		const configNodeModules = resolve(dirname(configPath), "node_modules");
+		const existingNodePath = process.env.NODE_PATH;
+		const nodePath = existingNodePath
+			? `${configNodeModules}${delimiter}${existingNodePath}`
+			: configNodeModules;
+
 		const childEnv: NodeJS.ProcessEnv = {
 			...process.env,
 			PLAYWRIGHT_BASE_URL: env.baseURL,
 			OTL_TEST_DIR: scenarioDir,
 			OTL_JSON_OUT: jsonOut,
 			OTL_ARTIFACTS: artifactsDir,
+			NODE_PATH: nodePath,
 			...env.variables,
 		};
 

@@ -5,8 +5,8 @@ import { _electron as electron, expect, test } from "@playwright/test";
 
 const REPO = resolve(__dirname, "../..");
 
-test("happy path: lancer le scénario seed et voir Réussi", async () => {
-	const workspace = mkdtempSync(join(tmpdir(), "otl-e2e-"));
+test("failure path: scénario en échec → Échec + capture", async () => {
+	const workspace = mkdtempSync(join(tmpdir(), "otl-e2e-fail-"));
 	const app = await electron.launch({
 		args: [join(REPO, "out/main/index.js")],
 		env: {
@@ -19,17 +19,19 @@ test("happy path: lancer le scénario seed et voir Réussi", async () => {
 	try {
 		const win = await app.firstWindow();
 		await win.waitForLoadState("domcontentloaded");
-		// Library shows the seeded scenario
-		await expect(win.getByText("Parcours d'accueil")).toBeVisible({
+		await expect(win.getByText("Parcours en échec")).toBeVisible({
 			timeout: 15000,
 		});
-		// Launch it — target the passing scenario card explicitly
 		await win
-			.getByTestId("scenario-card-passing")
+			.getByTestId("scenario-card-failing")
 			.getByRole("button", { name: /lancer/i })
 			.click();
-		// The run executes Playwright headless against the file:// site, then routes to the report
-		await expect(win.getByText("Réussi")).toBeVisible({ timeout: 120000 });
+		await expect(win.getByText("Échec", { exact: true })).toBeVisible({
+			timeout: 120000,
+		});
+		await expect(win.getByTestId("failure-screenshot")).toBeVisible({
+			timeout: 15000,
+		});
 	} finally {
 		await app.close();
 		rmSync(workspace, { recursive: true, force: true });
