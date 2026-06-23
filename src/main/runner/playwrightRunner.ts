@@ -59,6 +59,8 @@ function splitLines(buffer: string, partial: { value: string }): string[] {
 	return lines;
 }
 
+const isWindows = process.platform === "win32";
+
 export const playwrightRunner: TestRunner = {
 	async run(
 		scenario: Scenario,
@@ -98,14 +100,24 @@ export const playwrightRunner: TestRunner = {
 			...env.variables,
 		};
 
+		// Injectable, platform-correct npx command (OTL_NPX allows test overrides)
+		const npxCmd = process.env.OTL_NPX ?? (isWindows ? "npx.cmd" : "npx");
+
 		onEvent({ type: "run-started", runId });
 
 		const runBeginMs = Date.now();
 
 		const child = spawn(
-			"npx",
+			npxCmd,
 			["playwright", "test", scenario.specFile, "--config", configPath],
-			{ cwd: dirname(configPath), env: childEnv, detached: true },
+			{
+				cwd: dirname(configPath),
+				env: childEnv,
+				detached: !isWindows,
+				// Windows: spawning npx.cmd requires a shell (Node throws EINVAL on
+				// .cmd/.bat without it since the CVE-2024-27980 patch).
+				shell: isWindows,
+			},
 		);
 
 		const state: RunState = { child, cancelled: false };
@@ -129,9 +141,73 @@ export const playwrightRunner: TestRunner = {
 		});
 
 		return new Promise<RunResult>((resolve) => {
-			child.on("close", () => {
+			let settled = false;
+
+			function finishWith(report: Report, emitSteps: boolean): void {
+				if (settled) return;
+				settled = true;
 				activeRuns.delete(runId);
 
+				if (emitSteps) {
+					// Emit per-step events
+					for (const step of report.steps) {
+						onEvent({
+							type: "step-started",
+							index: step.index,
+							title: step.title,
+						});
+						if (step.status === "failed") {
+							onEvent({
+								type: "step-failed",
+								index: step.index,
+								error: step.error ?? "unknown error",
+								screenshot: step.screenshotPath,
+							});
+						} else {
+							onEvent({
+								type: "step-passed",
+								index: step.index,
+								durationMs: step.durationMs,
+							});
+						}
+					}
+				}
+
+				saveReport(report);
+				updateLastRun(scenario.id, {
+					status: report.status === "passed" ? "passed" : "failed",
+					at: startedAt,
+					durationMs: report.durationMs,
+				});
+				onEvent({
+					type: "run-finished",
+					status: report.status,
+					durationMs: report.durationMs,
+				});
+				resolve({
+					runId,
+					status: report.status,
+					durationMs: report.durationMs,
+					report,
+				});
+			}
+
+			child.on("error", () => {
+				const durationMs = Date.now() - runBeginMs;
+				const report = buildMinimalFailedReport({
+					runId,
+					scenarioId: scenario.id,
+					scenarioName: scenario.name,
+					environmentLabel: env.label,
+					startedAt,
+					durationMs,
+					error: "Impossible de démarrer Playwright (commande introuvable)",
+				});
+				if (state.cancelled) report.status = "cancelled";
+				finishWith(report, false);
+			});
+
+			child.on("close", () => {
 				const durationMs = Date.now() - runBeginMs;
 
 				// Flush any remaining partial lines
@@ -158,24 +234,7 @@ export const playwrightRunner: TestRunner = {
 					});
 
 					if (state.cancelled) report.status = "cancelled";
-
-					saveReport(report);
-					updateLastRun(scenario.id, {
-						status: report.status === "passed" ? "passed" : "failed",
-						at: startedAt,
-						durationMs: report.durationMs,
-					});
-					onEvent({
-						type: "run-finished",
-						status: report.status,
-						durationMs: report.durationMs,
-					});
-					resolve({
-						runId,
-						status: report.status,
-						durationMs: report.durationMs,
-						report,
-					});
+					finishWith(report, false);
 					return;
 				}
 
@@ -189,46 +248,7 @@ export const playwrightRunner: TestRunner = {
 
 				if (state.cancelled) report.status = "cancelled";
 
-				// Emit per-step events
-				for (const step of report.steps) {
-					onEvent({
-						type: "step-started",
-						index: step.index,
-						title: step.title,
-					});
-					if (step.status === "failed") {
-						onEvent({
-							type: "step-failed",
-							index: step.index,
-							error: step.error ?? "unknown error",
-							screenshot: step.screenshotPath,
-						});
-					} else {
-						onEvent({
-							type: "step-passed",
-							index: step.index,
-							durationMs: step.durationMs,
-						});
-					}
-				}
-
-				saveReport(report);
-				updateLastRun(scenario.id, {
-					status: report.status === "passed" ? "passed" : "failed",
-					at: startedAt,
-					durationMs: report.durationMs,
-				});
-				onEvent({
-					type: "run-finished",
-					status: report.status,
-					durationMs: report.durationMs,
-				});
-				resolve({
-					runId,
-					status: report.status,
-					durationMs: report.durationMs,
-					report,
-				});
+				finishWith(report, true);
 			});
 		});
 	},
@@ -238,7 +258,11 @@ export const playwrightRunner: TestRunner = {
 		if (!state) return;
 		state.cancelled = true;
 		const pid = state.child.pid;
-		if (pid !== undefined) {
+		if (pid === undefined) return;
+		if (isWindows) {
+			// Kill the whole tree on Windows
+			spawn("taskkill", ["/PID", String(pid), "/T", "/F"]);
+		} else {
 			try {
 				// kill the whole process group (negative pid) — covers playwright workers
 				process.kill(-pid, "SIGKILL");
