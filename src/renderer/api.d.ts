@@ -19,6 +19,12 @@ interface OtlApi {
 	onRunEvent(runId: string, cb: (e: RunEvent) => void): () => void;
 	listReports(scenarioId?: string): Promise<ReportSummary[]>;
 	getReport(runId: string): Promise<Report>;
+	startRecording(opts: {
+		name: string;
+		browser: "chromium" | "firefox" | "webkit";
+		environmentId: string;
+	}): Promise<{ recordingId: string }>;
+	stopRecording(recordingId: string): Promise<Scenario>;
 }
 
 declare global {
