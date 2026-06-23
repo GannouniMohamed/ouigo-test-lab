@@ -17,11 +17,14 @@ function pageTitle(pathname: string): string {
 export function TitleBar(): JSX.Element {
 	const { pathname } = useLocation();
 	const title = pageTitle(pathname);
-	const isMac = window.api?.platform === "darwin";
+	// Only Windows gets the custom min/max/close controls. macOS (native traffic
+	// lights) and any unknown platform render the controls-free centered bar, so
+	// we never accidentally show Windows controls on macOS.
+	const isWindows = window.api?.platform === "win32";
 
-	if (isMac) {
-		// Native traffic lights are drawn by macOS (hiddenInset). We just provide
-		// a draggable bar with the centered title and left room for the lights.
+	if (!isWindows) {
+		// macOS: native traffic lights are drawn by the OS; we provide a
+		// draggable bar with the centered title and left room for the lights.
 		return (
 			<div className="otl-titlebar otl-titlebar--mac" style={drag}>
 				<div className="otl-titlebar__title">

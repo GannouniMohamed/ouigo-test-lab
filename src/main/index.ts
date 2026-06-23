@@ -13,12 +13,16 @@ function createWindow(): void {
 		minHeight: 640,
 		backgroundColor: "#06080d",
 		show: false,
-		// macOS: keep the native traffic lights but hide the bar and inset them so
-		// our custom draggable title bar sits behind them. Windows/Linux: fully
-		// frameless — the renderer draws Fluent-style min/max/close controls.
-		titleBarStyle: isMac ? "hiddenInset" : "default",
-		trafficLightPosition: isMac ? { x: 18, y: 18 } : undefined,
-		frame: isMac,
+		// One unified title bar — never a native bar AND our custom bar.
+		// macOS: `hidden` keeps the native traffic lights but removes the native
+		// title bar, so only our custom draggable bar shows. Windows/Linux:
+		// fully frameless — the renderer draws the min/max/close controls.
+		...(isMac
+			? {
+					titleBarStyle: "hidden" as const,
+					trafficLightPosition: { x: 18, y: 18 },
+				}
+			: { frame: false }),
 		webPreferences: {
 			contextIsolation: true,
 			nodeIntegration: false,
