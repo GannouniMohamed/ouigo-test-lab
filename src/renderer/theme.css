@@ -146,17 +146,215 @@ body {
 .otl-btn-primary {
 	background: var(--otl-grad);
 	border: none;
-	border-radius: var(--otl-radius);
+	border-radius: 10px;
 	color: #fff;
 	cursor: pointer;
 	font-family: var(--otl-font);
+	font-size: 12.5px;
 	font-weight: 600;
-	padding: 0.5rem 1.25rem;
-	transition: opacity 0.15s ease;
+	padding: 9px 16px;
+	box-shadow: 0 12px 28px -10px rgba(0, 168, 150, 0.6), inset 0 1px 0
+		rgba(255, 255, 255, 0.18);
+	transition: filter 0.15s ease;
 }
 
 .otl-btn-primary:hover {
-	opacity: 0.9;
+	filter: brightness(1.06);
+}
+
+/* Filter tabs */
+.otl-tab {
+	padding: 7px 16px;
+	border-radius: 9px;
+	font-size: 12.5px;
+	font-weight: 600;
+	background: transparent;
+	border: 1px solid rgba(255, 255, 255, 0.08);
+	color: var(--otl-text-2);
+	cursor: pointer;
+	font-family: var(--otl-font);
+	transition: background 0.12s ease, color 0.12s ease;
+}
+
+.otl-tab--active {
+	background: var(--otl-grad);
+	color: #fff;
+	border-color: transparent;
+}
+
+.otl-tab:not(.otl-tab--active):hover {
+	background: var(--otl-hover);
+}
+
+/* Search wrapper */
+.otl-search {
+	position: relative;
+	display: flex;
+	align-items: center;
+}
+
+.otl-search__icon {
+	position: absolute;
+	left: 10px;
+	color: var(--otl-text-3);
+	display: flex;
+	align-items: center;
+	pointer-events: none;
+}
+
+.otl-search__input {
+	width: 100%;
+	height: 38px;
+	background: rgba(15, 23, 42, 0.5);
+	border: 1px solid rgba(255, 255, 255, 0.07);
+	border-radius: 9px;
+	color: var(--otl-text);
+	padding-left: 36px;
+	padding-right: 12px;
+	font-size: 13.5px;
+	font-family: var(--otl-font);
+	box-sizing: border-box;
+	outline: none;
+	transition: border-color 0.15s ease;
+}
+
+.otl-search__input::placeholder {
+	color: var(--otl-text-3);
+}
+
+.otl-search__input:focus {
+	border-color: rgba(0, 201, 177, 0.5);
+	outline: none;
+}
+
+/* Env select */
+.otl-select {
+	background: rgba(15, 23, 42, 0.5);
+	border: 1px solid rgba(255, 255, 255, 0.07);
+	border-radius: 9px;
+	color: var(--otl-text);
+	padding: 7px 28px 7px 12px;
+	font-size: 12.5px;
+	font-family: var(--otl-font);
+	height: 36px;
+	appearance: none;
+	cursor: pointer;
+}
+
+/* Scenario card list */
+.otl-card-list {
+	display: flex;
+	flex-direction: column;
+	gap: 10px;
+}
+
+/* Scenario card */
+.otl-card {
+	display: flex;
+	align-items: center;
+	gap: 14px;
+	padding: 13px 16px;
+	border-radius: 12px;
+	background: rgba(30, 41, 59, 0.45);
+	border: 1px solid rgba(255, 255, 255, 0.06);
+	transition: border-color 0.15s ease;
+}
+
+.otl-card:hover {
+	border-color: rgba(255, 255, 255, 0.14);
+}
+
+.otl-card--failed {
+	background: rgba(255, 51, 102, 0.06);
+	border: 1px solid rgba(255, 51, 102, 0.18);
+}
+
+/* Platform icon badge */
+.otl-card__icon {
+	width: 38px;
+	height: 38px;
+	border-radius: 10px;
+	background: rgba(0, 201, 177, 0.1);
+	color: var(--otl-cyan);
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	flex-shrink: 0;
+}
+
+/* Card middle section */
+.otl-card__body {
+	flex: 1;
+	display: flex;
+	flex-direction: column;
+	gap: 3px;
+	min-width: 0;
+}
+
+.otl-card__name {
+	font-size: 15px;
+	font-weight: 600;
+	color: var(--otl-text);
+	white-space: nowrap;
+	overflow: hidden;
+	text-overflow: ellipsis;
+}
+
+.otl-card__meta {
+	font-size: 12px;
+	color: var(--otl-text-3);
+}
+
+/* Card right cluster */
+.otl-card__right {
+	display: flex;
+	align-items: center;
+	gap: 12px;
+	flex-shrink: 0;
+}
+
+.otl-card__time {
+	font-size: 12px;
+	color: var(--otl-text-3);
+}
+
+.otl-card__duration {
+	font-family: var(--otl-mono);
+	font-size: 12px;
+	color: var(--otl-text-3);
+}
+
+/* Launch button */
+.otl-btn-launch {
+	background: var(--otl-grad);
+	border: none;
+	border-radius: 9px;
+	color: #fff;
+	cursor: pointer;
+	font-family: var(--otl-font);
+	font-size: 12.5px;
+	font-weight: 600;
+	padding: 7px 14px;
+	transition: filter 0.15s ease;
+}
+
+.otl-btn-launch:hover {
+	filter: brightness(1.06);
+}
+
+/* Hub header title */
+.otl-hub-title {
+	font-size: 24px;
+	font-weight: 600;
+	letter-spacing: -0.02em;
+	color: #f1f5f9;
+	margin: 0;
+}
+
+.otl-hub-subtitle {
+	font-size: 13.5px;
+	color: var(--otl-text-3);
+	margin: 2px 0 0;
 }
 
 /* Sidebar */
