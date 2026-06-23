@@ -4,3 +4,6 @@ out/
 .DS_Store
 *.log
 .superpowers/
+release/
+test-results/
+playwright-report/
