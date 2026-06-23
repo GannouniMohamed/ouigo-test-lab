@@ -525,3 +525,294 @@ body {
 	padding: 2rem;
 	overflow-y: auto;
 }
+
+/* ===== Live Run screen ===== */
+
+/* Keyframes */
+@keyframes otl-pulse {
+	0%,
+	100% {
+		opacity: 1;
+	}
+	50% {
+		opacity: 0.4;
+	}
+}
+
+@keyframes otl-spin {
+	to {
+		transform: rotate(360deg);
+	}
+}
+
+/* Status badge "En cours" */
+.otl-run-status {
+	display: inline-flex;
+	align-items: center;
+	gap: 7px;
+	padding: 4px 10px;
+	border-radius: 7px;
+	background: rgba(45, 212, 191, 0.12);
+	color: var(--otl-ok);
+	font-size: 12px;
+	font-weight: 600;
+}
+
+.otl-run-status__dot {
+	width: 8px;
+	height: 8px;
+	border-radius: 50%;
+	background: var(--otl-accent-bar);
+	box-shadow: 0 0 8px var(--otl-accent-bar);
+	animation: otl-pulse 1.2s ease-in-out infinite;
+	flex-shrink: 0;
+}
+
+/* Stop button */
+.otl-btn-stop {
+	padding: 9px 16px;
+	border-radius: 9px;
+	background: rgba(255, 51, 102, 0.1);
+	border: 1px solid rgba(255, 51, 102, 0.3);
+	color: var(--otl-danger-soft);
+	font-weight: 600;
+	font-size: 12.5px;
+	font-family: var(--otl-font);
+	cursor: pointer;
+	transition: background 0.15s ease;
+}
+
+.otl-btn-stop:hover {
+	background: rgba(255, 51, 102, 0.16);
+}
+
+/* Progress bar */
+.otl-progress {
+	height: 4px;
+	border-radius: 99px;
+	background: rgba(255, 255, 255, 0.07);
+	overflow: hidden;
+	margin: 14px 0;
+}
+
+.otl-progress__fill {
+	height: 100%;
+	border-radius: 99px;
+	background: var(--otl-grad);
+	box-shadow: 0 0 10px rgba(0, 201, 177, 0.6);
+	transition: width 0.3s ease;
+}
+
+/* Live Run layout */
+.live-run {
+	display: flex;
+	flex-direction: column;
+	height: 100%;
+	padding: 0;
+}
+
+.live-run__header {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 16px;
+	margin-bottom: 0;
+}
+
+.live-run__header-left {
+	display: flex;
+	align-items: center;
+	gap: 12px;
+}
+
+.live-run__header-right {
+	display: flex;
+	align-items: center;
+	gap: 14px;
+}
+
+.live-run__title {
+	font-size: 19px;
+	font-weight: 600;
+	letter-spacing: -0.01em;
+	color: var(--otl-text);
+	margin: 0;
+}
+
+.live-run__timer {
+	display: inline-flex;
+	align-items: center;
+	gap: 5px;
+	color: var(--otl-text-2);
+}
+
+.live-run__body {
+	display: flex;
+	flex-direction: row;
+	gap: 20px;
+	flex: 1;
+	min-height: 0;
+	margin-top: 4px;
+}
+
+.live-run__logs {
+	font-family: var(--otl-mono);
+	font-size: 12px;
+	color: var(--otl-text-3);
+	background: rgba(0, 0, 0, 0.2);
+	border-radius: 8px;
+	padding: 10px 14px;
+	margin-top: 16px;
+	overflow-x: auto;
+}
+
+/* Preview panel (browser device frame) */
+.otl-preview {
+	width: 248px;
+	flex-shrink: 0;
+	border-radius: 14px;
+	border: 1px solid rgba(255, 255, 255, 0.08);
+	background: rgba(2, 6, 16, 0.5);
+	display: flex;
+	flex-direction: column;
+	overflow: hidden;
+}
+
+.otl-preview__chrome {
+	display: flex;
+	align-items: center;
+	gap: 5px;
+	padding: 8px 12px;
+	background: rgba(255, 255, 255, 0.03);
+	border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.otl-preview__dot {
+	width: 8px;
+	height: 8px;
+	border-radius: 50%;
+	background: rgba(255, 255, 255, 0.12);
+}
+
+.otl-preview__dot:nth-child(1) {
+	background: rgba(255, 95, 86, 0.55);
+}
+
+.otl-preview__dot:nth-child(2) {
+	background: rgba(255, 189, 46, 0.55);
+}
+
+.otl-preview__dot:nth-child(3) {
+	background: rgba(39, 201, 63, 0.55);
+}
+
+.otl-preview__inner {
+	flex: 1;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	background-image: radial-gradient(
+		rgba(255, 255, 255, 0.03) 1px,
+		transparent 1px
+	);
+	background-size: 18px 18px;
+	min-height: 120px;
+}
+
+.otl-preview__spinner {
+	display: block;
+	width: 28px;
+	height: 28px;
+	border-radius: 50%;
+	border: 2.5px solid rgba(255, 255, 255, 0.1);
+	border-top-color: var(--otl-ok);
+	animation: otl-spin 0.8s linear infinite;
+}
+
+/* Step list */
+.otl-steps {
+	flex: 1;
+	display: flex;
+	flex-direction: column;
+	gap: 8px;
+	overflow-y: auto;
+}
+
+/* Step base */
+.otl-step {
+	display: flex;
+	align-items: center;
+	gap: 10px;
+	padding: 6px 0;
+}
+
+.otl-step__icon {
+	width: 22px;
+	height: 22px;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	flex-shrink: 0;
+}
+
+.otl-step__title {
+	flex: 1;
+	font-size: 13.5px;
+	color: var(--otl-text);
+}
+
+.otl-step__duration {
+	font-family: var(--otl-mono);
+	font-size: 11px;
+	color: var(--otl-text-3);
+	flex-shrink: 0;
+}
+
+.otl-step__error {
+	font-size: 12px;
+	color: var(--otl-danger);
+}
+
+/* Step: running */
+.otl-step--running {
+	background: rgba(45, 212, 191, 0.08);
+	border: 1px solid rgba(45, 212, 191, 0.25);
+	border-radius: 9px;
+	padding: 8px 10px;
+}
+
+.otl-step--running .otl-step__title {
+	color: var(--otl-ok);
+}
+
+/* Step: done (passed) */
+.otl-step--done .otl-step__title {
+	color: var(--otl-text);
+}
+
+/* Step: done + failed */
+.otl-step--failed .otl-step__title {
+	color: var(--otl-danger-soft);
+}
+
+/* Step: pending */
+.otl-step--pending .otl-step__icon::before {
+	content: "";
+	display: block;
+	width: 16px;
+	height: 16px;
+	border-radius: 50%;
+	border: 2px solid rgba(255, 255, 255, 0.15);
+}
+
+.otl-step--pending .otl-step__title {
+	color: var(--otl-text-3);
+}
+
+/* Spinning ring icon */
+.otl-step__spin {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	animation: otl-spin 0.8s linear infinite;
+}
