@@ -12,7 +12,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [macos-latest, ubuntu-latest]
+        os: [macos-latest, ubuntu-latest, windows-latest]
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -26,6 +26,9 @@ jobs:
         run: npx playwright install --with-deps chromium
       - name: Install Playwright Chromium (macOS)
         if: runner.os == 'macOS'
+        run: npx playwright install chromium
+      - name: Install Playwright Chromium (Windows)
+        if: runner.os == 'Windows'
         run: npx playwright install chromium
       - name: Lint
         run: npm run lint
