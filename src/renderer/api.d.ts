@@ -7,6 +7,8 @@ import type {
 } from "../shared/types";
 
 interface OtlApi {
+	browsersReady(): Promise<boolean>;
+	installBrowsers(): Promise<boolean>;
 	listScenarios(): Promise<Scenario[]>;
 	getScenario(id: string): Promise<Scenario>;
 	deleteScenario(id: string): Promise<void>;

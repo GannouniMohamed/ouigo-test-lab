@@ -4,6 +4,7 @@ import type {
 	ReportSummary,
 	Scenario,
 } from "../../shared/types";
+import { isBrowserInstalled } from "../runner/ensureBrowsers";
 import {
 	getEnvironment,
 	listEnvironments,
@@ -42,6 +43,10 @@ export function handleListReports(scenarioId?: string): ReportSummary[] {
 
 export function handleGetReport(runId: string): Report {
 	return getReport(runId);
+}
+
+export function handleBrowsersReady(): boolean {
+	return isBrowserInstalled("chromium");
 }
 
 // Re-export getEnvironment for use in register.ts

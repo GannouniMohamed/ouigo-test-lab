@@ -1,8 +1,10 @@
 import { ipcMain } from "electron";
 import type { Environment } from "../../shared/types";
+import { installBrowser } from "../runner/ensureBrowsers";
 import { playwrightRunner } from "../runner/playwrightRunner";
 import { getEnvironment } from "../stores/environmentStore";
 import {
+	handleBrowsersReady,
 	handleDeleteScenario,
 	handleGetReport,
 	handleGetScenario,
@@ -13,6 +15,12 @@ import {
 } from "./handlers";
 
 export function registerIpc(): void {
+	ipcMain.handle("browsers:ready", () => handleBrowsersReady());
+	ipcMain.handle("browsers:install", async () => {
+		await installBrowser("chromium");
+		return true;
+	});
+
 	ipcMain.handle("scenario:list", () => handleListScenarios());
 
 	ipcMain.handle("scenario:get", (_e, id: string) => handleGetScenario(id));

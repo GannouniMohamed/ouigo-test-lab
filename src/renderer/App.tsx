@@ -1,4 +1,5 @@
 import { HashRouter, Navigate, Route, Routes } from "react-router-dom";
+import { AppGate } from "./components/AppGate";
 import { Sidebar } from "./components/Sidebar";
 import History from "./screens/History";
 import HubLibrary from "./screens/HubLibrary";
@@ -11,13 +12,15 @@ function App(): JSX.Element {
 			<div className="otl-app">
 				<Sidebar />
 				<main className="otl-main">
-					<Routes>
-						<Route path="/" element={<Navigate to="/scenarios" replace />} />
-						<Route path="/scenarios" element={<HubLibrary />} />
-						<Route path="/run/:runId" element={<LiveRun />} />
-						<Route path="/report/:runId" element={<Report />} />
-						<Route path="/reports" element={<History />} />
-					</Routes>
+					<AppGate>
+						<Routes>
+							<Route path="/" element={<Navigate to="/scenarios" replace />} />
+							<Route path="/scenarios" element={<HubLibrary />} />
+							<Route path="/run/:runId" element={<LiveRun />} />
+							<Route path="/report/:runId" element={<Report />} />
+							<Route path="/reports" element={<History />} />
+						</Routes>
+					</AppGate>
 				</main>
 			</div>
 		</HashRouter>
