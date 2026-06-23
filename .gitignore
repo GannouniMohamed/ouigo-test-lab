@@ -5,3 +5,5 @@ out/
 *.log
 .superpowers/
 release/
+test-results/
+playwright-report/

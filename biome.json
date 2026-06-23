@@ -10,6 +10,16 @@
 		}
 	},
 	"files": {
-		"ignore": ["out/**", "node_modules/**", "docs/**"]
+		"ignore": [
+			"out/**",
+			"node_modules/**",
+			"docs/**",
+			"test-results/**",
+			"playwright-report/**",
+			"release/**"
+		]
+	},
+	"formatter": {
+		"lineEnding": "lf"
 	}
 }
