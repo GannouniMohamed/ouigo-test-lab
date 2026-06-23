@@ -34,6 +34,21 @@ body {
 	flex-direction: column;
 	height: 100vh;
 	overflow: hidden;
+	background: radial-gradient(
+			120% 90% at 12% 0%,
+			rgba(58, 31, 82, 0.35) 0%,
+			transparent 45%
+		),
+		radial-gradient(
+			110% 90% at 92% 8%,
+			rgba(140, 64, 99, 0.28) 0%,
+			transparent 42%
+		),
+		radial-gradient(
+			120% 120% at 60% 100%,
+			rgba(30, 58, 138, 0.32) 0%,
+			transparent 55%
+		), var(--otl-bg);
 }
 
 /* ---- Custom title bar (frameless, per-OS) ---- */
@@ -146,36 +161,54 @@ body {
 
 /* Sidebar */
 .otl-sidebar {
-	background: rgba(255, 255, 255, 0.03);
-	border-right: 1px solid var(--otl-border);
+	background: var(--otl-sidebar-bg);
+	border-right: 1px solid rgba(255, 255, 255, 0.05);
 	display: flex;
 	flex-direction: column;
 	align-items: center;
 	width: 84px;
-	padding: 1.25rem 0;
-	gap: 0.5rem;
+	padding: 18px 0 20px;
+	gap: 4px;
 	flex-shrink: 0;
 	overflow-y: auto;
+}
+
+.otl-sidebar__logo {
+	width: 42px;
+	height: 42px;
+	border-radius: 12px;
+	background: var(--otl-grad);
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	box-shadow: 0 8px 22px -6px rgba(0, 168, 150, 0.6);
+	margin-bottom: 14px;
+	flex-shrink: 0;
 }
 
 .otl-sidebar__nav {
 	display: flex;
 	flex-direction: column;
 	align-items: center;
-	gap: 0.25rem;
+	gap: 5px;
 	flex: 1;
 	width: 100%;
 }
 
 .otl-sidebar__item {
+	position: relative;
 	display: flex;
 	flex-direction: column;
 	align-items: center;
 	justify-content: center;
-	width: 64px;
-	height: 56px;
-	border-radius: 10px;
-	font-size: 0.65rem;
+	gap: 4px;
+	width: 62px;
+	height: 50px;
+	border: none;
+	background: transparent;
+	border-radius: 11px;
+	font-family: var(--otl-font);
+	font-size: 9.5px;
 	font-weight: 600;
 	color: var(--otl-text-2);
 	text-decoration: none;
@@ -185,18 +218,37 @@ body {
 	user-select: none;
 }
 
+.otl-sidebar__icon {
+	display: flex;
+	color: inherit;
+	opacity: 0.85;
+}
+
 .otl-sidebar__item:hover {
-	background: var(--otl-surface);
+	background: var(--otl-hover);
 	color: var(--otl-text);
 }
 
 .otl-sidebar__item.active {
-	background: var(--otl-grad);
-	color: #fff;
+	background: rgba(45, 212, 191, 0.1);
+	color: var(--otl-ok);
+}
+
+/* Left-bar active indicator */
+.otl-sidebar__item.active::before {
+	content: "";
+	position: absolute;
+	left: -11px;
+	top: 50%;
+	transform: translateY(-50%);
+	width: 3px;
+	height: 26px;
+	border-radius: 0 3px 3px 0;
+	background: var(--otl-accent-bar);
 }
 
 .otl-sidebar__item--disabled {
-	opacity: 0.35;
+	opacity: 0.4;
 	cursor: not-allowed;
 	color: var(--otl-text-3);
 }
@@ -207,18 +259,20 @@ body {
 }
 
 .otl-sidebar__avatar {
-	width: 36px;
-	height: 36px;
+	width: 34px;
+	height: 34px;
 	border-radius: 50%;
-	background: var(--otl-grad);
+	background: linear-gradient(135deg, #334155, #1e293b);
+	border: 1px solid rgba(255, 255, 255, 0.1);
 	display: flex;
 	align-items: center;
 	justify-content: center;
 	font-size: 0.7rem;
 	font-weight: 700;
-	color: #fff;
+	color: var(--otl-text);
 	margin-top: auto;
 	cursor: pointer;
+	flex-shrink: 0;
 }
 
 /* Status badge */
