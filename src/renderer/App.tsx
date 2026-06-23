@@ -1,6 +1,7 @@
 import { HashRouter, Navigate, Route, Routes } from "react-router-dom";
 import { AppGate } from "./components/AppGate";
 import { Sidebar } from "./components/Sidebar";
+import { TitleBar } from "./components/TitleBar";
 import History from "./screens/History";
 import HubLibrary from "./screens/HubLibrary";
 import LiveRun from "./screens/LiveRun";
@@ -10,20 +11,23 @@ import Report from "./screens/Report";
 function App(): JSX.Element {
 	return (
 		<HashRouter>
-			<div className="otl-app">
-				<Sidebar />
-				<main className="otl-main">
-					<AppGate>
-						<Routes>
-							<Route path="/" element={<Navigate to="/scenarios" replace />} />
-							<Route path="/scenarios" element={<HubLibrary />} />
-							<Route path="/scenarios/new" element={<NewScenario />} />
-							<Route path="/run/:runId" element={<LiveRun />} />
-							<Route path="/report/:runId" element={<Report />} />
-							<Route path="/reports" element={<History />} />
-						</Routes>
-					</AppGate>
-				</main>
+			<div className="otl-root">
+				<TitleBar />
+				<div className="otl-app">
+					<Sidebar />
+					<main className="otl-main">
+						<AppGate>
+							<Routes>
+								<Route path="/" element={<Navigate to="/scenarios" replace />} />
+								<Route path="/scenarios" element={<HubLibrary />} />
+								<Route path="/scenarios/new" element={<NewScenario />} />
+								<Route path="/run/:runId" element={<LiveRun />} />
+								<Route path="/report/:runId" element={<Report />} />
+								<Route path="/reports" element={<History />} />
+							</Routes>
+						</AppGate>
+					</main>
+				</div>
 			</div>
 		</HashRouter>
 	);

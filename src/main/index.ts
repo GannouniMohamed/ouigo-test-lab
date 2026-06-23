@@ -5,15 +5,28 @@ import { seedIfEmpty } from "./seed";
 import { ensureWorkspace } from "./workspace";
 
 function createWindow(): void {
+	const isMac = process.platform === "darwin";
 	const win = new BrowserWindow({
 		width: 1280,
 		height: 800,
+		minWidth: 960,
+		minHeight: 640,
+		backgroundColor: "#06080d",
+		show: false,
+		// macOS: keep the native traffic lights but hide the bar and inset them so
+		// our custom draggable title bar sits behind them. Windows/Linux: fully
+		// frameless — the renderer draws Fluent-style min/max/close controls.
+		titleBarStyle: isMac ? "hiddenInset" : "default",
+		trafficLightPosition: isMac ? { x: 18, y: 18 } : undefined,
+		frame: isMac,
 		webPreferences: {
 			contextIsolation: true,
 			nodeIntegration: false,
 			preload: join(__dirname, "../preload/index.js"),
 		},
 	});
+
+	win.once("ready-to-show", () => win.show());
 
 	// In development, electron-vite provides a dev server URL
 	if (process.env.ELECTRON_RENDERER_URL) {
