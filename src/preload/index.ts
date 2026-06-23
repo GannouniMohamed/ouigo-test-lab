@@ -2,6 +2,14 @@ import { contextBridge, ipcRenderer } from "electron";
 import type { Environment, RunEvent } from "../shared/types";
 
 contextBridge.exposeInMainWorld("api", {
+	browsersReady() {
+		return ipcRenderer.invoke("browsers:ready");
+	},
+
+	installBrowsers() {
+		return ipcRenderer.invoke("browsers:install");
+	},
+
 	listScenarios() {
 		return ipcRenderer.invoke("scenario:list");
 	},
