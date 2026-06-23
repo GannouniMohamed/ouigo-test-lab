@@ -11,7 +11,7 @@ beforeEach(() => {
 });
 afterEach(() => {
 	rmSync(dir, { recursive: true, force: true });
-	process.env.OTL_WORKSPACE = undefined;
+	Reflect.deleteProperty(process.env, "OTL_WORKSPACE");
 });
 
 describe("workspace", () => {
