@@ -64,6 +64,7 @@ export default function HubLibrary(): JSX.Element {
 					{scenarios.map((scenario) => (
 						<div
 							key={scenario.id}
+							data-testid={`scenario-card-${scenario.id}`}
 							className="otl-surface"
 							style={{
 								padding: "1.25rem",
