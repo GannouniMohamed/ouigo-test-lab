@@ -41,6 +41,14 @@ beforeEach(() => {
 	// biome-ignore lint/suspicious/noExplicitAny: test utility cast
 	(globalThis as any).window.api = {
 		listScenarios: vi.fn().mockResolvedValue(scenarios),
+		listEnvironments: vi.fn().mockResolvedValue([
+			{
+				id: "preprod",
+				label: "Préprod",
+				baseURL: "https://pp.example",
+				variables: {},
+			},
+		]),
 		runScenario: vi.fn().mockResolvedValue({ runId: "run-123" }),
 	};
 });

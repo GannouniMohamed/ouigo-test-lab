@@ -1,5 +1,6 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { EnvPicker } from "../components/EnvPicker";
 import { StatusBadge } from "../components/StatusBadge";
 import { useAppStore } from "../store";
 
@@ -28,14 +29,29 @@ export default function HubLibrary(): JSX.Element {
 	const scenarios = useAppStore((s) => s.scenarios);
 	const setScenarios = useAppStore((s) => s.setScenarios);
 
+	const [filter, setFilter] = useState<"all" | "mobile" | "web">("all");
+	const [query, setQuery] = useState("");
+	const [envId, setEnvId] = useState("");
+
 	useEffect(() => {
 		window.api.listScenarios().then((s) => setScenarios(s));
 	}, [setScenarios]);
 
-	async function handleLancer(scenarioId: string, envId: string) {
-		const { runId } = await window.api.runScenario(scenarioId, envId);
+	async function handleLancer(
+		scenarioId: string,
+		defaultEnvironmentId: string,
+	) {
+		const env = envId || defaultEnvironmentId;
+		const { runId } = await window.api.runScenario(scenarioId, env);
 		navigate(`/run/${runId}`);
 	}
+
+	const visibleScenarios = scenarios.filter((s) => {
+		if (filter !== "all" && s.platform !== filter) return false;
+		if (query && !s.name.toLowerCase().includes(query.toLowerCase()))
+			return false;
+		return true;
+	});
 
 	return (
 		<div style={{ padding: "2rem" }}>
@@ -51,7 +67,41 @@ export default function HubLibrary(): JSX.Element {
 				Scénarios
 			</h1>
 
-			{scenarios.length === 0 ? (
+			<EnvPicker value={envId} onChange={setEnvId} />
+
+			<div style={{ display: "flex", gap: "0.5rem", margin: "1rem 0" }}>
+				<button
+					type="button"
+					className={filter === "all" ? "otl-btn-primary" : "otl-btn"}
+					onClick={() => setFilter("all")}
+				>
+					Tous
+				</button>
+				<button
+					type="button"
+					className={filter === "mobile" ? "otl-btn-primary" : "otl-btn"}
+					onClick={() => setFilter("mobile")}
+				>
+					Mobile
+				</button>
+				<button
+					type="button"
+					className={filter === "web" ? "otl-btn-primary" : "otl-btn"}
+					onClick={() => setFilter("web")}
+				>
+					Web
+				</button>
+			</div>
+
+			<input
+				type="text"
+				placeholder="Rechercher…"
+				value={query}
+				onChange={(e) => setQuery(e.target.value)}
+				style={{ marginBottom: "1rem", padding: "0.5rem", width: "100%" }}
+			/>
+
+			{visibleScenarios.length === 0 ? (
 				<p style={{ color: "var(--otl-text-2)" }}>Aucun scénario</p>
 			) : (
 				<div
@@ -61,7 +111,7 @@ export default function HubLibrary(): JSX.Element {
 						gap: "1rem",
 					}}
 				>
-					{scenarios.map((scenario) => (
+					{visibleScenarios.map((scenario) => (
 						<div
 							key={scenario.id}
 							data-testid={`scenario-card-${scenario.id}`}
