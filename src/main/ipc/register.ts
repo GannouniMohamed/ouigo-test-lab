@@ -13,6 +13,7 @@ import {
 	handleListScenarios,
 	handleSaveEnvironment,
 } from "./handlers";
+import { handleStartRecording, handleStopRecording } from "./recordingHandlers";
 
 export function registerIpc(): void {
 	ipcMain.handle("browsers:ready", () => handleBrowsersReady());
@@ -65,4 +66,7 @@ export function registerIpc(): void {
 	ipcMain.handle("run:cancel", (_e, runId: string) =>
 		playwrightRunner.cancel(runId),
 	);
+
+	ipcMain.handle("recording:start", (_e, opts) => handleStartRecording(opts));
+	ipcMain.handle("recording:stop", (_e, id: string) => handleStopRecording(id));
 }

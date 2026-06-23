@@ -53,4 +53,16 @@ contextBridge.exposeInMainWorld("api", {
 	getReport(runId: string) {
 		return ipcRenderer.invoke("report:get", runId);
 	},
+
+	startRecording(opts: {
+		name: string;
+		browser: "chromium" | "firefox" | "webkit";
+		environmentId: string;
+	}) {
+		return ipcRenderer.invoke("recording:start", opts);
+	},
+
+	stopRecording(recordingId: string) {
+		return ipcRenderer.invoke("recording:stop", recordingId);
+	},
 });
