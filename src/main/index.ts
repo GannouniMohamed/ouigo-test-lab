@@ -1,5 +1,8 @@
 import { join } from "node:path";
 import { BrowserWindow, app } from "electron";
+import { registerIpc } from "./ipc/register";
+import { seedIfEmpty } from "./seed";
+import { ensureWorkspace } from "./workspace";
 
 function createWindow(): void {
 	const win = new BrowserWindow({
@@ -21,6 +24,10 @@ function createWindow(): void {
 }
 
 app.whenReady().then(() => {
+	const appRoot = app.isPackaged ? app.getAppPath() : process.cwd();
+	ensureWorkspace();
+	seedIfEmpty(appRoot);
+	registerIpc();
 	createWindow();
 
 	app.on("activate", () => {
