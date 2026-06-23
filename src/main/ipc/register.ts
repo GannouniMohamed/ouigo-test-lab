@@ -1,4 +1,4 @@
-import { ipcMain } from "electron";
+import { BrowserWindow, ipcMain } from "electron";
 import type { Environment } from "../../shared/types";
 import { installBrowser } from "../runner/ensureBrowsers";
 import { playwrightRunner } from "../runner/playwrightRunner";
@@ -16,6 +16,20 @@ import {
 import { handleStartRecording, handleStopRecording } from "./recordingHandlers";
 
 export function registerIpc(): void {
+	// Custom title-bar window controls (Windows/Linux frameless chrome).
+	ipcMain.on("window:minimize", (e) =>
+		BrowserWindow.fromWebContents(e.sender)?.minimize(),
+	);
+	ipcMain.on("window:maximize", (e) => {
+		const w = BrowserWindow.fromWebContents(e.sender);
+		if (!w) return;
+		if (w.isMaximized()) w.unmaximize();
+		else w.maximize();
+	});
+	ipcMain.on("window:close", (e) =>
+		BrowserWindow.fromWebContents(e.sender)?.close(),
+	);
+
 	ipcMain.handle("browsers:ready", () => handleBrowsersReady());
 	ipcMain.handle("browsers:install", async () => {
 		await installBrowser("chromium");

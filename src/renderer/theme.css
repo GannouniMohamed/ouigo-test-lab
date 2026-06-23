@@ -9,6 +9,12 @@
 	--otl-blue: #2f6bff;
 	--otl-grad: linear-gradient(135deg, #00c9b1, #2f6bff);
 	--otl-danger: #ff3366;
+	--otl-ok: #5eead4;
+	--otl-danger-soft: #fca5b5;
+	--otl-accent-bar: #2dd4bf;
+	--otl-sidebar-bg: rgba(7, 10, 18, 0.45);
+	--otl-hover: rgba(255, 255, 255, 0.07);
+	--otl-glass: rgba(11, 15, 25, 0.72);
 	--otl-radius: 12px;
 	--otl-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, monospace;
 	--otl-font: -apple-system, "Segoe UI Variable", "Segoe UI", system-ui,
@@ -20,6 +26,97 @@ body {
 	background: var(--otl-bg);
 	color: var(--otl-text);
 	font-family: var(--otl-font);
+}
+
+/* Root layout: title bar on top, then sidebar + main */
+.otl-root {
+	display: flex;
+	flex-direction: column;
+	height: 100vh;
+	overflow: hidden;
+}
+
+/* ---- Custom title bar (frameless, per-OS) ---- */
+.otl-titlebar {
+	display: flex;
+	align-items: center;
+	flex-shrink: 0;
+	background: rgba(7, 10, 18, 0.55);
+	color: var(--otl-text-2);
+	font-size: 12.5px;
+	font-weight: 500;
+	user-select: none;
+}
+
+.otl-titlebar--mac {
+	height: 42px;
+	justify-content: center;
+	padding-left: 78px; /* room for the native traffic lights */
+	border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.otl-titlebar--win {
+	height: 40px;
+	justify-content: space-between;
+}
+
+.otl-titlebar__title,
+.otl-titlebar__left {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+}
+
+.otl-titlebar__left {
+	padding-left: 14px;
+}
+
+.otl-titlebar__logo {
+	width: 16px;
+	height: 16px;
+	border-radius: 5px;
+	background: var(--otl-grad);
+	box-shadow: 0 4px 10px -3px rgba(0, 168, 150, 0.6);
+}
+
+.otl-titlebar__sep {
+	color: var(--otl-text-3);
+}
+
+.otl-wordmark {
+	font-family: var(--otl-mono);
+	font-size: 12px;
+	letter-spacing: 0.12em;
+	text-transform: uppercase;
+	color: var(--otl-cyan);
+}
+
+.otl-titlebar__controls {
+	display: flex;
+	height: 100%;
+}
+
+.otl-wc {
+	width: 46px;
+	height: 100%;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	border: none;
+	background: transparent;
+	color: var(--otl-text-2);
+	cursor: pointer;
+	transition: background 0.12s ease, color 0.12s ease;
+}
+
+.otl-wc:hover {
+	background: var(--otl-hover);
+	color: var(--otl-text);
+}
+
+.otl-wc--close:hover {
+	background: #e81123;
+	color: #fff;
 }
 
 /* Glassmorphic surface */
@@ -55,10 +152,10 @@ body {
 	flex-direction: column;
 	align-items: center;
 	width: 84px;
-	min-height: 100vh;
 	padding: 1.25rem 0;
 	gap: 0.5rem;
 	flex-shrink: 0;
+	overflow-y: auto;
 }
 
 .otl-sidebar__nav {
@@ -164,10 +261,11 @@ body {
 	color: var(--otl-text-3);
 }
 
-/* App layout */
+/* App layout (below the title bar) */
 .otl-app {
 	display: flex;
-	min-height: 100vh;
+	flex: 1;
+	min-height: 0;
 }
 
 .otl-main {

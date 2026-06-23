@@ -7,6 +7,12 @@ import type {
 } from "../shared/types";
 
 interface OtlApi {
+	platform: NodeJS.Platform;
+	windowControls: {
+		minimize(): void;
+		maximize(): void;
+		close(): void;
+	};
 	browsersReady(): Promise<boolean>;
 	installBrowsers(): Promise<boolean>;
 	listScenarios(): Promise<Scenario[]>;
