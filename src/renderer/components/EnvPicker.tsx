@@ -15,7 +15,11 @@ export function EnvPicker({
 	}, []);
 
 	return (
-		<select value={value} onChange={(e) => onChange(e.target.value)}>
+		<select
+			className="otl-select"
+			value={value}
+			onChange={(e) => onChange(e.target.value)}
+		>
 			<option value="">Environnement par défaut</option>
 			{environments.map((env) => (
 				<option key={env.id} value={env.id}>

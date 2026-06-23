@@ -24,6 +24,64 @@ function formatPlatform(platform: "web" | "mobile"): string {
 	return platform === "web" ? "Web" : "Mobile";
 }
 
+function WebIcon(): JSX.Element {
+	return (
+		<svg
+			width="16"
+			height="16"
+			viewBox="0 0 24 24"
+			fill="none"
+			stroke="currentColor"
+			strokeWidth="2"
+			strokeLinecap="round"
+			strokeLinejoin="round"
+			aria-hidden="true"
+		>
+			<circle cx="12" cy="12" r="10" />
+			<line x1="2" y1="12" x2="22" y2="12" />
+			<path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z" />
+		</svg>
+	);
+}
+
+function MobileIcon(): JSX.Element {
+	return (
+		<svg
+			width="16"
+			height="16"
+			viewBox="0 0 24 24"
+			fill="none"
+			stroke="currentColor"
+			strokeWidth="2"
+			strokeLinecap="round"
+			strokeLinejoin="round"
+			aria-hidden="true"
+		>
+			<rect x="5" y="2" width="14" height="20" rx="2" ry="2" />
+			<line x1="12" y1="18" x2="12.01" y2="18" />
+		</svg>
+	);
+}
+
+function MagnifierIcon(): JSX.Element {
+	return (
+		<svg
+			width="16"
+			height="16"
+			viewBox="0 0 24 24"
+			fill="none"
+			stroke="currentColor"
+			strokeWidth="2"
+			strokeLinecap="round"
+			strokeLinejoin="round"
+			aria-hidden="true"
+		>
+			<circle cx="11" cy="11" r="8" />
+			<line x1="21" y1="21" x2="16.65" y2="16.65" />
+		</svg>
+	);
+}
+
 export default function HubLibrary(): JSX.Element {
 	const navigate = useNavigate();
 	const scenarios = useAppStore((s) => s.scenarios);
@@ -55,25 +113,21 @@ export default function HubLibrary(): JSX.Element {
 
 	return (
 		<div style={{ padding: "2rem" }}>
+			{/* Header */}
 			<div
 				style={{
 					display: "flex",
-					alignItems: "center",
+					alignItems: "flex-start",
 					justifyContent: "space-between",
 					marginBottom: "1.5rem",
 				}}
 			>
-				<h1
-					style={{
-						fontFamily: "var(--otl-font)",
-						color: "var(--otl-text)",
-						margin: 0,
-						fontSize: "1.5rem",
-						fontWeight: 700,
-					}}
-				>
-					Scénarios
-				</h1>
+				<div>
+					<h1 className="otl-hub-title">Scénarios</h1>
+					<p className="otl-hub-subtitle">
+						Vos parcours de test, prêts à lancer
+					</p>
+				</div>
 				<button
 					type="button"
 					className="otl-btn-primary"
@@ -83,112 +137,105 @@ export default function HubLibrary(): JSX.Element {
 				</button>
 			</div>
 
-			<EnvPicker value={envId} onChange={setEnvId} />
+			{/* Env picker + filter row */}
+			<div
+				style={{
+					display: "flex",
+					alignItems: "center",
+					gap: "0.75rem",
+					marginBottom: "1rem",
+				}}
+			>
+				<EnvPicker value={envId} onChange={setEnvId} />
 
-			<div style={{ display: "flex", gap: "0.5rem", margin: "1rem 0" }}>
-				<button
-					type="button"
-					className={filter === "all" ? "otl-btn-primary" : "otl-btn"}
-					onClick={() => setFilter("all")}
-				>
-					Tous
-				</button>
-				<button
-					type="button"
-					className={filter === "mobile" ? "otl-btn-primary" : "otl-btn"}
-					onClick={() => setFilter("mobile")}
-				>
-					Mobile
-				</button>
-				<button
-					type="button"
-					className={filter === "web" ? "otl-btn-primary" : "otl-btn"}
-					onClick={() => setFilter("web")}
-				>
-					Web
-				</button>
+				<div style={{ display: "flex", gap: "0.5rem" }}>
+					<button
+						type="button"
+						className={filter === "all" ? "otl-tab otl-tab--active" : "otl-tab"}
+						onClick={() => setFilter("all")}
+					>
+						Tous
+					</button>
+					<button
+						type="button"
+						className={
+							filter === "mobile" ? "otl-tab otl-tab--active" : "otl-tab"
+						}
+						onClick={() => setFilter("mobile")}
+					>
+						Mobile
+					</button>
+					<button
+						type="button"
+						className={filter === "web" ? "otl-tab otl-tab--active" : "otl-tab"}
+						onClick={() => setFilter("web")}
+					>
+						Web
+					</button>
+				</div>
 			</div>
 
-			<input
-				type="text"
-				placeholder="Rechercher…"
-				value={query}
-				onChange={(e) => setQuery(e.target.value)}
-				style={{ marginBottom: "1rem", padding: "0.5rem", width: "100%" }}
-			/>
+			{/* Search */}
+			<div className="otl-search" style={{ marginBottom: "1rem" }}>
+				<span className="otl-search__icon">
+					<MagnifierIcon />
+				</span>
+				<input
+					type="text"
+					className="otl-search__input"
+					placeholder="Rechercher…"
+					value={query}
+					onChange={(e) => setQuery(e.target.value)}
+				/>
+			</div>
 
+			{/* Scenario list */}
 			{visibleScenarios.length === 0 ? (
 				<p style={{ color: "var(--otl-text-2)" }}>Aucun scénario</p>
 			) : (
-				<div
-					style={{
-						display: "grid",
-						gridTemplateColumns: "repeat(auto-fill, minmax(320px, 1fr))",
-						gap: "1rem",
-					}}
-				>
+				<div className="otl-card-list">
 					{visibleScenarios.map((scenario) => (
 						<div
 							key={scenario.id}
 							data-testid={`scenario-card-${scenario.id}`}
-							className="otl-surface"
-							style={{
-								padding: "1.25rem",
-								display: "flex",
-								flexDirection: "column",
-								gap: "0.75rem",
-							}}
+							className={
+								scenario.lastRun.status === "failed"
+									? "otl-card otl-card--failed"
+									: "otl-card"
+							}
 						>
-							<div
-								style={{
-									fontWeight: 600,
-									fontSize: "1rem",
-									color: "var(--otl-text)",
-								}}
-							>
-								{scenario.name}
+							{/* Platform icon */}
+							<div className="otl-card__icon">
+								{scenario.platform === "web" ? <WebIcon /> : <MobileIcon />}
 							</div>
 
-							<div
-								style={{
-									fontSize: "0.8rem",
-									color: "var(--otl-text-2)",
-									display: "flex",
-									gap: "0.5rem",
-									alignItems: "center",
-								}}
-							>
-								<span>{formatPlatform(scenario.platform)}</span>
-								<span style={{ color: "var(--otl-text-3)" }}>·</span>
-								<span>{scenario.browser}</span>
+							{/* Name + meta */}
+							<div className="otl-card__body">
+								<div className="otl-card__name">{scenario.name}</div>
+								<div className="otl-card__meta">
+									{formatPlatform(scenario.platform)} · {scenario.browser}
+								</div>
 							</div>
 
-							<StatusBadge status={scenario.lastRun.status} />
-
-							<div style={{ fontSize: "0.75rem", color: "var(--otl-text-2)" }}>
-								{formatAt(scenario.lastRun.at)}
+							{/* Right cluster */}
+							<div className="otl-card__right">
+								<StatusBadge status={scenario.lastRun.status} />
+								<span className="otl-card__time">
+									{formatAt(scenario.lastRun.at)}
+								</span>
+								<span className="otl-card__duration">
+									{formatDuration(scenario.lastRun.durationMs)}
+								</span>
+								<button
+									type="button"
+									className="otl-btn-launch"
+									onClick={() =>
+										handleLancer(scenario.id, scenario.defaultEnvironmentId)
+									}
+								>
+									Lancer
+								</button>
 							</div>
-
-							<div
-								style={{
-									fontFamily: "var(--otl-mono)",
-									fontSize: "0.75rem",
-									color: "var(--otl-text-2)",
-								}}
-							>
-								{formatDuration(scenario.lastRun.durationMs)}
-							</div>
-
-							<button
-								type="button"
-								className="otl-btn-primary"
-								style={{ alignSelf: "flex-start", marginTop: "0.25rem" }}
-								onClick={() =>
-									handleLancer(scenario.id, scenario.defaultEnvironmentId)
-								}
-							>
-								Lancer
-							</button>
 						</div>
 					))}
 				</div>
