@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+</helmet>
+<div style="width:max-content; min-width:100%; min-height:100vh; box-sizing:border-box; padding:56px; background:#06080D; font-family:-apple-system,'Segoe UI Variable','Segoe UI',system-ui,sans-serif;">
+
+  <div style="margin-bottom:42px; max-width:760px;">
+    <div style="font-family:'JetBrains Mono',monospace; font-size:12px; letter-spacing:0.14em; color:#00C9B1; text-transform:uppercase;">OuiTest · Plateforme de tests E2E</div>
+    <div style="font-size:27px; font-weight:600; color:#E8EDF5; margin-top:9px; letter-spacing:-0.02em;">Application Electron premium — tester sans écrire de code</div>
+    <div style="font-size:14px; color:#64748B; margin-top:7px; line-height:1.55;">Un hub unique pour PO, testeurs et équipes métier : créer, exécuter et analyser des tests Mobile (Maestro · Android) et Web (Playwright), avec assistance IA. L'utilisateur ne manipule jamais Maestro ni Playwright directement. Intégration native macOS et Windows 11.</div>
+  </div>
+
+  <div style="display:flex; align-items:center; gap:10px; margin-bottom:16px;">
+    <div style="font-family:'JetBrains Mono',monospace; font-size:12px; color:#94A3B8; letter-spacing:0.04em;">01 — Le Hub · bibliothèque de scénarios</div>
+    <div style="flex:1; height:1px; background:rgba(255,255,255,0.06);"></div>
+    <div style="font-size:11px; color:#475569;">Intégration native macOS &amp; Windows 11</div>
+  </div>
+  <div style="display:flex; gap:48px; align-items:flex-start; margin-bottom:56px;">
+    <div style="flex:none; width:1240px;">
+      <div style="display:flex; align-items:center; gap:10px; margin-bottom:14px;"><span style="font-family:'JetBrains Mono',monospace; font-size:12px; color:#cbd5e1;">Hub — macOS</span><span style="font-size:10px; color:#64748B; border:1px solid rgba(255,255,255,0.1); border-radius:5px; padding:2px 7px;">macOS Sonoma</span></div>
+      <div style="position:relative; width:1240px; height:820px; border-radius:16px; overflow:hidden;">
+        <div style="position:absolute; inset:0; background:radial-gradient(120% 120% at 18% 8%, #3a1f52 0%, transparent 48%), radial-gradient(120% 120% at 88% 22%, #8c4063 0%, transparent 44%), radial-gradient(110% 110% at 55% 100%, #1e3a8a 0%, transparent 55%), linear-gradient(150deg,#241640,#0f1838);"></div>
+        <div style="position:absolute; inset:0; background:radial-gradient(120% 90% at 50% 50%, transparent 55%, rgba(0,0,0,0.45) 100%);"></div>
+        <div style="position:absolute; inset:0; display:flex; align-items:center; justify-content:center;"><div style="width:1140px; height:720px;"><dc-import name="HubLibrary" os="mac" hint-size="1140px,720px" style="width:1140px; height:720px;"></dc-import></div></div>
+      </div>
+    </div>
+    <div style="flex:none; width:1240px;">
+      <div style="display:flex; align-items:center; gap:10px; margin-bottom:14px;"><span style="font-family:'JetBrains Mono',monospace; font-size:12px; color:#cbd5e1;">Hub — Windows 11</span><span style="font-size:10px; color:#64748B; border:1px solid rgba(255,255,255,0.1); border-radius:5px; padding:2px 7px;">Windows 11 · Fluent</span></div>
+      <div style="position:relative; width:1240px; height:820px; border-radius:16px; overflow:hidden;">
+        <div style="position:absolute; inset:0; background:radial-gradient(110% 110% at 50% 0%, #0a4a6b 0%, transparent 58%), radial-gradient(120% 120% at 82% 92%, #1b6ca8 0%, transparent 50%), radial-gradient(90% 90% at 14% 82%, #0e8a82 0%, transparent 55%), linear-gradient(160deg,#04141f,#08172a);"></div>
+        <div style="position:absolute; inset:0; background:radial-gradient(120% 90% at 50% 50%, transparent 55%, rgba(0,0,0,0.45) 100%);"></div>
+        <div style="position:absolute; inset:0; display:flex; align-items:center; justify-content:center;"><div style="width:1140px; height:720px;"><dc-import name="HubLibrary" os="win" hint-size="1140px,720px" style="width:1140px; height:720px;"></dc-import></div></div>
+      </div>
+    </div>
+  </div>
+
+  <div style="display:flex; align-items:center; gap:10px; margin-bottom:16px;">
+    <div style="font-family:'JetBrains Mono',monospace; font-size:12px; color:#94A3B8; letter-spacing:0.04em;">02 — Créer un scénario · enregistrement (V2) + IA (V3)</div>
+    <div style="flex:1; height:1px; background:rgba(255,255,255,0.06);"></div>
+  </div>
+  <div style="display:flex; gap:48px; align-items:flex-start; margin-bottom:56px;">
+    <div style="flex:none; width:1240px;">
+      <div style="display:flex; align-items:center; gap:10px; margin-bottom:14px;"><span style="font-family:'JetBrains Mono',monospace; font-size:12px; color:#cbd5e1;">Nouveau scénario — macOS</span><span style="font-size:10px; color:#64748B; border:1px solid rgba(255,255,255,0.1); border-radius:5px; padding:2px 7px;">Enregistrer ou décrire à l'IA</span></div>
+      <div style="position:relative; width:1240px; height:820px; border-radius:16px; overflow:hidden;">
+        <div style="position:absolute; inset:0; background:radial-gradient(120% 120% at 18% 8%, #3a1f52 0%, transparent 48%), radial-gradient(120% 120% at 88% 22%, #8c4063 0%, transparent 44%), radial-gradient(110% 110% at 55% 100%, #1e3a8a 0%, transparent 55%), linear-gradient(150deg,#241640,#0f1838);"></div>
+        <div style="position:absolute; inset:0; background:radial-gradient(120% 90% at 50% 50%, transparent 55%, rgba(0,0,0,0.45) 100%);"></div>
+        <div style="position:absolute; inset:0; display:flex; align-items:center; justify-content:center;"><div style="width:1140px; height:720px;"><dc-import name="NewScenario" os="mac" hint-size="1140px,720px" style="width:1140px; height:720px;"></dc-import></div></div>
+      </div>
+    </div>
+    <div style="flex:none; width:1240px;">
+      <div style="display:flex; align-items:center; gap:10px; margin-bottom:14px;"><span style="font-family:'JetBrains Mono',monospace; font-size:12px; color:#cbd5e1;">Exécution en direct — macOS</span><span style="font-size:10px; color:#64748B; border:1px solid rgba(255,255,255,0.1); border-radius:5px; padding:2px 7px;">V1 · étapes en langage clair</span></div>
+      <div style="position:relative; width:1240px; height:820px; border-radius:16px; overflow:hidden;">
+        <div style="position:absolute; inset:0; background:radial-gradient(120% 120% at 18% 8%, #3a1f52 0%, transparent 48%), radial-gradient(120% 120% at 88% 22%, #8c4063 0%, transparent 44%), radial-gradient(110% 110% at 55% 100%, #1e3a8a 0%, transparent 55%), linear-gradient(150deg,#241640,#0f1838);"></div>
+        <div style="position:absolute; inset:0; background:radial-gradient(120% 90% at 50% 50%, transparent 55%, rgba(0,0,0,0.45) 100%);"></div>
+        <div style="position:absolute; inset:0; display:flex; align-items:center; justify-content:center;"><div style="width:1140px; height:720px;"><dc-import name="LiveRun" os="mac" hint-size="1140px,720px" style="width:1140px; height:720px;"></dc-import></div></div>
+      </div>
+    </div>
+  </div>
+
+  <div style="display:flex; align-items:center; gap:10px; margin-bottom:16px;">
+    <div style="font-family:'JetBrains Mono',monospace; font-size:12px; color:#94A3B8; letter-spacing:0.04em;">03 — Rapport &amp; réparation automatique par l'IA (V3)</div>
+    <div style="flex:1; height:1px; background:rgba(255,255,255,0.06);"></div>
+  </div>
+  <div style="display:flex; gap:48px; align-items:flex-start;">
+    <div style="flex:none; width:1240px;">
+      <div style="display:flex; align-items:center; gap:10px; margin-bottom:14px;"><span style="font-family:'JetBrains Mono',monospace; font-size:12px; color:#cbd5e1;">Rapport d'exécution — macOS</span><span style="font-size:10px; color:#64748B; border:1px solid rgba(255,255,255,0.1); border-radius:5px; padding:2px 7px;">Échec · capture · réparation IA</span></div>
+      <div style="position:relative; width:1240px; height:820px; border-radius:16px; overflow:hidden;">
+        <div style="position:absolute; inset:0; background:radial-gradient(120% 120% at 18% 8%, #3a1f52 0%, transparent 48%), radial-gradient(120% 120% at 88% 22%, #8c4063 0%, transparent 44%), radial-gradient(110% 110% at 55% 100%, #1e3a8a 0%, transparent 55%), linear-gradient(150deg,#241640,#0f1838);"></div>
+        <div style="position:absolute; inset:0; background:radial-gradient(120% 90% at 50% 50%, transparent 55%, rgba(0,0,0,0.45) 100%);"></div>
+        <div style="position:absolute; inset:0; display:flex; align-items:center; justify-content:center;"><div style="width:1140px; height:720px;"><dc-import name="Report" os="mac" hint-size="1140px,720px" style="width:1140px; height:720px;"></dc-import></div></div>
+      </div>
+    </div>
+    <div style="flex:none; width:1240px;">
+      <div style="display:flex; align-items:center; gap:10px; margin-bottom:14px;"><span style="font-family:'JetBrains Mono',monospace; font-size:12px; color:#cbd5e1;">Rapport d'exécution — Windows 11</span><span style="font-size:10px; color:#64748B; border:1px solid rgba(255,255,255,0.1); border-radius:5px; padding:2px 7px;">Windows 11 · Fluent</span></div>
+      <div style="position:relative; width:1240px; height:820px; border-radius:16px; overflow:hidden;">
+        <div style="position:absolute; inset:0; background:radial-gradient(110% 110% at 50% 0%, #0a4a6b 0%, transparent 58%), radial-gradient(120% 120% at 82% 92%, #1b6ca8 0%, transparent 50%), radial-gradient(90% 90% at 14% 82%, #0e8a82 0%, transparent 55%), linear-gradient(160deg,#04141f,#08172a);"></div>
+        <div style="position:absolute; inset:0; background:radial-gradient(120% 90% at 50% 50%, transparent 55%, rgba(0,0,0,0.45) 100%);"></div>
+        <div style="position:absolute; inset:0; display:flex; align-items:center; justify-content:center;"><div style="width:1140px; height:720px;"><dc-import name="Report" os="win" hint-size="1140px,720px" style="width:1140px; height:720px;"></dc-import></div></div>
+      </div>
+    </div>
+  </div>
+</div>
+</x-dc>
+</body>
+</html>

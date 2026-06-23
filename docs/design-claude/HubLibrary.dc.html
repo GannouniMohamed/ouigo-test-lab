@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+</helmet>
+<div style="width:100%; height:100%; display:flex; flex-direction:column; background:rgba(11,15,25,0.72); backdrop-filter:blur(34px) saturate(150%); -webkit-backdrop-filter:blur(34px) saturate(150%); border:1px solid rgba(255,255,255,0.09); border-radius:13px; overflow:hidden; box-shadow:0 50px 100px -25px rgba(0,0,0,0.7), 0 0 0 1px rgba(0,0,0,0.35); font-family:-apple-system,'Segoe UI Variable','Segoe UI',system-ui,sans-serif; color:#E8EDF5;">
+
+  <sc-if value="{{ isMac }}" hint-placeholder-val="{{ true }}">
+    <div style="height:42px; flex:none; display:flex; align-items:center; padding:0 16px; gap:8px; border-bottom:1px solid rgba(255,255,255,0.05); position:relative;">
+      <div style="display:flex; gap:8px;">
+        <div style="width:12px; height:12px; border-radius:50%; background:#FF5F57;"></div>
+        <div style="width:12px; height:12px; border-radius:50%; background:#FEBC2E;"></div>
+        <div style="width:12px; height:12px; border-radius:50%; background:#28C840;"></div>
+      </div>
+      <div style="position:absolute; left:0; right:0; text-align:center; font-size:12.5px; color:#94A3B8; font-weight:500; pointer-events:none;">OuiTest — Hub de tests E2E</div>
+    </div>
+  </sc-if>
+  <sc-if value="{{ isWin }}" hint-placeholder-val="{{ true }}">
+    <div style="height:40px; flex:none; display:flex; align-items:center; justify-content:space-between; border-bottom:1px solid rgba(255,255,255,0.05);">
+      <div style="display:flex; align-items:center; gap:9px; padding-left:14px; font-size:12.5px; color:#94A3B8; font-weight:500;">
+        <div style="width:15px; height:15px; border-radius:4px; background:linear-gradient(135deg,#00C9B1,#2F6BFF);"></div>
+        OuiTest — Hub de tests E2E
+      </div>
+      <div style="display:flex; align-self:stretch;">
+        <div style="width:46px; display:flex; align-items:center; justify-content:center; color:#cbd5e1;" style-hover="background:rgba(255,255,255,0.07)"><div style="width:11px; height:1px; background:currentColor;"></div></div>
+        <div style="width:46px; display:flex; align-items:center; justify-content:center; color:#cbd5e1;" style-hover="background:rgba(255,255,255,0.07)"><div style="width:10px; height:10px; border:1px solid currentColor; border-radius:1px;"></div></div>
+        <div style="width:46px; display:flex; align-items:center; justify-content:center; color:#cbd5e1;" style-hover="background:#E81123; color:#fff"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><line x1="5" y1="5" x2="19" y2="19"/><line x1="19" y1="5" x2="5" y2="19"/></svg></div>
+      </div>
+    </div>
+  </sc-if>
+
+  <div style="flex:1; display:flex; min-height:0;">
+
+    <div style="width:84px; flex:none; display:flex; flex-direction:column; align-items:center; padding:18px 0 20px; gap:4px; background:rgba(7,10,18,0.45); border-right:1px solid rgba(255,255,255,0.05);">
+      <div style="width:42px; height:42px; border-radius:12px; background:linear-gradient(135deg,#00C9B1 0%,#2F6BFF 100%); display:flex; align-items:center; justify-content:center; box-shadow:0 8px 22px -6px rgba(0,168,150,0.6); margin-bottom:14px;">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#06121f" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="5 6 12 12 5 18"/><polyline points="12 6 19 12 12 18"/></svg>
+      </div>
+      <div style="position:relative; width:100%; display:flex; flex-direction:column; align-items:center; gap:5px; padding:8px 0;">
+        <div style="position:absolute; left:0; top:5px; bottom:5px; width:3px; border-radius:0 3px 3px 0; background:#2DD4BF;"></div>
+        <div style="width:46px; height:36px; border-radius:11px; background:rgba(0,168,150,0.14); display:flex; align-items:center; justify-content:center; color:#2DD4BF;"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/><polyline points="2 12 12 17 22 12"/></svg></div>
+        <div style="font-size:9.5px; font-weight:600; color:#2DD4BF;">Scénarios</div>
+      </div>
+      <div style="display:flex; flex-direction:column; align-items:center; gap:5px; padding:8px 0;">
+        <div style="width:46px; height:36px; border-radius:11px; display:flex; align-items:center; justify-content:center; color:#64748B;"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><polygon points="10 8 16 12 10 16" fill="currentColor" stroke="none"/></svg></div>
+        <div style="font-size:9.5px; font-weight:500; color:#475569;">Exéc.</div>
+      </div>
+      <div style="display:flex; flex-direction:column; align-items:center; gap:5px; padding:8px 0;">
+        <div style="width:46px; height:36px; border-radius:11px; display:flex; align-items:center; justify-content:center; color:#64748B;"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><line x1="4" y1="20" x2="4" y2="12"/><line x1="10" y1="20" x2="10" y2="5"/><line x1="16" y1="20" x2="16" y2="15"/><line x1="3" y1="20" x2="21" y2="20"/></svg></div>
+        <div style="font-size:9.5px; font-weight:500; color:#475569;">Rapports</div>
+      </div>
+      <div style="display:flex; flex-direction:column; align-items:center; gap:5px; padding:8px 0;">
+        <div style="width:46px; height:36px; border-radius:11px; display:flex; align-items:center; justify-content:center; color:#64748B;"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l1.7 4.8L18.5 9.5 13.7 11.2 12 16 10.3 11.2 5.5 9.5 10.3 7.8z"/><path d="M18 15l.7 2 .8.7-1.9.7-.6 2-.7-2-1.9-.7 1.9-.7z"/></svg></div>
+        <div style="font-size:9.5px; font-weight:500; color:#475569;">IA</div>
+      </div>
+      <div style="margin-top:auto; width:34px; height:34px; border-radius:50%; background:linear-gradient(135deg,#334155,#1e293b); border:1px solid rgba(255,255,255,0.1); display:flex; align-items:center; justify-content:center; font-size:11px; font-weight:600; color:#cbd5e1;">PO</div>
+    </div>
+
+    <div style="flex:1; padding:28px 32px; display:flex; flex-direction:column; min-width:0;">
+
+      <div style="display:flex; align-items:flex-end; justify-content:space-between;">
+        <div>
+          <div style="font-size:24px; font-weight:600; letter-spacing:-0.02em; color:#F1F5F9;">Scénarios</div>
+          <div style="font-size:13.5px; color:#64748B; margin-top:4px;">Vos parcours de test mobile et web — aucun code à écrire.</div>
+        </div>
+        <div style="display:inline-flex; align-items:center; gap:9px; padding:11px 18px; border-radius:10px; background:linear-gradient(135deg,#00C9B1 0%,#2F6BFF 100%); color:#fff; font-size:13.5px; font-weight:600; box-shadow:0 12px 28px -10px rgba(0,168,150,0.6), inset 0 1px 0 rgba(255,255,255,0.25);" style-hover="filter:brightness(1.06)">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+          Nouveau scénario
+        </div>
+      </div>
+
+      <div style="display:flex; align-items:center; gap:14px; margin-top:20px;">
+        <div style="display:inline-flex; padding:4px; background:rgba(15,23,42,0.6); border:1px solid rgba(255,255,255,0.07); border-radius:10px; gap:3px;">
+          <div style="padding:6px 14px; border-radius:7px; background:rgba(255,255,255,0.07); color:#E2E8F0; font-size:12.5px; font-weight:600;">Tous · 6</div>
+          <div style="padding:6px 14px; border-radius:7px; color:#64748B; font-size:12.5px; font-weight:500;">Mobile · 3</div>
+          <div style="padding:6px 14px; border-radius:7px; color:#64748B; font-size:12.5px; font-weight:500;">Web · 3</div>
+        </div>
+        <div style="flex:1; height:38px; border-radius:9px; background:rgba(15,23,42,0.5); border:1px solid rgba(255,255,255,0.07); display:flex; align-items:center; gap:9px; padding:0 13px; color:#475569; font-size:13px;">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.5" y2="16.5"/></svg>
+          Rechercher un scénario…
+        </div>
+      </div>
+
+      <div style="flex:1; display:flex; flex-direction:column; gap:9px; margin-top:18px; min-height:0;">
+
+        <div style="display:flex; align-items:center; gap:14px; padding:13px 16px; border-radius:12px; background:rgba(30,41,59,0.45); border:1px solid rgba(255,255,255,0.06);" style-hover="background:rgba(30,41,59,0.65)">
+          <div style="width:38px; height:38px; flex:none; border-radius:10px; background:rgba(0,168,150,0.12); border:1px solid rgba(0,168,150,0.25); display:flex; align-items:center; justify-content:center; color:#2DD4BF;"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="7" y="3" width="10" height="18" rx="2.5"/><line x1="11" y1="18" x2="13" y2="18"/></svg></div>
+          <div style="flex:1; min-width:0;"><div style="font-size:14px; font-weight:600; color:#E8EDF5;">Parcours de connexion</div><div style="font-size:11.5px; color:#64748B; margin-top:2px;">Mobile · Android Pixel 7 &nbsp;·&nbsp; Préprod &nbsp;·&nbsp; 7 étapes</div></div>
+          <div style="display:flex; align-items:center; gap:7px; width:150px;"><div style="width:7px; height:7px; border-radius:50%; background:#2DD4BF;"></div><span style="font-size:12.5px; color:#5EEAD4; font-weight:500;">Réussi</span><span style="font-size:11.5px; color:#475569; margin-left:auto;">il y a 2 h</span></div>
+          <div style="width:64px; text-align:right; font-size:11.5px; color:#64748B; font-family:'JetBrains Mono',monospace;">0:38</div>
+          <div style="width:34px; height:34px; flex:none; border-radius:9px; border:1px solid rgba(255,255,255,0.1); display:flex; align-items:center; justify-content:center; color:#94A3B8;" style-hover="background:rgba(0,168,150,0.16); color:#2DD4BF"><svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" stroke="none"><polygon points="6 4 20 12 6 20"/></svg></div>
+        </div>
+
+        <div style="display:flex; align-items:center; gap:14px; padding:13px 16px; border-radius:12px; background:rgba(30,41,59,0.45); border:1px solid rgba(255,255,255,0.06);" style-hover="background:rgba(30,41,59,0.65)">
+          <div style="width:38px; height:38px; flex:none; border-radius:10px; background:rgba(47,107,255,0.12); border:1px solid rgba(47,107,255,0.25); display:flex; align-items:center; justify-content:center; color:#7DA8FF;"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><line x1="3" y1="12" x2="21" y2="12"/><path d="M12 3a14 14 0 0 1 0 18 14 14 0 0 1 0-18"/></svg></div>
+          <div style="flex:1; min-width:0;"><div style="font-size:14px; font-weight:600; color:#E8EDF5;">Achat billet Paris → Lyon</div><div style="font-size:11.5px; color:#64748B; margin-top:2px;">Web · Chrome &nbsp;·&nbsp; Recette &nbsp;·&nbsp; 14 étapes</div></div>
+          <div style="display:flex; align-items:center; gap:7px; width:150px;"><div style="width:7px; height:7px; border-radius:50%; background:#2DD4BF;"></div><span style="font-size:12.5px; color:#5EEAD4; font-weight:500;">Réussi</span><span style="font-size:11.5px; color:#475569; margin-left:auto;">il y a 5 h</span></div>
+          <div style="width:64px; text-align:right; font-size:11.5px; color:#64748B; font-family:'JetBrains Mono',monospace;">1:12</div>
+          <div style="width:34px; height:34px; flex:none; border-radius:9px; border:1px solid rgba(255,255,255,0.1); display:flex; align-items:center; justify-content:center; color:#94A3B8;" style-hover="background:rgba(0,168,150,0.16); color:#2DD4BF"><svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" stroke="none"><polygon points="6 4 20 12 6 20"/></svg></div>
+        </div>
+
+        <div style="display:flex; align-items:center; gap:14px; padding:13px 16px; border-radius:12px; background:rgba(255,51,102,0.06); border:1px solid rgba(255,51,102,0.22);" style-hover="background:rgba(255,51,102,0.1)">
+          <div style="width:38px; height:38px; flex:none; border-radius:10px; background:rgba(0,168,150,0.12); border:1px solid rgba(0,168,150,0.25); display:flex; align-items:center; justify-content:center; color:#2DD4BF;"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="7" y="3" width="10" height="18" rx="2.5"/><line x1="11" y1="18" x2="13" y2="18"/></svg></div>
+          <div style="flex:1; min-width:0;"><div style="display:flex; align-items:center; gap:9px;"><span style="font-size:14px; font-weight:600; color:#E8EDF5;">Création de compte</span><span style="display:inline-flex; align-items:center; gap:4px; font-size:10px; font-weight:600; color:#2DD4BF; background:rgba(0,168,150,0.14); border:1px solid rgba(0,168,150,0.35); border-radius:5px; padding:2px 7px;"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M12 3l1.7 4.8L18.5 9.5 13.7 11.2 12 16 10.3 11.2 5.5 9.5 10.3 7.8z"/></svg>Réparation IA</span></div><div style="font-size:11.5px; color:#64748B; margin-top:2px;">Mobile · Android Pixel 7 &nbsp;·&nbsp; Préprod &nbsp;·&nbsp; 9 étapes</div></div>
+          <div style="display:flex; align-items:center; gap:7px; width:150px;"><div style="width:7px; height:7px; border-radius:50%; background:#FF3366;"></div><span style="font-size:12.5px; color:#FCA5B5; font-weight:500;">Échec</span><span style="font-size:11.5px; color:#475569; margin-left:auto;">il y a 1 j</span></div>
+          <div style="width:64px; text-align:right; font-size:11.5px; color:#64748B; font-family:'JetBrains Mono',monospace;">0:52</div>
+          <div style="width:34px; height:34px; flex:none; border-radius:9px; border:1px solid rgba(255,255,255,0.1); display:flex; align-items:center; justify-content:center; color:#94A3B8;" style-hover="background:rgba(0,168,150,0.16); color:#2DD4BF"><svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" stroke="none"><polygon points="6 4 20 12 6 20"/></svg></div>
+        </div>
+
+        <div style="display:flex; align-items:center; gap:14px; padding:13px 16px; border-radius:12px; background:rgba(30,41,59,0.45); border:1px solid rgba(255,255,255,0.06);" style-hover="background:rgba(30,41,59,0.65)">
+          <div style="width:38px; height:38px; flex:none; border-radius:10px; background:rgba(47,107,255,0.12); border:1px solid rgba(47,107,255,0.25); display:flex; align-items:center; justify-content:center; color:#7DA8FF;"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><line x1="3" y1="12" x2="21" y2="12"/><path d="M12 3a14 14 0 0 1 0 18 14 14 0 0 1 0-18"/></svg></div>
+          <div style="flex:1; min-width:0;"><div style="font-size:14px; font-weight:600; color:#E8EDF5;">Recherche &amp; filtres</div><div style="font-size:11.5px; color:#64748B; margin-top:2px;">Web · Firefox &nbsp;·&nbsp; Préprod &nbsp;·&nbsp; 11 étapes</div></div>
+          <div style="display:flex; align-items:center; gap:7px; width:150px;"><div style="width:7px; height:7px; border-radius:50%; background:#2DD4BF;"></div><span style="font-size:12.5px; color:#5EEAD4; font-weight:500;">Réussi</span><span style="font-size:11.5px; color:#475569; margin-left:auto;">hier</span></div>
+          <div style="width:64px; text-align:right; font-size:11.5px; color:#64748B; font-family:'JetBrains Mono',monospace;">0:49</div>
+          <div style="width:34px; height:34px; flex:none; border-radius:9px; border:1px solid rgba(255,255,255,0.1); display:flex; align-items:center; justify-content:center; color:#94A3B8;" style-hover="background:rgba(0,168,150,0.16); color:#2DD4BF"><svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" stroke="none"><polygon points="6 4 20 12 6 20"/></svg></div>
+        </div>
+
+        <div style="display:flex; align-items:center; gap:14px; padding:13px 16px; border-radius:12px; background:rgba(30,41,59,0.45); border:1px solid rgba(255,255,255,0.06);" style-hover="background:rgba(30,41,59,0.65)">
+          <div style="width:38px; height:38px; flex:none; border-radius:10px; background:rgba(47,107,255,0.12); border:1px solid rgba(47,107,255,0.25); display:flex; align-items:center; justify-content:center; color:#7DA8FF;"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><line x1="3" y1="12" x2="21" y2="12"/><path d="M12 3a14 14 0 0 1 0 18 14 14 0 0 1 0-18"/></svg></div>
+          <div style="flex:1; min-width:0;"><div style="font-size:14px; font-weight:600; color:#E8EDF5;">Réinitialisation mot de passe</div><div style="font-size:11.5px; color:#64748B; margin-top:2px;">Web · Edge &nbsp;·&nbsp; Recette &nbsp;·&nbsp; 6 étapes</div></div>
+          <div style="display:flex; align-items:center; gap:7px; width:150px;"><div style="width:7px; height:7px; border-radius:50%; background:#475569;"></div><span style="font-size:12.5px; color:#64748B; font-weight:500;">Jamais exécuté</span></div>
+          <div style="width:64px; text-align:right; font-size:11.5px; color:#475569; font-family:'JetBrains Mono',monospace;">—</div>
+          <div style="width:34px; height:34px; flex:none; border-radius:9px; border:1px solid rgba(255,255,255,0.1); display:flex; align-items:center; justify-content:center; color:#94A3B8;" style-hover="background:rgba(0,168,150,0.16); color:#2DD4BF"><svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" stroke="none"><polygon points="6 4 20 12 6 20"/></svg></div>
+        </div>
+
+        <div style="display:flex; align-items:center; gap:14px; padding:13px 16px; border-radius:12px; background:rgba(30,41,59,0.45); border:1px solid rgba(255,255,255,0.06);" style-hover="background:rgba(30,41,59,0.65)">
+          <div style="width:38px; height:38px; flex:none; border-radius:10px; background:rgba(0,168,150,0.12); border:1px solid rgba(0,168,150,0.25); display:flex; align-items:center; justify-content:center; color:#2DD4BF;"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="7" y="3" width="10" height="18" rx="2.5"/><line x1="11" y1="18" x2="13" y2="18"/></svg></div>
+          <div style="flex:1; min-width:0;"><div style="font-size:14px; font-weight:600; color:#E8EDF5;">Paiement CB</div><div style="font-size:11.5px; color:#64748B; margin-top:2px;">Mobile · Android Pixel 7 &nbsp;·&nbsp; Préprod &nbsp;·&nbsp; 16 étapes</div></div>
+          <div style="display:flex; align-items:center; gap:7px; width:150px;"><div style="width:7px; height:7px; border-radius:50%; background:#2DD4BF;"></div><span style="font-size:12.5px; color:#5EEAD4; font-weight:500;">Réussi</span><span style="font-size:11.5px; color:#475569; margin-left:auto;">il y a 3 j</span></div>
+          <div style="width:64px; text-align:right; font-size:11.5px; color:#64748B; font-family:'JetBrains Mono',monospace;">1:40</div>
+          <div style="width:34px; height:34px; flex:none; border-radius:9px; border:1px solid rgba(255,255,255,0.1); display:flex; align-items:center; justify-content:center; color:#94A3B8;" style-hover="background:rgba(0,168,150,0.16); color:#2DD4BF"><svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" stroke="none"><polygon points="6 4 20 12 6 20"/></svg></div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:1140,&quot;height&quot;:720},&quot;os&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;mac&quot;,&quot;win&quot;],&quot;default&quot;:&quot;mac&quot;,&quot;tsType&quot;:&quot;string&quot;}}">
+class Component extends DCLogic {
+  renderVals() {
+    const os = this.props.os === 'win' ? 'win' : 'mac';
+    return { isMac: os === 'mac', isWin: os === 'win' };
+  }
+}
+</script>
+</body>
+</html>
