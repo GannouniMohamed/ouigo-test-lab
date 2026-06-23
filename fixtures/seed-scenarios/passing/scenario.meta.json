@@ -1,0 +1,11 @@
+{
+	"id": "passing",
+	"name": "Parcours d'accueil",
+	"platform": "web",
+	"browser": "chromium",
+	"defaultEnvironmentId": "local",
+	"tags": ["smoke"],
+	"specFile": "passing.spec.ts",
+	"createdAt": "2026-06-23T00:00:00Z",
+	"lastRun": { "status": "never" }
+}
