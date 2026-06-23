@@ -21,6 +21,24 @@ const activeRecordings = new Map<string, RecordingSession>();
 
 const isWindows = process.platform === "win32";
 
+function killProcessTree(child: ChildProcess): void {
+	const pid = child.pid;
+	if (pid === undefined) return;
+	if (isWindows) {
+		spawn("taskkill", ["/PID", String(pid), "/T", "/F"]);
+	} else {
+		try {
+			process.kill(-pid, "SIGKILL");
+		} catch {
+			try {
+				child.kill("SIGKILL");
+			} catch {
+				/* already dead */
+			}
+		}
+	}
+}
+
 function uniqueId(base: string): string {
 	let candidate = base;
 	let counter = 2;
@@ -97,37 +115,28 @@ export const playwrightRecorder = {
 			throw new Error(`Recording not found: ${recordingId}`);
 		}
 
-		const pid = session.child.pid;
-
-		// Kill the codegen process tree
-		if (pid !== undefined) {
-			if (isWindows) {
-				spawn("taskkill", ["/PID", String(pid), "/T", "/F"]);
-			} else {
-				try {
-					process.kill(-pid, "SIGKILL");
-				} catch {
-					try {
-						session.child.kill("SIGKILL");
-					} catch {
-						/* already dead */
-					}
-				}
-			}
-		}
-
-		// Poll up to ~2s for the output file to exist
+		// IMPORTANT: wait for codegen to have produced its output file BEFORE
+		// killing it. Killing first races against the codegen process even
+		// starting up — on a fast machine the kill lands before any output is
+		// written, so the file never appears. Playwright codegen writes the
+		// output file on launch (and live as you record), so polling for it
+		// first is safe and removes the race.
 		const pollIntervalMs = 50;
-		const maxWaitMs = 2000;
+		const maxWaitMs = 10000;
 		const start = Date.now();
 		while (!existsSync(session.outFile)) {
 			if (Date.now() - start > maxWaitMs) {
+				killProcessTree(session.child);
+				activeRecordings.delete(recordingId);
 				throw new Error(
 					`Timed out waiting for codegen output file: ${session.outFile}`,
 				);
 			}
 			await new Promise((r) => setTimeout(r, pollIntervalMs));
 		}
+
+		// Output exists — now stop the codegen process tree and read it.
+		killProcessTree(session.child);
 
 		const specContent = readFileSync(session.outFile, "utf-8");
 
