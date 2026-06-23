@@ -105,7 +105,7 @@ export const playwrightRunner: TestRunner = {
 		const child = spawn(
 			"npx",
 			["playwright", "test", scenario.specFile, "--config", configPath],
-			{ cwd: dirname(configPath), env: childEnv },
+			{ cwd: dirname(configPath), env: childEnv, detached: true },
 		);
 
 		const state: RunState = { child, cancelled: false };
@@ -237,13 +237,18 @@ export const playwrightRunner: TestRunner = {
 		const state = activeRuns.get(runId);
 		if (!state) return;
 		state.cancelled = true;
-		state.child.kill("SIGTERM");
-		// Also try to kill the process group on macOS/Linux
-		if (state.child.pid !== undefined) {
+		const pid = state.child.pid;
+		if (pid !== undefined) {
 			try {
-				process.kill(-state.child.pid, "SIGTERM");
+				// kill the whole process group (negative pid) — covers playwright workers
+				process.kill(-pid, "SIGKILL");
 			} catch {
-				// Ignore — process group kill may fail if already dead
+				// fallback: kill just the child
+				try {
+					state.child.kill("SIGKILL");
+				} catch {
+					/* already dead */
+				}
 			}
 		}
 	},
