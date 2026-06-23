@@ -13,9 +13,11 @@ import { ensureWorkspace, getWorkspaceDir } from "./workspace";
 export function seedIfEmpty(appRoot: string): void {
 	ensureWorkspace();
 
+	const fixturesRoot = process.env.OTL_FIXTURES ?? join(appRoot, "fixtures");
+
 	const scenarios = listScenarios();
 	if (scenarios.length === 0) {
-		const seedScenariosDir = join(appRoot, "fixtures", "seed-scenarios");
+		const seedScenariosDir = join(fixturesRoot, "seed-scenarios");
 		if (existsSync(seedScenariosDir)) {
 			const workspaceScenariosDir = join(getWorkspaceDir(), "scenarios");
 			for (const entry of readdirSync(seedScenariosDir, {
@@ -33,7 +35,7 @@ export function seedIfEmpty(appRoot: string): void {
 	const envs = listEnvironments();
 	const hasLocal = envs.some((e) => e.id === "local");
 	if (!hasLocal) {
-		const siteIndexPath = join(appRoot, "fixtures", "site", "index.html");
+		const siteIndexPath = join(fixturesRoot, "site", "index.html");
 		const baseURL = pathToFileURL(siteIndexPath).href;
 		saveEnvironment({
 			id: "local",

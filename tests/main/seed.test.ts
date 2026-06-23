@@ -8,6 +8,7 @@ import { listScenarios } from "../../src/main/stores/scenarioStore";
 
 // The repo root contains fixtures/seed-scenarios and fixtures/site
 const REPO_ROOT = join(import.meta.dirname, "../..");
+const FIXTURES_ROOT = join(REPO_ROOT, "fixtures");
 
 let dir: string;
 beforeEach(() => {
@@ -17,6 +18,7 @@ beforeEach(() => {
 afterEach(() => {
 	rmSync(dir, { recursive: true, force: true });
 	Reflect.deleteProperty(process.env, "OTL_WORKSPACE");
+	Reflect.deleteProperty(process.env, "OTL_FIXTURES");
 });
 
 describe("seedIfEmpty", () => {
@@ -58,5 +60,23 @@ describe("seedIfEmpty", () => {
 		// Call again — should remain same count
 		seedIfEmpty(REPO_ROOT);
 		expect(listScenarios()).toHaveLength(afterFirst);
+	});
+
+	it("OTL_FIXTURES override: seeds scenario when OTL_FIXTURES points at repo fixtures/", () => {
+		process.env.OTL_FIXTURES = FIXTURES_ROOT;
+		// Pass an invalid appRoot — the override must take precedence
+		seedIfEmpty("/nonexistent/approot");
+		const scenarios = listScenarios();
+		expect(scenarios.some((s) => s.name === "Parcours d'accueil")).toBe(true);
+	});
+
+	it("OTL_FIXTURES override: seeds 'local' environment with file:// baseURL", () => {
+		process.env.OTL_FIXTURES = FIXTURES_ROOT;
+		seedIfEmpty("/nonexistent/approot");
+		const envs = listEnvironments();
+		const local = envs.find((e) => e.id === "local");
+		expect(local).toBeDefined();
+		expect(local?.baseURL).toMatch(/^file:\/\//);
+		expect(local?.baseURL).toContain("index.html");
 	});
 });
