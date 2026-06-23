@@ -21,7 +21,7 @@ export function Sidebar(): JSX.Element {
 					Exéc.
 				</NavLink>
 				<NavLink
-					to="/scenarios"
+					to="/reports"
 					className={({ isActive }) =>
 						`otl-sidebar__item${isActive ? " active" : ""}`
 					}

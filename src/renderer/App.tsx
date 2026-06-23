@@ -1,5 +1,6 @@
 import { HashRouter, Navigate, Route, Routes } from "react-router-dom";
 import { Sidebar } from "./components/Sidebar";
+import History from "./screens/History";
 import HubLibrary from "./screens/HubLibrary";
 import LiveRun from "./screens/LiveRun";
 import Report from "./screens/Report";
@@ -15,6 +16,7 @@ function App(): JSX.Element {
 						<Route path="/scenarios" element={<HubLibrary />} />
 						<Route path="/run/:runId" element={<LiveRun />} />
 						<Route path="/report/:runId" element={<Report />} />
+						<Route path="/reports" element={<History />} />
 					</Routes>
 				</main>
 			</div>
