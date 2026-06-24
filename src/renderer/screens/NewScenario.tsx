@@ -1,20 +1,35 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import type { Platform, Tunnel } from "../../shared/types";
 import { EnvPicker } from "../components/EnvPicker";
+import { useAppStore } from "../store";
 
 export default function NewScenario(): JSX.Element {
 	const navigate = useNavigate();
+	const activeProjectId = useAppStore((s) => s.activeProjectId);
 
 	const [name, setName] = useState("");
 	const [envId, setEnvId] = useState("");
 	const [recordingId, setRecordingId] = useState<string | null>(null);
-	const [platform, setPlatform] = useState<"web">("web");
+	const [platform, setPlatform] = useState<Platform>("web");
+	const [tunnels, setTunnels] = useState<Tunnel[]>([]);
+	const [tunnelId, setTunnelId] = useState("");
+
+	useEffect(() => {
+		if (!activeProjectId) return;
+		window.api.listTunnels(activeProjectId).then((t) => {
+			setTunnels(t);
+			setTunnelId((current) => current || t[0]?.id || "");
+		});
+	}, [activeProjectId]);
 
 	async function handleStart() {
 		const { recordingId: id } = await window.api.startRecording({
 			name,
 			browser: "chromium",
 			environmentId: envId || "local",
+			projectId: activeProjectId,
+			tunnelId: tunnelId || "general",
 		});
 		setRecordingId(id);
 	}
@@ -87,6 +102,57 @@ export default function NewScenario(): JSX.Element {
 						</span>
 					</button>
 
+					{/* Responsive card */}
+					<button
+						type="button"
+						className={`otl-platform${platform === "responsive" ? " otl-platform--selected" : ""}`}
+						onClick={() => setPlatform("responsive")}
+					>
+						<span className="otl-platform__icon">
+							<svg
+								width="30"
+								height="30"
+								viewBox="0 0 24 24"
+								fill="none"
+								stroke="currentColor"
+								strokeWidth="1.8"
+								strokeLinecap="round"
+								strokeLinejoin="round"
+								aria-hidden="true"
+							>
+								<rect x="3" y="4" width="18" height="12" rx="1.5" />
+								<path d="M9 20h6M12 16v4" />
+							</svg>
+						</span>
+						<span className="otl-platform__labels">
+							<span className="otl-platform__name">Responsive</span>
+							<span className="otl-platform__sub">Playwright</span>
+						</span>
+						<span className="otl-platform__check">
+							{platform === "responsive" ? (
+								<svg
+									width="18"
+									height="18"
+									viewBox="0 0 24 24"
+									fill="var(--otl-cyan)"
+									aria-hidden="true"
+								>
+									<circle cx="12" cy="12" r="10" />
+									<path
+										d="M8 12l3 3 5-5"
+										stroke="#fff"
+										strokeWidth="2"
+										strokeLinecap="round"
+										strokeLinejoin="round"
+										fill="none"
+									/>
+								</svg>
+							) : (
+								<span className="otl-platform__hollow-circle" />
+							)}
+						</span>
+					</button>
+
 					{/* Mobile card — disabled */}
 					<div
 						className="otl-platform otl-platform--disabled"
@@ -118,6 +184,23 @@ export default function NewScenario(): JSX.Element {
 							<span className="otl-platform__soon-pill">bientôt</span>
 						</span>
 					</div>
+				</div>
+
+				{/* Tunnel */}
+				<div>
+					<div className="otl-field-label">Tunnel</div>
+					<select
+						className="otl-select"
+						aria-label="Tunnel"
+						value={tunnelId}
+						onChange={(e) => setTunnelId(e.target.value)}
+					>
+						{tunnels.map((t) => (
+							<option key={t.id} value={t.id}>
+								{t.name}
+							</option>
+						))}
+					</select>
 				</div>
 
 				{/* Scenario name */}
