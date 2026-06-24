@@ -3,7 +3,7 @@ import type { ChildProcess } from "node:child_process";
 import { randomUUID } from "node:crypto";
 import { existsSync, mkdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
-import type { Scenario } from "../../shared/types";
+import type { Platform, Scenario } from "../../shared/types";
 import { getEnvironment } from "../stores/projectStore";
 import { getScenario, saveScenario } from "../stores/scenarioStore";
 import { getWorkspaceDir } from "../workspace";
@@ -17,6 +17,7 @@ interface RecordingSession {
 	environmentId: string;
 	projectId: string;
 	tunnelId: string;
+	platform: Platform;
 }
 
 const activeRecordings = new Map<string, RecordingSession>();
@@ -62,6 +63,7 @@ export const playwrightRecorder = {
 		environmentId: string;
 		projectId: string;
 		tunnelId: string;
+		platform?: Platform;
 	}): Promise<{ recordingId: string }> {
 		const env = getEnvironment(opts.projectId, opts.environmentId);
 		const recordingId = randomUUID();
@@ -108,6 +110,7 @@ export const playwrightRecorder = {
 			environmentId: opts.environmentId,
 			projectId: opts.projectId,
 			tunnelId: opts.tunnelId,
+			platform: opts.platform ?? "web",
 		});
 
 		return { recordingId };
@@ -155,7 +158,7 @@ export const playwrightRecorder = {
 			projectId: session.projectId,
 			tunnelId: session.tunnelId,
 			name: session.name,
-			platform: "web",
+			platform: session.platform,
 			browser: session.browser,
 			defaultEnvironmentId: session.environmentId,
 			tags: [],

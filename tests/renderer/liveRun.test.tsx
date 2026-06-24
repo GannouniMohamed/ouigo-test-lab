@@ -28,9 +28,11 @@ afterEach(() => {
 	Reflect.deleteProperty((globalThis as any).window, "api");
 });
 
-function renderAt() {
+function renderAt(state?: unknown) {
+	const entry =
+		state !== undefined ? { pathname: "/run/run-1", state } : "/run/run-1";
 	return render(
-		<MemoryRouter initialEntries={["/run/run-1"]}>
+		<MemoryRouter initialEntries={[entry]}>
 			<Routes>
 				<Route path="/run/:runId" element={<LiveRun />} />
 			</Routes>
@@ -53,5 +55,18 @@ describe("LiveRun", () => {
 		await waitFor(() =>
 			expect(navigateMock).toHaveBeenCalledWith("/report/run-1"),
 		);
+	});
+
+	it("affiche le badge AUTO et le bandeau en mode auto", () => {
+		renderAt({ auto: true });
+		expect(screen.getByText("AUTO")).toBeInTheDocument();
+		expect(
+			screen.getByText(/Première exécution — validation automatique/i),
+		).toBeInTheDocument();
+	});
+
+	it("n'affiche pas le mode AUTO sans state.auto", () => {
+		renderAt(undefined);
+		expect(screen.queryByText("AUTO")).not.toBeInTheDocument();
 	});
 });

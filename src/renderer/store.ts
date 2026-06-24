@@ -50,6 +50,8 @@ interface AppState {
 	loadProjects: () => Promise<void>;
 	activeEnvByProject: Record<string, string>;
 	setActiveEnv: (projectId: string, envId: string) => void;
+	firstRunScenarioId: string | null;
+	setFirstRunScenarioId: (id: string | null) => void;
 }
 
 export const useAppStore = create<AppState>((set, get) => ({
@@ -76,4 +78,6 @@ export const useAppStore = create<AppState>((set, get) => ({
 		writeActiveEnvMap(next);
 		set({ activeEnvByProject: next });
 	},
+	firstRunScenarioId: null,
+	setFirstRunScenarioId: (id) => set({ firstRunScenarioId: id }),
 }));

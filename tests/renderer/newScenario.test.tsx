@@ -11,8 +11,12 @@ vi.mock("react-router-dom", async (orig) => ({
 	useNavigate: () => navigateMock,
 }));
 
+const runScenario = vi.fn().mockResolvedValue({ runId: "run-9" });
+
 beforeEach(() => {
 	navigateMock.mockReset();
+	runScenario.mockReset();
+	runScenario.mockResolvedValue({ runId: "run-9" });
 	// biome-ignore lint/suspicious/noExplicitAny: test stub
 	(globalThis as any).window.api = {
 		listEnvironments: vi.fn().mockResolvedValue([]),
@@ -22,32 +26,37 @@ beforeEach(() => {
 				projectId: "default",
 				name: "Général",
 				order: 0,
+				color: "",
+				description: "",
 				createdAt: "2026-06-24T00:00:00Z",
 			},
 		]),
 		startRecording: vi.fn().mockResolvedValue({ recordingId: "rec-1" }),
 		stopRecording: vi.fn().mockResolvedValue({
-			id: "parcours",
+			id: "scn-1",
+			projectId: "p1",
+			tunnelId: "t1",
 			name: "Parcours",
 			platform: "web",
 			browser: "chromium",
-			defaultEnvironmentId: "local",
+			defaultEnvironmentId: "preprod",
 			tags: [],
 			specFile: "parcours.spec.ts",
-			createdAt: "",
+			createdAt: "2026-06-24T00:00:00Z",
 			lastRun: { status: "never" },
 		}),
+		runScenario,
 	} as unknown as typeof window.api;
 	useAppStore.setState({ activeProjectId: "default" });
 });
 afterEach(() => {
 	// biome-ignore lint/suspicious/noExplicitAny: cleanup
 	Reflect.deleteProperty((globalThis as any).window, "api");
-	useAppStore.setState({ activeProjectId: "" });
+	useAppStore.setState({ activeProjectId: "", firstRunScenarioId: null });
 });
 
 describe("NewScenario", () => {
-	it("démarre puis arrête l'enregistrement et revient à la bibliothèque", async () => {
+	it("démarre puis arrête l'enregistrement et lance l'auto-run", async () => {
 		render(
 			<MemoryRouter>
 				<NewScenario />
@@ -73,7 +82,38 @@ describe("NewScenario", () => {
 		await userEvent.click(screen.getByRole("button", { name: /arrêter/i }));
 		await waitFor(() => {
 			expect(window.api.stopRecording).toHaveBeenCalledWith("rec-1");
-			expect(navigateMock).toHaveBeenCalledWith("/scenarios");
+			expect(navigateMock).toHaveBeenCalledWith("/run/run-9", {
+				state: { auto: true },
+			});
 		});
+	});
+
+	it("arrêter déclenche auto-run et navigue vers LiveRun en mode AUTO", async () => {
+		render(
+			<MemoryRouter>
+				<NewScenario />
+			</MemoryRouter>,
+		);
+		await userEvent.type(
+			screen.getByPlaceholderText("Nom du scénario"),
+			"Parcours",
+		);
+		await userEvent.click(
+			screen.getByRole("button", { name: /démarrer l'enregistrement/i }),
+		);
+		await waitFor(() => expect(window.api.startRecording).toHaveBeenCalled());
+		await userEvent.click(screen.getByRole("button", { name: /arrêter/i }));
+		await waitFor(() => {
+			expect(runScenario).toHaveBeenCalledWith(
+				"p1",
+				"t1",
+				"scn-1",
+				expect.any(String),
+			);
+			expect(navigateMock).toHaveBeenCalledWith("/run/run-9", {
+				state: { auto: true },
+			});
+		});
+		expect(useAppStore.getState().firstRunScenarioId).toBe("scn-1");
 	});
 });

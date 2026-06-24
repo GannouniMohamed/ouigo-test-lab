@@ -1,5 +1,6 @@
 import type {
 	Environment,
+	Platform,
 	Project,
 	Report,
 	ReportSummary,
@@ -66,6 +67,7 @@ interface OtlApi {
 		environmentId: string;
 		projectId: string;
 		tunnelId: string;
+		platform?: Platform;
 	}): Promise<{ recordingId: string }>;
 	stopRecording(recordingId: string): Promise<Scenario>;
 }

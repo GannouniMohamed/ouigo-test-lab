@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { useNavigate, useParams } from "react-router-dom";
+import { useLocation, useNavigate, useParams } from "react-router-dom";
 import type { RunEvent } from "../../shared/types";
 
 type StepStatus = "running" | "passed" | "failed";
@@ -121,6 +121,8 @@ function formatElapsed(secs: number): string {
 export default function LiveRun(): JSX.Element {
 	const { runId } = useParams<{ runId: string }>();
 	const navigate = useNavigate();
+	const auto =
+		(useLocation().state as { auto?: boolean } | null)?.auto ?? false;
 
 	const [state, setState] = useState<LiveState>({
 		steps: [],
@@ -212,6 +214,7 @@ export default function LiveRun(): JSX.Element {
 						<span className="otl-run-status__dot" />
 						En cours
 					</span>
+					{auto && <span className="live-run__auto-badge">AUTO</span>}
 					<h1 className="live-run__title">Exécution en cours</h1>
 				</div>
 				<div className="live-run__header-right">
@@ -240,6 +243,18 @@ export default function LiveRun(): JSX.Element {
 					</button>
 				</div>
 			</div>
+
+			{auto && (
+				<div className="live-run__auto-banner">
+					<div className="live-run__auto-banner-title">
+						Première exécution — validation automatique
+					</div>
+					<div className="live-run__auto-banner-text">
+						Le scénario que vous venez d'enregistrer est lancé une fois pour
+						vérifier qu'il fonctionne. Aucune action requise.
+					</div>
+				</div>
+			)}
 
 			{/* Progress bar */}
 			<div className="otl-progress">

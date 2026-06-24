@@ -144,6 +144,25 @@ describe("HubLibrary", () => {
 		expect(call[2]).toBe("login");
 	});
 
+	it("affiche '1ʳᵉ exécution…' et cache Lancer pour le scénario en first-run", async () => {
+		useAppStore.setState({ firstRunScenarioId: "login" });
+		render(
+			<MemoryRouter>
+				<HubLibrary />
+			</MemoryRouter>,
+		);
+		await screen.findByText("Connexion");
+		// The running scenario shows the first-run label
+		expect(screen.getByText(/1ʳᵉ exécution…/)).toBeInTheDocument();
+		// The running scenario's row has no "Lancer" button — only the other scenario does
+		const launchButtons = screen.getAllByRole("button", { name: /lancer/i });
+		expect(launchButtons).toHaveLength(1);
+		// The other scenario (Recherche train) still has a Lancer button
+		expect(screen.getByText("Recherche train")).toBeInTheDocument();
+		// Reset
+		useAppStore.setState({ firstRunScenarioId: null });
+	});
+
 	it("sélectionner un groupe vide affiche son en-tête et son bouton Éditer", async () => {
 		render(
 			<MemoryRouter>

@@ -513,6 +513,20 @@ body {
 	color: var(--otl-text-3);
 }
 
+.otl-badge--new .otl-badge__dot {
+	background: var(--otl-blue);
+}
+
+.otl-badge--new .otl-badge__label {
+	color: var(--otl-blue);
+}
+
+.otl-card__firstrun {
+	font-size: 12px;
+	color: var(--otl-text-2);
+	font-style: italic;
+}
+
 /* App layout (below the title bar) */
 .otl-app {
 	display: flex;
@@ -1762,4 +1776,32 @@ body {
 	color: var(--otl-text-2);
 	font-size: 13px;
 	padding: 8px 2px;
+}
+.live-run__auto-badge {
+	display: inline-flex;
+	align-items: center;
+	padding: 2px 8px;
+	border-radius: 6px;
+	font-size: 11px;
+	font-weight: 700;
+	letter-spacing: 0.04em;
+	color: #04121a;
+	background: linear-gradient(90deg, var(--otl-cyan), var(--otl-blue));
+}
+.live-run__auto-banner {
+	margin: 0 0 1rem;
+	padding: 12px 14px;
+	border-radius: 10px;
+	background: rgba(0, 201, 177, 0.08);
+	border: 1px solid rgba(0, 201, 177, 0.25);
+}
+.live-run__auto-banner-title {
+	font-size: 13px;
+	font-weight: 600;
+	color: var(--otl-text);
+}
+.live-run__auto-banner-text {
+	margin-top: 4px;
+	font-size: 12.5px;
+	color: var(--otl-text-2);
 }
