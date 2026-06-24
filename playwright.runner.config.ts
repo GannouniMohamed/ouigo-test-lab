@@ -5,6 +5,7 @@ export default defineConfig({
 	reporter: [
 		["list"],
 		["json", { outputFile: process.env.OTL_JSON_OUT || "pw.json" }],
+		["./playwright.step-reporter.cjs"],
 	],
 	outputDir: process.env.OTL_ARTIFACTS || "pw-artifacts",
 	use: {
