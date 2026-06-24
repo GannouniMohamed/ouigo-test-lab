@@ -4,6 +4,7 @@ import { AppGate } from "./components/AppGate";
 import { ProjectContextBar } from "./components/ProjectContextBar";
 import { Sidebar } from "./components/Sidebar";
 import { TitleBar } from "./components/TitleBar";
+import EditGroupe from "./screens/EditGroupe";
 import History from "./screens/History";
 import HubLibrary from "./screens/HubLibrary";
 import LiveRun from "./screens/LiveRun";
@@ -35,6 +36,10 @@ function App(): JSX.Element {
 								<Route path="/scenarios" element={<HubLibrary />} />
 								<Route path="/scenarios/new" element={<NewScenario />} />
 								<Route path="/scenarios/groups/new" element={<NewGroupe />} />
+								<Route
+									path="/scenarios/groups/:tunnelId/edit"
+									element={<EditGroupe />}
+								/>
 								<Route path="/run/:runId" element={<LiveRun />} />
 								<Route path="/report/:runId" element={<Report />} />
 								<Route path="/reports" element={<History />} />
