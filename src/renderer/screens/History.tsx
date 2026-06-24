@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import type { ReportSummary, Scenario } from "../../shared/types";
 import { StatusBadge } from "../components/StatusBadge";
+import { useAppStore } from "../store";
 
 type BadgeStatus = "passed" | "failed" | "never";
 
@@ -26,23 +27,25 @@ function formatDuration(ms: number): string {
 
 export default function History(): JSX.Element {
 	const navigate = useNavigate();
+	const activeProjectId = useAppStore((s) => s.activeProjectId);
 	const [reports, setReports] = useState<ReportSummary[]>([]);
 	const [scenarioMap, setScenarioMap] = useState<Map<string, string>>(
 		new Map(),
 	);
 
 	useEffect(() => {
-		Promise.all([window.api.listReports(), window.api.listScenarios()]).then(
-			([reps, scenarios]: [ReportSummary[], Scenario[]]) => {
-				const map = new Map<string, string>();
-				for (const s of scenarios) {
-					map.set(s.id, s.name);
-				}
-				setScenarioMap(map);
-				setReports(reps);
-			},
-		);
-	}, []);
+		Promise.all([
+			window.api.listReports(),
+			activeProjectId
+				? window.api.listScenariosByProject(activeProjectId)
+				: Promise.resolve([]),
+		]).then(([reps, scenarios]: [ReportSummary[], Scenario[]]) => {
+			const map = new Map<string, string>();
+			for (const s of scenarios) map.set(s.id, s.name);
+			setScenarioMap(map);
+			setReports(reps);
+		});
+	}, [activeProjectId]);
 
 	return (
 		<div style={{ padding: "2rem" }}>
