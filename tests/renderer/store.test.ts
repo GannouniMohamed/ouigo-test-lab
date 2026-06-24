@@ -3,7 +3,17 @@ import { useAppStore } from "../../src/renderer/store";
 
 afterEach(() => {
 	localStorage.clear();
-	useAppStore.setState({ activeEnvByProject: {} });
+	useAppStore.setState({ activeEnvByProject: {}, firstRunScenarioId: null });
+});
+
+describe("store firstRunScenarioId", () => {
+	it("setFirstRunScenarioId pose puis efface le flag", () => {
+		expect(useAppStore.getState().firstRunScenarioId).toBeNull();
+		useAppStore.getState().setFirstRunScenarioId("scn-1");
+		expect(useAppStore.getState().firstRunScenarioId).toBe("scn-1");
+		useAppStore.getState().setFirstRunScenarioId(null);
+		expect(useAppStore.getState().firstRunScenarioId).toBeNull();
+	});
 });
 
 describe("store activeEnvByProject", () => {
