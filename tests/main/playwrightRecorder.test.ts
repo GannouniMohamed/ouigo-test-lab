@@ -8,7 +8,6 @@ import { saveProject } from "../../src/main/stores/projectStore";
 import {
 	getScenario,
 	listScenarios,
-	saveScenario,
 } from "../../src/main/stores/scenarioStore";
 import { saveTunnel } from "../../src/main/stores/tunnelStore";
 
