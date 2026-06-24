@@ -9,6 +9,7 @@ import HubLibrary from "./screens/HubLibrary";
 import LiveRun from "./screens/LiveRun";
 import NewProject from "./screens/NewProject";
 import NewScenario from "./screens/NewScenario";
+import ProjectEnvironments from "./screens/ProjectEnvironments";
 import Projects from "./screens/Projects";
 import Report from "./screens/Report";
 import { useAppStore } from "./store";
@@ -40,6 +41,10 @@ function App(): JSX.Element {
 								<Route path="/reports" element={<History />} />
 								<Route path="/projects" element={<Projects />} />
 								<Route path="/projects/new" element={<NewProject />} />
+								<Route
+									path="/projects/:id/environments"
+									element={<ProjectEnvironments />}
+								/>
 							</Routes>
 						</AppGate>
 					</main>
