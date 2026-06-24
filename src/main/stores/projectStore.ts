@@ -68,11 +68,13 @@ export function saveProject(p: Project): void {
 }
 
 export function deleteProject(id: string): void {
+	if (!existsSync(metaPath(id))) {
+		throw new Error(`Project not found: ${id}`);
+	}
 	if (listProjects().length <= 1) {
 		throw new Error("Cannot delete the last project");
 	}
-	const dir = projectDir(id);
-	if (existsSync(dir)) rmSync(dir, { recursive: true, force: true });
+	rmSync(projectDir(id), { recursive: true, force: true });
 }
 
 export function listEnvironments(projectId: string): Environment[] {

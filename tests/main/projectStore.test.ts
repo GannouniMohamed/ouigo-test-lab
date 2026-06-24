@@ -101,4 +101,9 @@ describe("projectStore", () => {
 		store.saveProject(sample("p1"));
 		expect(() => store.deleteProject("p1")).toThrow();
 	});
+	it("deleteProject lève une erreur si le projet est inconnu", () => {
+		store.saveProject(sample("p1"));
+		store.saveProject(sample("p2"));
+		expect(() => store.deleteProject("nope")).toThrow();
+	});
 });

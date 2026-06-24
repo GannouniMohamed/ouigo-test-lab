@@ -55,8 +55,10 @@ export function saveTunnel(t: Tunnel): void {
 function tunnelHasScenarios(projectId: string, tunnelId: string): boolean {
 	const scenariosDir = join(tunnelDir(projectId, tunnelId), "scenarios");
 	if (!existsSync(scenariosDir)) return false;
-	return readdirSync(scenariosDir, { withFileTypes: true }).some((e) =>
-		e.isDirectory(),
+	return readdirSync(scenariosDir, { withFileTypes: true }).some(
+		(e) =>
+			e.isDirectory() &&
+			existsSync(join(scenariosDir, e.name, "scenario.meta.json")),
 	);
 }
 
