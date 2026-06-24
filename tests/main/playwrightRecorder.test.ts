@@ -4,14 +4,33 @@ import { join, resolve } from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { playwrightRecorder } from "../../src/main/recorder/playwrightRecorder";
 import { slugify } from "../../src/main/recorder/slugify";
-import { saveEnvironment } from "../../src/main/stores/environmentStore";
+import { saveProject } from "../../src/main/stores/projectStore";
 import {
 	getScenario,
 	listScenarios,
+	saveScenario,
 } from "../../src/main/stores/scenarioStore";
+import { saveTunnel } from "../../src/main/stores/tunnelStore";
 
 const REPO = resolve(__dirname, "../..");
 let dir: string;
+
+function seedDefaultProject(baseURL: string): void {
+	saveProject({
+		id: "default",
+		name: "Projet par défaut",
+		description: "",
+		environments: [{ id: "local", label: "Local", baseURL, variables: {} }],
+		createdAt: "2026-06-24T00:00:00Z",
+	});
+	saveTunnel({
+		id: "general",
+		projectId: "default",
+		name: "Général",
+		order: 0,
+		createdAt: "2026-06-24T00:00:00Z",
+	});
+}
 
 beforeEach(() => {
 	dir = mkdtempSync(join(tmpdir(), "otl-rec-"));
@@ -22,12 +41,7 @@ beforeEach(() => {
 		REPO,
 		"tests/fixtures/fake-codegen.mjs",
 	);
-	saveEnvironment({
-		id: "local",
-		label: "Local",
-		baseURL: "https://x.example",
-		variables: {},
-	});
+	seedDefaultProject("https://x.example");
 });
 afterEach(() => {
 	rmSync(dir, { recursive: true, force: true });
@@ -52,6 +66,8 @@ describe("playwrightRecorder", () => {
 			name: "Parcours enregistré",
 			browser: "chromium",
 			environmentId: "local",
+			projectId: "default",
+			tunnelId: "general",
 		});
 		expect(recordingId).toBeTruthy();
 		// let the fake codegen write the file
@@ -59,8 +75,10 @@ describe("playwrightRecorder", () => {
 		const scenario = await playwrightRecorder.stopRecording(recordingId);
 		expect(scenario.name).toBe("Parcours enregistré");
 		expect(scenario.platform).toBe("web");
-		expect(listScenarios()).toHaveLength(1);
+		expect(listScenarios("default", "general")).toHaveLength(1);
 		// the generated spec was persisted
-		expect(getScenario(scenario.id).specFile).toMatch(/\.spec\.ts$/);
+		expect(getScenario("default", "general", scenario.id).specFile).toMatch(
+			/\.spec\.ts$/,
+		);
 	}, 15000);
 });

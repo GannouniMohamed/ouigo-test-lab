@@ -76,7 +76,15 @@ export const playwrightRunner: TestRunner = {
 		mkdirSync(artifactsDir, { recursive: true });
 
 		const jsonOut = join(runDir, "playwright.json");
-		const scenarioDir = join(getWorkspaceDir(), "scenarios", scenario.id);
+		const scenarioDir = join(
+			getWorkspaceDir(),
+			"projects",
+			scenario.projectId,
+			"tunnels",
+			scenario.tunnelId,
+			"scenarios",
+			scenario.id,
+		);
 
 		const configPath =
 			process.env.OTL_RUNNER_CONFIG ??
@@ -174,7 +182,7 @@ export const playwrightRunner: TestRunner = {
 				}
 
 				saveReport(report);
-				updateLastRun(scenario.id, {
+				updateLastRun(scenario.projectId, scenario.tunnelId, scenario.id, {
 					status: report.status === "passed" ? "passed" : "failed",
 					at: startedAt,
 					durationMs: report.durationMs,
