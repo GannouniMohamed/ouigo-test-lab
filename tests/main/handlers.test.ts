@@ -185,6 +185,41 @@ describe("handlers", () => {
 		);
 	});
 
+	it("handleCreateProject construit les environnements fournis (libellé + URL)", () => {
+		const p = handleCreateProject({
+			name: "Démo",
+			description: "",
+			environments: [
+				{ label: "Préprod", baseURL: "https://preprod.demo" },
+				{ label: "Recette", baseURL: "https://recette.demo" },
+			],
+		});
+		expect(p.environments.map((e) => e.label)).toEqual(["Préprod", "Recette"]);
+		expect(p.environments.map((e) => e.baseURL)).toEqual([
+			"https://preprod.demo",
+			"https://recette.demo",
+		]);
+		// ids dérivés et uniques
+		expect(new Set(p.environments.map((e) => e.id)).size).toBe(2);
+	});
+
+	it("handleCreateProject sans environnements garde les défauts", () => {
+		const p = handleCreateProject({ name: "Démo2", description: "" });
+		expect(p.environments.map((e) => e.id)).toEqual(["preprod", "recette"]);
+	});
+
+	it("handleCreateProject déduplique les ids d'environnement", () => {
+		const p = handleCreateProject({
+			name: "Démo3",
+			description: "",
+			environments: [
+				{ label: "Prod", baseURL: "https://a" },
+				{ label: "Prod", baseURL: "https://b" },
+			],
+		});
+		expect(p.environments[0].id).not.toBe(p.environments[1].id);
+	});
+
 	it("handleCreateProject génère un id sain même si le nom slugifie en vide", () => {
 		// slugify("!!!") returns "scenario" (its own fallback), so the handlers'
 		// fallback ("projet") is exercised when base="" is passed directly. Here we

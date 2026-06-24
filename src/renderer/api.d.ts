@@ -23,6 +23,7 @@ interface OtlApi {
 	createProject(input: {
 		name: string;
 		description: string;
+		environments?: Array<{ label: string; baseURL: string }>;
 	}): Promise<Project>;
 	updateProject(p: Project): Promise<void>;
 	deleteProject(id: string): Promise<void>;
