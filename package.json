@@ -22,6 +22,7 @@
 			"out/**",
 			"fixtures/**",
 			"playwright.runner.config.ts",
+			"playwright.step-reporter.cjs",
 			"package.json"
 		],
 		"mac": {

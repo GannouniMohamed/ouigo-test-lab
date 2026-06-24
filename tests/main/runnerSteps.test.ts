@@ -1,4 +1,4 @@
-import { existsSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
@@ -287,15 +287,5 @@ describe("logique de remplacement des steps et préservation de la capture d'éc
 
 		const firstFailed = customSteps?.find((s) => s.status === "failed");
 		expect(firstFailed?.screenshotPath).toBeUndefined();
-	});
-
-	it("vérifie que le fichier steps.json est bien créé par le runner", () => {
-		// Simply verify stepsOut path construction logic (integration-light)
-		const runId = "test-run-123";
-		const workspace = dir;
-		const runDir = join(workspace, "runs", runId);
-		const stepsOut = join(runDir, "steps.json");
-		expect(stepsOut).toBe(join(workspace, "runs", runId, "steps.json"));
-		expect(existsSync(stepsOut)).toBe(false);
 	});
 });
