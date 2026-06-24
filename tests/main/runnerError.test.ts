@@ -25,6 +25,8 @@ afterEach(() => {
 
 const scenario: Scenario = {
 	id: "x",
+	projectId: "default",
+	tunnelId: "general",
 	name: "X",
 	platform: "web",
 	browser: "chromium",

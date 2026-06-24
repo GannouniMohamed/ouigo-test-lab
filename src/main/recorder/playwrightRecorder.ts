@@ -4,7 +4,7 @@ import { randomUUID } from "node:crypto";
 import { existsSync, mkdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import type { Scenario } from "../../shared/types";
-import { getEnvironment } from "../stores/environmentStore";
+import { getEnvironment } from "../stores/projectStore";
 import { getScenario, saveScenario } from "../stores/scenarioStore";
 import { getWorkspaceDir } from "../workspace";
 import { slugify } from "./slugify";
@@ -15,6 +15,8 @@ interface RecordingSession {
 	name: string;
 	browser: "chromium" | "firefox" | "webkit";
 	environmentId: string;
+	projectId: string;
+	tunnelId: string;
 }
 
 const activeRecordings = new Map<string, RecordingSession>();
@@ -39,17 +41,15 @@ function killProcessTree(child: ChildProcess): void {
 	}
 }
 
-function uniqueId(base: string): string {
+function uniqueId(projectId: string, tunnelId: string, base: string): string {
 	let candidate = base;
 	let counter = 2;
 	while (true) {
 		try {
-			getScenario(candidate);
-			// If getScenario didn't throw, the id is taken
+			getScenario(projectId, tunnelId, candidate);
 			candidate = `${base}-${counter}`;
 			counter++;
 		} catch {
-			// Not found — this id is available
 			return candidate;
 		}
 	}
@@ -60,8 +60,10 @@ export const playwrightRecorder = {
 		name: string;
 		browser: "chromium" | "firefox" | "webkit";
 		environmentId: string;
+		projectId: string;
+		tunnelId: string;
 	}): Promise<{ recordingId: string }> {
-		const env = getEnvironment(opts.environmentId);
+		const env = getEnvironment(opts.projectId, opts.environmentId);
 		const recordingId = randomUUID();
 
 		const recordingsDir = join(getWorkspaceDir(), "recordings");
@@ -104,6 +106,8 @@ export const playwrightRecorder = {
 			name: opts.name,
 			browser: opts.browser,
 			environmentId: opts.environmentId,
+			projectId: opts.projectId,
+			tunnelId: opts.tunnelId,
 		});
 
 		return { recordingId };
@@ -140,10 +144,16 @@ export const playwrightRecorder = {
 
 		const specContent = readFileSync(session.outFile, "utf-8");
 
-		const id = uniqueId(slugify(session.name));
+		const id = uniqueId(
+			session.projectId,
+			session.tunnelId,
+			slugify(session.name),
+		);
 
 		const scenario: Scenario = {
 			id,
+			projectId: session.projectId,
+			tunnelId: session.tunnelId,
 			name: session.name,
 			platform: "web",
 			browser: session.browser,

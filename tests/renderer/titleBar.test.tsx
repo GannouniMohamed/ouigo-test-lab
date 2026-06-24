@@ -63,4 +63,14 @@ describe("TitleBar", () => {
 			screen.queryByRole("button", { name: "Fermer" }),
 		).not.toBeInTheDocument();
 	});
+
+	it("affiche le titre Projets pour /projects", () => {
+		setPlatform("darwin");
+		render(
+			<MemoryRouter initialEntries={["/projects"]}>
+				<TitleBar />
+			</MemoryRouter>,
+		);
+		expect(screen.getByText("Projets")).toBeInTheDocument();
+	});
 });

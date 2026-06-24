@@ -58,6 +58,22 @@ const icons = {
 			/>
 		</svg>
 	),
+	projects: (
+		<svg
+			width="20"
+			height="20"
+			viewBox="0 0 24 24"
+			fill="none"
+			aria-hidden="true"
+		>
+			<path
+				d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7Z"
+				stroke="currentColor"
+				strokeWidth="1.6"
+				strokeLinejoin="round"
+			/>
+		</svg>
+	),
 	ai: (
 		<svg
 			width="20"
@@ -82,6 +98,12 @@ const navItems: NavItem[] = [
 		icon: icons.scenarios,
 		to: "/scenarios",
 		match: (p) => p === "/" || p.startsWith("/scenarios"),
+	},
+	{
+		label: "Projets",
+		icon: icons.projects,
+		to: "/projects",
+		match: (p) => p.startsWith("/projects"),
 	},
 	{
 		label: "Exéc.",

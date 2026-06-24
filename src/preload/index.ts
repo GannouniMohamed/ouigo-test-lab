@@ -1,5 +1,5 @@
 import { contextBridge, ipcRenderer } from "electron";
-import type { Environment, RunEvent } from "../shared/types";
+import type { Environment, Project, RunEvent } from "../shared/types";
 
 contextBridge.exposeInMainWorld("api", {
 	platform: process.platform,
@@ -17,39 +17,74 @@ contextBridge.exposeInMainWorld("api", {
 	browsersReady() {
 		return ipcRenderer.invoke("browsers:ready");
 	},
-
 	installBrowsers() {
 		return ipcRenderer.invoke("browsers:install");
 	},
 
-	listScenarios() {
-		return ipcRenderer.invoke("scenario:list");
+	listProjects() {
+		return ipcRenderer.invoke("project:list");
+	},
+	getProject(id: string) {
+		return ipcRenderer.invoke("project:get", id);
+	},
+	createProject(input: { name: string; description: string }) {
+		return ipcRenderer.invoke("project:create", input);
+	},
+	updateProject(p: Project) {
+		return ipcRenderer.invoke("project:update", p);
+	},
+	deleteProject(id: string) {
+		return ipcRenderer.invoke("project:delete", id);
 	},
 
-	getScenario(id: string) {
-		return ipcRenderer.invoke("scenario:get", id);
+	listEnvironments(projectId: string) {
+		return ipcRenderer.invoke("environment:list", projectId);
+	},
+	saveEnvironment(projectId: string, env: Environment) {
+		return ipcRenderer.invoke("environment:save", projectId, env);
+	},
+	deleteEnvironment(projectId: string, envId: string) {
+		return ipcRenderer.invoke("environment:delete", projectId, envId);
 	},
 
-	deleteScenario(id: string) {
-		return ipcRenderer.invoke("scenario:delete", id);
+	listTunnels(projectId: string) {
+		return ipcRenderer.invoke("tunnel:list", projectId);
+	},
+	createTunnel(input: { projectId: string; name: string }) {
+		return ipcRenderer.invoke("tunnel:create", input);
+	},
+	deleteTunnel(projectId: string, tunnelId: string) {
+		return ipcRenderer.invoke("tunnel:delete", projectId, tunnelId);
 	},
 
-	listEnvironments() {
-		return ipcRenderer.invoke("environment:list");
+	listScenariosByProject(projectId: string) {
+		return ipcRenderer.invoke("scenario:listByProject", projectId);
 	},
-
-	saveEnvironment(env: Environment) {
-		return ipcRenderer.invoke("environment:save", env);
+	deleteScenario(projectId: string, tunnelId: string, scenarioId: string) {
+		return ipcRenderer.invoke(
+			"scenario:delete",
+			projectId,
+			tunnelId,
+			scenarioId,
+		);
 	},
-
-	runScenario(scenarioId: string, envId: string) {
-		return ipcRenderer.invoke("scenario:run", scenarioId, envId);
+	runScenario(
+		projectId: string,
+		tunnelId: string,
+		scenarioId: string,
+		envId: string,
+	) {
+		return ipcRenderer.invoke(
+			"scenario:run",
+			projectId,
+			tunnelId,
+			scenarioId,
+			envId,
+		);
 	},
-
 	cancelRun(runId: string) {
 		return ipcRenderer.invoke("run:cancel", runId);
 	},
-
 	onRunEvent(runId: string, cb: (e: RunEvent) => void) {
 		const channel = `run-event:${runId}`;
 		const listener = (_e: Electron.IpcRendererEvent, payload: RunEvent) =>
@@ -61,7 +96,6 @@ contextBridge.exposeInMainWorld("api", {
 	listReports(scenarioId?: string) {
 		return ipcRenderer.invoke("report:list", scenarioId);
 	},
-
 	getReport(runId: string) {
 		return ipcRenderer.invoke("report:get", runId);
 	},
@@ -70,10 +104,11 @@ contextBridge.exposeInMainWorld("api", {
 		name: string;
 		browser: "chromium" | "firefox" | "webkit";
 		environmentId: string;
+		projectId: string;
+		tunnelId: string;
 	}) {
 		return ipcRenderer.invoke("recording:start", opts);
 	},
-
 	stopRecording(recordingId: string) {
 		return ipcRenderer.invoke("recording:stop", recordingId);
 	},

@@ -3,6 +3,7 @@ import userEvent from "@testing-library/user-event";
 import { MemoryRouter } from "react-router-dom";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import History from "../../src/renderer/screens/History";
+import { useAppStore } from "../../src/renderer/store";
 
 const navigateMock = vi.fn();
 vi.mock("react-router-dom", async (orig) => ({
@@ -12,6 +13,7 @@ vi.mock("react-router-dom", async (orig) => ({
 
 beforeEach(() => {
 	navigateMock.mockReset();
+	useAppStore.setState({ activeProjectId: "default" });
 	// biome-ignore lint/suspicious/noExplicitAny: test stub
 	(globalThis as any).window.api = {
 		listReports: vi.fn().mockResolvedValue([
@@ -30,17 +32,12 @@ beforeEach(() => {
 				durationMs: 8400,
 			},
 		]),
-		listScenarios: vi.fn().mockResolvedValue([
+		listScenariosByProject: vi.fn().mockResolvedValue([
 			{
 				id: "login",
 				name: "Parcours de connexion",
-				platform: "web",
-				browser: "chromium",
-				defaultEnvironmentId: "preprod",
-				tags: [],
-				specFile: "login.spec.ts",
-				createdAt: "2026-06-23T00:00:00Z",
-				lastRun: { status: "failed" },
+				projectId: "default",
+				tunnelId: "general",
 			},
 		]),
 	};

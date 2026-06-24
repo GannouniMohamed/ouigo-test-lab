@@ -1,40 +1,145 @@
 import type {
 	Environment,
+	Project,
 	Report,
 	ReportSummary,
+	RunEvent,
 	Scenario,
+	Tunnel,
 } from "../../shared/types";
+import { slugify } from "../recorder/slugify";
 import { isBrowserInstalled } from "../runner/ensureBrowsers";
+import { playwrightRunner } from "../runner/playwrightRunner";
 import {
+	defaultEnvironments,
+	deleteEnvironment,
+	deleteProject,
 	getEnvironment,
+	getProject,
 	listEnvironments,
+	listProjects,
 	saveEnvironment,
-} from "../stores/environmentStore";
+	saveProject,
+} from "../stores/projectStore";
 import { getReport, listReports } from "../stores/reportStore";
 import {
 	deleteScenario,
 	getScenario,
-	listScenarios,
+	listScenariosByProject,
 } from "../stores/scenarioStore";
+import { deleteTunnel, listTunnels, saveTunnel } from "../stores/tunnelStore";
 
-export function handleListScenarios(): Scenario[] {
-	return listScenarios();
+function uniqueProjectId(base: string): string {
+	const existing = new Set(listProjects().map((p) => p.id));
+	const safeBase = base || "projet";
+	let candidate = safeBase;
+	let n = 2;
+	while (existing.has(candidate)) candidate = `${safeBase}-${n++}`;
+	return candidate;
 }
 
-export function handleGetScenario(id: string): Scenario {
-	return getScenario(id);
+function uniqueTunnelId(projectId: string, base: string): string {
+	const existing = new Set(listTunnels(projectId).map((t) => t.id));
+	const safeBase = base || "tunnel";
+	let candidate = safeBase;
+	let n = 2;
+	while (existing.has(candidate)) candidate = `${safeBase}-${n++}`;
+	return candidate;
 }
 
-export function handleDeleteScenario(id: string): void {
-	deleteScenario(id);
+export function handleListProjects(): Project[] {
+	return listProjects();
 }
 
-export function handleListEnvironments(): Environment[] {
-	return listEnvironments();
+export function handleGetProject(id: string): Project {
+	return getProject(id);
 }
 
-export function handleSaveEnvironment(env: Environment): void {
-	saveEnvironment(env);
+export function handleCreateProject(input: {
+	name: string;
+	description: string;
+}): Project {
+	const id = uniqueProjectId(slugify(input.name));
+	const now = new Date().toISOString();
+	const project: Project = {
+		id,
+		name: input.name,
+		description: input.description,
+		environments: defaultEnvironments(),
+		createdAt: now,
+	};
+	saveProject(project);
+	saveTunnel({
+		id: "general",
+		projectId: id,
+		name: "Général",
+		order: 0,
+		createdAt: now,
+	});
+	return project;
+}
+
+export function handleUpdateProject(p: Project): void {
+	saveProject(p);
+}
+
+export function handleDeleteProject(id: string): void {
+	deleteProject(id);
+}
+
+export function handleListEnvironments(projectId: string): Environment[] {
+	return listEnvironments(projectId);
+}
+
+export function handleSaveEnvironment(
+	projectId: string,
+	env: Environment,
+): void {
+	saveEnvironment(projectId, env);
+}
+
+export function handleDeleteEnvironment(
+	projectId: string,
+	envId: string,
+): void {
+	deleteEnvironment(projectId, envId);
+}
+
+export function handleListTunnels(projectId: string): Tunnel[] {
+	return listTunnels(projectId);
+}
+
+export function handleCreateTunnel(input: {
+	projectId: string;
+	name: string;
+}): Tunnel {
+	const id = uniqueTunnelId(input.projectId, slugify(input.name));
+	const order = listTunnels(input.projectId).length;
+	const tunnel: Tunnel = {
+		id,
+		projectId: input.projectId,
+		name: input.name,
+		order,
+		createdAt: new Date().toISOString(),
+	};
+	saveTunnel(tunnel);
+	return tunnel;
+}
+
+export function handleDeleteTunnel(projectId: string, tunnelId: string): void {
+	deleteTunnel(projectId, tunnelId);
+}
+
+export function handleListScenariosByProject(projectId: string): Scenario[] {
+	return listScenariosByProject(projectId);
+}
+
+export function handleDeleteScenario(
+	projectId: string,
+	tunnelId: string,
+	id: string,
+): void {
+	deleteScenario(projectId, tunnelId, id);
 }
 
 export function handleListReports(scenarioId?: string): ReportSummary[] {
@@ -49,5 +154,26 @@ export function handleBrowsersReady(): boolean {
 	return isBrowserInstalled("chromium");
 }
 
-// Re-export getEnvironment for use in register.ts
+export async function handleRunScenario(
+	projectId: string,
+	tunnelId: string,
+	scenarioId: string,
+	envId: string,
+	sendEvent: (channel: string, payload: RunEvent) => void,
+): Promise<{ runId: string }> {
+	const scenario = getScenario(projectId, tunnelId, scenarioId);
+	const env = getEnvironment(projectId, envId);
+	let runId = "";
+	const ready = new Promise<string>((resolve) => {
+		void playwrightRunner.run(scenario, env, (ev) => {
+			if (ev.type === "run-started") {
+				runId = ev.runId;
+				resolve(runId);
+			}
+			if (runId) sendEvent(`run-event:${runId}`, ev);
+		});
+	});
+	return { runId: await ready };
+}
+
 export { getEnvironment };

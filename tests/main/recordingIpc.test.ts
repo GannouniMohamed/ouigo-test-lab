@@ -6,8 +6,9 @@ import {
 	handleStartRecording,
 	handleStopRecording,
 } from "../../src/main/ipc/recordingHandlers";
-import { saveEnvironment } from "../../src/main/stores/environmentStore";
+import { saveProject } from "../../src/main/stores/projectStore";
 import { listScenarios } from "../../src/main/stores/scenarioStore";
+import { saveTunnel } from "../../src/main/stores/tunnelStore";
 
 const REPO = resolve(__dirname, "../..");
 let dir: string;
@@ -20,11 +21,26 @@ beforeEach(() => {
 		REPO,
 		"tests/fixtures/fake-codegen.mjs",
 	);
-	saveEnvironment({
-		id: "local",
-		label: "Local",
-		baseURL: "https://x.example",
-		variables: {},
+	saveProject({
+		id: "default",
+		name: "Projet par défaut",
+		description: "",
+		environments: [
+			{
+				id: "local",
+				label: "Local",
+				baseURL: "https://x.example",
+				variables: {},
+			},
+		],
+		createdAt: "2026-06-24T00:00:00Z",
+	});
+	saveTunnel({
+		id: "general",
+		projectId: "default",
+		name: "Général",
+		order: 0,
+		createdAt: "2026-06-24T00:00:00Z",
 	});
 });
 afterEach(() => {
@@ -40,11 +56,13 @@ describe("recording IPC handlers", () => {
 			name: "Via IPC",
 			browser: "chromium",
 			environmentId: "local",
+			projectId: "default",
+			tunnelId: "general",
 		});
 		expect(recordingId).toBeTruthy();
 		await new Promise((r) => setTimeout(r, 300));
 		const scenario = await handleStopRecording(recordingId);
 		expect(scenario.name).toBe("Via IPC");
-		expect(listScenarios()).toHaveLength(1);
+		expect(listScenarios("default", "general")).toHaveLength(1);
 	}, 15000);
 });

@@ -1,22 +1,29 @@
 import { BrowserWindow, ipcMain } from "electron";
-import type { Environment } from "../../shared/types";
+import type { Environment, Project } from "../../shared/types";
 import { installBrowser } from "../runner/ensureBrowsers";
 import { playwrightRunner } from "../runner/playwrightRunner";
-import { getEnvironment } from "../stores/environmentStore";
 import {
 	handleBrowsersReady,
+	handleCreateProject,
+	handleCreateTunnel,
+	handleDeleteEnvironment,
+	handleDeleteProject,
 	handleDeleteScenario,
+	handleDeleteTunnel,
+	handleGetProject,
 	handleGetReport,
-	handleGetScenario,
 	handleListEnvironments,
+	handleListProjects,
 	handleListReports,
-	handleListScenarios,
+	handleListScenariosByProject,
+	handleListTunnels,
+	handleRunScenario,
 	handleSaveEnvironment,
+	handleUpdateProject,
 } from "./handlers";
 import { handleStartRecording, handleStopRecording } from "./recordingHandlers";
 
 export function registerIpc(): void {
-	// Custom title-bar window controls (Windows/Linux frameless chrome).
 	ipcMain.on("window:minimize", (e) =>
 		BrowserWindow.fromWebContents(e.sender)?.minimize(),
 	);
@@ -36,45 +43,74 @@ export function registerIpc(): void {
 		return true;
 	});
 
-	ipcMain.handle("scenario:list", () => handleListScenarios());
+	// Projects
+	ipcMain.handle("project:list", () => handleListProjects());
+	ipcMain.handle("project:get", (_e, id: string) => handleGetProject(id));
+	ipcMain.handle(
+		"project:create",
+		(_e, input: { name: string; description: string }) =>
+			handleCreateProject(input),
+	);
+	ipcMain.handle("project:update", (_e, p: Project) => handleUpdateProject(p));
+	ipcMain.handle("project:delete", (_e, id: string) => handleDeleteProject(id));
 
-	ipcMain.handle("scenario:get", (_e, id: string) => handleGetScenario(id));
-
-	ipcMain.handle("scenario:delete", (_e, id: string) =>
-		handleDeleteScenario(id),
+	// Environments (project-scoped)
+	ipcMain.handle("environment:list", (_e, projectId: string) =>
+		handleListEnvironments(projectId),
+	);
+	ipcMain.handle(
+		"environment:save",
+		(_e, projectId: string, env: Environment) =>
+			handleSaveEnvironment(projectId, env),
+	);
+	ipcMain.handle("environment:delete", (_e, projectId: string, envId: string) =>
+		handleDeleteEnvironment(projectId, envId),
 	);
 
-	ipcMain.handle("environment:list", () => handleListEnvironments());
+	// Tunnels
+	ipcMain.handle("tunnel:list", (_e, projectId: string) =>
+		handleListTunnels(projectId),
+	);
+	ipcMain.handle(
+		"tunnel:create",
+		(_e, input: { projectId: string; name: string }) =>
+			handleCreateTunnel(input),
+	);
+	ipcMain.handle("tunnel:delete", (_e, projectId: string, tunnelId: string) =>
+		handleDeleteTunnel(projectId, tunnelId),
+	);
 
-	ipcMain.handle("environment:save", (_e, env: Environment) =>
-		handleSaveEnvironment(env),
+	// Scenarios
+	ipcMain.handle("scenario:listByProject", (_e, projectId: string) =>
+		handleListScenariosByProject(projectId),
+	);
+	ipcMain.handle(
+		"scenario:delete",
+		(_e, projectId: string, tunnelId: string, scenarioId: string) =>
+			handleDeleteScenario(projectId, tunnelId, scenarioId),
 	);
 
 	ipcMain.handle("report:list", (_e, scenarioId?: string) =>
 		handleListReports(scenarioId),
 	);
-
 	ipcMain.handle("report:get", (_e, runId: string) => handleGetReport(runId));
 
 	ipcMain.handle(
 		"scenario:run",
-		async (event, scenarioId: string, envId: string) => {
-			const scenario = handleGetScenario(scenarioId);
-			const env = getEnvironment(envId);
-
-			let runId = "";
-			const ready = new Promise<string>((resolve) => {
-				void playwrightRunner.run(scenario, env, (e) => {
-					if (e.type === "run-started") {
-						runId = e.runId;
-						resolve(runId);
-					}
-					if (runId) event.sender.send(`run-event:${runId}`, e);
-				});
-			});
-
-			return { runId: await ready };
-		},
+		(
+			event,
+			projectId: string,
+			tunnelId: string,
+			scenarioId: string,
+			envId: string,
+		) =>
+			handleRunScenario(
+				projectId,
+				tunnelId,
+				scenarioId,
+				envId,
+				(channel, payload) => event.sender.send(channel, payload),
+			),
 	);
 
 	ipcMain.handle("run:cancel", (_e, runId: string) =>

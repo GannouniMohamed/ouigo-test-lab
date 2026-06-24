@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import type { Environment } from "../../shared/types";
+import { useAppStore } from "../store";
 
 export function EnvPicker({
 	value,
@@ -8,11 +9,18 @@ export function EnvPicker({
 	value: string;
 	onChange: (id: string) => void;
 }): JSX.Element {
+	const activeProjectId = useAppStore((s) => s.activeProjectId);
 	const [environments, setEnvironments] = useState<Environment[]>([]);
 
 	useEffect(() => {
-		window.api.listEnvironments().then((envs) => setEnvironments(envs));
-	}, []);
+		if (!activeProjectId) {
+			setEnvironments([]);
+			return;
+		}
+		window.api
+			.listEnvironments(activeProjectId)
+			.then((envs) => setEnvironments(envs));
+	}, [activeProjectId]);
 
 	return (
 		<select

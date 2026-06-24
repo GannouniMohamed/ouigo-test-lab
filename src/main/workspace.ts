@@ -12,6 +12,6 @@ export function getWorkspaceDir(): string {
 
 export function ensureWorkspace(): void {
 	const root = getWorkspaceDir();
-	for (const sub of ["scenarios", "runs"])
+	for (const sub of ["projects", "runs"])
 		mkdirSync(join(root, sub), { recursive: true });
 }

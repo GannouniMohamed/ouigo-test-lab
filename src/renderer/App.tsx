@@ -1,18 +1,28 @@
+import { useEffect } from "react";
 import { HashRouter, Navigate, Route, Routes } from "react-router-dom";
 import { AppGate } from "./components/AppGate";
+import { ProjectSwitcher } from "./components/ProjectSwitcher";
 import { Sidebar } from "./components/Sidebar";
 import { TitleBar } from "./components/TitleBar";
 import History from "./screens/History";
 import HubLibrary from "./screens/HubLibrary";
 import LiveRun from "./screens/LiveRun";
 import NewScenario from "./screens/NewScenario";
+import Projects from "./screens/Projects";
 import Report from "./screens/Report";
+import { useAppStore } from "./store";
 
 function App(): JSX.Element {
+	const loadProjects = useAppStore((s) => s.loadProjects);
+	useEffect(() => {
+		loadProjects();
+	}, [loadProjects]);
+
 	return (
 		<HashRouter>
 			<div className="otl-root">
 				<TitleBar />
+				<ProjectSwitcher />
 				<div className="otl-app">
 					<Sidebar />
 					<main className="otl-main">
@@ -27,6 +37,7 @@ function App(): JSX.Element {
 								<Route path="/run/:runId" element={<LiveRun />} />
 								<Route path="/report/:runId" element={<Report />} />
 								<Route path="/reports" element={<History />} />
+								<Route path="/projects" element={<Projects />} />
 							</Routes>
 						</AppGate>
 					</main>

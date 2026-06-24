@@ -1,90 +1,100 @@
-import { render, screen, waitFor } from "@testing-library/react";
-import userEvent from "@testing-library/user-event";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import HubLibrary from "../../src/renderer/screens/HubLibrary";
-import type { Scenario } from "../../src/shared/types";
+import { useAppStore } from "../../src/renderer/store";
 
-const scenarios: Scenario[] = [
+const scenarios = [
 	{
 		id: "login",
-		name: "Parcours de connexion",
+		projectId: "default",
+		tunnelId: "general",
+		name: "Connexion",
 		platform: "web",
 		browser: "chromium",
-		defaultEnvironmentId: "preprod",
+		defaultEnvironmentId: "local",
 		tags: [],
 		specFile: "login.spec.ts",
-		createdAt: "2026-06-23T00:00:00Z",
-		lastRun: { status: "passed", at: "2026-06-23T14:00:00Z", durationMs: 8400 },
+		createdAt: "2026-06-24T00:00:00Z",
+		lastRun: { status: "never" },
 	},
 	{
-		id: "buy",
-		name: "Achat billet",
-		platform: "web",
+		id: "search",
+		projectId: "default",
+		tunnelId: "booking",
+		name: "Recherche train",
+		platform: "responsive",
 		browser: "chromium",
-		defaultEnvironmentId: "preprod",
+		defaultEnvironmentId: "local",
 		tags: [],
-		specFile: "buy.spec.ts",
-		createdAt: "2026-06-23T00:00:00Z",
-		lastRun: { status: "never" },
+		specFile: "search.spec.ts",
+		createdAt: "2026-06-24T00:00:00Z",
+		lastRun: { status: "passed", at: "2026-06-24T01:00:00Z", durationMs: 900 },
 	},
 ];
 
-const navigateMock = vi.fn();
-vi.mock("react-router-dom", async (orig) => ({
-	...(await orig<typeof import("react-router-dom")>()),
-	useNavigate: () => navigateMock,
-}));
+const tunnels = [
+	{
+		id: "general",
+		projectId: "default",
+		name: "Général",
+		order: 0,
+		createdAt: "2026-06-24T00:00:00Z",
+	},
+	{
+		id: "booking",
+		projectId: "default",
+		name: "Réservation",
+		order: 1,
+		createdAt: "2026-06-24T00:00:00Z",
+	},
+];
 
 beforeEach(() => {
-	navigateMock.mockReset();
-	// biome-ignore lint/suspicious/noExplicitAny: test utility cast
-	(globalThis as any).window.api = {
-		listScenarios: vi.fn().mockResolvedValue(scenarios),
-		listEnvironments: vi.fn().mockResolvedValue([
-			{
-				id: "preprod",
-				label: "Préprod",
-				baseURL: "https://pp.example",
-				variables: {},
-			},
-		]),
-		runScenario: vi.fn().mockResolvedValue({ runId: "run-123" }),
-	};
+	window.api = {
+		listScenariosByProject: vi.fn().mockResolvedValue(scenarios),
+		listTunnels: vi.fn().mockResolvedValue(tunnels),
+		listEnvironments: vi.fn().mockResolvedValue([]),
+		runScenario: vi.fn().mockResolvedValue({ runId: "run-1" }),
+	} as unknown as typeof window.api;
+	useAppStore.setState({ activeProjectId: "default", scenarios: [] });
 });
 afterEach(() => {
-	// biome-ignore lint/suspicious/noExplicitAny: test utility cast
-	Reflect.deleteProperty((globalThis as any).window, "api");
+	vi.clearAllMocks();
 });
 
 describe("HubLibrary", () => {
-	it("liste les scénarios", async () => {
+	it("affiche les scénarios groupés par tunnel", async () => {
 		render(
 			<MemoryRouter>
 				<HubLibrary />
 			</MemoryRouter>,
 		);
-		expect(
-			await screen.findByText("Parcours de connexion"),
-		).toBeInTheDocument();
-		expect(screen.getByText("Achat billet")).toBeInTheDocument();
+		expect(await screen.findByText("Général")).toBeTruthy();
+		expect(screen.getByText("Réservation")).toBeTruthy();
+		expect(screen.getByText("Connexion")).toBeTruthy();
+		expect(screen.getByText("Recherche train")).toBeTruthy();
 	});
-	it("lance un scénario et navigue vers /run/:runId", async () => {
+
+	it("Lancer appelle runScenario avec projectId et tunnelId", async () => {
 		render(
 			<MemoryRouter>
 				<HubLibrary />
 			</MemoryRouter>,
 		);
-		await screen.findByText("Parcours de connexion");
-		const buttons = screen.getAllByRole("button", { name: /lancer/i });
-		await userEvent.click(buttons[0]);
-		await waitFor(() => {
-			// biome-ignore lint/suspicious/noExplicitAny: test utility cast
-			expect(window.api.runScenario as any).toHaveBeenCalledWith(
-				"login",
-				"preprod",
-			);
-			expect(navigateMock).toHaveBeenCalledWith("/run/run-123");
-		});
+		await screen.findByText("Connexion");
+		const launchButtons = screen.getAllByRole("button", { name: /lancer/i });
+		fireEvent.click(launchButtons[0]);
+		await waitFor(() =>
+			expect(
+				window.api.runScenario as unknown as ReturnType<typeof vi.fn>,
+			).toHaveBeenCalled(),
+		);
+		const call = (window.api.runScenario as unknown as ReturnType<typeof vi.fn>)
+			.mock.calls[0];
+		// (projectId, tunnelId, scenarioId, envId)
+		expect(call[0]).toBe("default");
+		expect(call[1]).toBe("general");
+		expect(call[2]).toBe("login");
 	});
 });

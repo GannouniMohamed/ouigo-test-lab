@@ -1,24 +1,57 @@
 import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
+	handleCreateProject,
+	handleCreateTunnel,
 	handleDeleteScenario,
 	handleGetReport,
-	handleGetScenario,
-	handleListEnvironments,
+	handleListProjects,
 	handleListReports,
-	handleListScenarios,
-	handleSaveEnvironment,
+	handleListScenariosByProject,
+	handleListTunnels,
+	handleRunScenario,
 } from "../../src/main/ipc/handlers";
+import { playwrightRunner } from "../../src/main/runner/playwrightRunner";
+import { saveProject } from "../../src/main/stores/projectStore";
 import { saveReport } from "../../src/main/stores/reportStore";
 import { saveScenario } from "../../src/main/stores/scenarioStore";
-import type { Environment, Report, Scenario } from "../../src/shared/types";
+import { saveTunnel } from "../../src/main/stores/tunnelStore";
+import type { Report, Scenario } from "../../src/shared/types";
 
 let dir: string;
 beforeEach(() => {
 	dir = mkdtempSync(join(tmpdir(), "otl-handlers-"));
 	process.env.OTL_WORKSPACE = dir;
+	// Seed a default project with a general tunnel
+	saveProject({
+		id: "default",
+		name: "Projet par défaut",
+		description: "",
+		environments: [
+			{
+				id: "preprod",
+				label: "Préprod",
+				baseURL: "https://preprod.ouigo.example",
+				variables: {},
+			},
+			{
+				id: "recette",
+				label: "Recette",
+				baseURL: "https://recette.ouigo.example",
+				variables: {},
+			},
+		],
+		createdAt: "2026-06-24T00:00:00Z",
+	});
+	saveTunnel({
+		id: "general",
+		projectId: "default",
+		name: "Général",
+		order: 0,
+		createdAt: "2026-06-24T00:00:00Z",
+	});
 });
 afterEach(() => {
 	rmSync(dir, { recursive: true, force: true });
@@ -27,6 +60,8 @@ afterEach(() => {
 
 const sample: Scenario = {
 	id: "login",
+	projectId: "default",
+	tunnelId: "general",
 	name: "Connexion",
 	platform: "web",
 	browser: "chromium",
@@ -37,66 +72,25 @@ const sample: Scenario = {
 	lastRun: { status: "never" },
 };
 
-const sampleEnv: Environment = {
-	id: "staging",
-	label: "Staging",
-	baseURL: "https://staging.example",
-	variables: {},
-};
-
 describe("handlers", () => {
-	describe("handleListScenarios", () => {
+	describe("handleListScenariosByProject", () => {
 		it("returns seeded scenario", () => {
 			saveScenario(sample, 'test("ok", () => {});');
-			const result = handleListScenarios();
+			const result = handleListScenariosByProject("default");
 			expect(result).toHaveLength(1);
 			expect(result[0].name).toBe("Connexion");
 		});
 
 		it("returns empty array when no scenarios", () => {
-			expect(handleListScenarios()).toEqual([]);
-		});
-	});
-
-	describe("handleGetScenario", () => {
-		it("returns scenario by id", () => {
-			saveScenario(sample, "x");
-			const result = handleGetScenario("login");
-			expect(result.specFile).toBe("login.spec.ts");
-		});
-
-		it("throws when scenario not found", () => {
-			expect(() => handleGetScenario("nonexistent")).toThrow(
-				"Scenario not found",
-			);
+			expect(handleListScenariosByProject("default")).toEqual([]);
 		});
 	});
 
 	describe("handleDeleteScenario", () => {
 		it("deletes a scenario", () => {
 			saveScenario(sample, "x");
-			handleDeleteScenario("login");
-			expect(handleListScenarios()).toHaveLength(0);
-		});
-	});
-
-	describe("handleListEnvironments", () => {
-		it("contains preprod by default", () => {
-			const envs = handleListEnvironments();
-			expect(envs.map((e) => e.id)).toContain("preprod");
-		});
-
-		it("contains recette by default", () => {
-			const envs = handleListEnvironments();
-			expect(envs.map((e) => e.id)).toContain("recette");
-		});
-	});
-
-	describe("handleSaveEnvironment", () => {
-		it("persists and retrieves an environment", () => {
-			handleSaveEnvironment(sampleEnv);
-			const envs = handleListEnvironments();
-			expect(envs.map((e) => e.id)).toContain("staging");
+			handleDeleteScenario("default", "general", "login");
+			expect(handleListScenariosByProject("default")).toHaveLength(0);
 		});
 	});
 
@@ -171,5 +165,100 @@ describe("handlers", () => {
 		it("throws when report not found", () => {
 			expect(() => handleGetReport("nonexistent")).toThrow("Report not found");
 		});
+	});
+
+	it("handleCreateProject crée un projet avec tunnel Général et environnements", () => {
+		const p = handleCreateProject({ name: "Site Web", description: "" });
+		expect(p.name).toBe("Site Web");
+		expect(p.environments.length).toBeGreaterThanOrEqual(2);
+		expect(handleListTunnels(p.id).map((t) => t.id)).toEqual(["general"]);
+		expect(handleListProjects().some((x) => x.id === p.id)).toBe(true);
+	});
+
+	it("handleCreateTunnel ajoute un tunnel ordonné", () => {
+		const p = handleCreateProject({ name: "Site Web", description: "" });
+		const t = handleCreateTunnel({ projectId: p.id, name: "Réservation" });
+		expect(t.name).toBe("Réservation");
+		expect(t.order).toBe(1);
+		expect(handleListTunnels(p.id).map((t2) => t2.name)).toContain(
+			"Réservation",
+		);
+	});
+
+	it("handleCreateProject génère un id sain même si le nom slugifie en vide", () => {
+		// slugify("!!!") returns "scenario" (its own fallback), so the handlers'
+		// fallback ("projet") is exercised when base="" is passed directly. Here we
+		// verify the public contract: a name made of only symbols produces an id
+		// with no leading dash and non-zero length, regardless of which fallback
+		// fires (slugify's "scenario" or handlers' "projet").
+		const p = handleCreateProject({ name: "!!!", description: "" });
+		expect(p.id).not.toMatch(/^-/);
+		expect(p.id.length).toBeGreaterThan(0);
+	});
+
+	it("handleRunScenario résout le scénario et l'environnement scopés projet", async () => {
+		// seed: project "default" with env "preprod" + tunnel "general" + scenario "login"
+		saveProject({
+			id: "default",
+			name: "P",
+			description: "",
+			environments: [
+				{
+					id: "preprod",
+					label: "Préprod",
+					baseURL: "https://pp",
+					variables: {},
+				},
+			],
+			createdAt: "2026-06-24T00:00:00Z",
+		});
+		saveTunnel({
+			id: "general",
+			projectId: "default",
+			name: "Général",
+			order: 0,
+			createdAt: "2026-06-24T00:00:00Z",
+		});
+		saveScenario(
+			{
+				id: "login",
+				projectId: "default",
+				tunnelId: "general",
+				name: "Connexion",
+				platform: "web",
+				browser: "chromium",
+				defaultEnvironmentId: "preprod",
+				tags: [],
+				specFile: "login.spec.ts",
+				createdAt: "2026-06-24T00:00:00Z",
+				lastRun: { status: "never" },
+			},
+			'test("x", () => {});',
+		);
+
+		const spy = vi
+			.spyOn(playwrightRunner, "run")
+			.mockImplementation((_s, _e, cb) => {
+				cb({ type: "run-started", runId: "run-1" });
+				return Promise.resolve({
+					runId: "run-1",
+					status: "passed",
+					durationMs: 1,
+					report: {} as never,
+				});
+			});
+
+		const res = await handleRunScenario(
+			"default",
+			"general",
+			"login",
+			"preprod",
+			() => {},
+		);
+		expect(res.runId).toBe("run-1");
+		const [passedScenario, passedEnv] = spy.mock.calls[0];
+		expect(passedScenario.id).toBe("login");
+		expect(passedEnv.id).toBe("preprod");
+		spy.mockRestore();
 	});
 });

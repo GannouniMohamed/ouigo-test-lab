@@ -3,6 +3,7 @@ import userEvent from "@testing-library/user-event";
 import { MemoryRouter } from "react-router-dom";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import NewScenario from "../../src/renderer/screens/NewScenario";
+import { useAppStore } from "../../src/renderer/store";
 
 const navigateMock = vi.fn();
 vi.mock("react-router-dom", async (orig) => ({
@@ -14,11 +15,16 @@ beforeEach(() => {
 	navigateMock.mockReset();
 	// biome-ignore lint/suspicious/noExplicitAny: test stub
 	(globalThis as any).window.api = {
-		listEnvironments: vi
-			.fn()
-			.mockResolvedValue([
-				{ id: "local", label: "Local", baseURL: "https://x", variables: {} },
-			]),
+		listEnvironments: vi.fn().mockResolvedValue([]),
+		listTunnels: vi.fn().mockResolvedValue([
+			{
+				id: "general",
+				projectId: "default",
+				name: "Général",
+				order: 0,
+				createdAt: "2026-06-24T00:00:00Z",
+			},
+		]),
 		startRecording: vi.fn().mockResolvedValue({ recordingId: "rec-1" }),
 		stopRecording: vi.fn().mockResolvedValue({
 			id: "parcours",
@@ -31,11 +37,13 @@ beforeEach(() => {
 			createdAt: "",
 			lastRun: { status: "never" },
 		}),
-	};
+	} as unknown as typeof window.api;
+	useAppStore.setState({ activeProjectId: "default" });
 });
 afterEach(() => {
 	// biome-ignore lint/suspicious/noExplicitAny: cleanup
 	Reflect.deleteProperty((globalThis as any).window, "api");
+	useAppStore.setState({ activeProjectId: "" });
 });
 
 describe("NewScenario", () => {
@@ -54,7 +62,12 @@ describe("NewScenario", () => {
 		);
 		await waitFor(() =>
 			expect(window.api.startRecording).toHaveBeenCalledWith(
-				expect.objectContaining({ name: "Parcours", environmentId: "local" }),
+				expect.objectContaining({
+					name: "Parcours",
+					browser: "chromium",
+					projectId: "default",
+					tunnelId: "general",
+				}),
 			),
 		);
 		await userEvent.click(screen.getByRole("button", { name: /arrêter/i }));

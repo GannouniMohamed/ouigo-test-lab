@@ -1,4 +1,4 @@
-export type Platform = "web" | "mobile";
+export type Platform = "web" | "responsive" | "mobile";
 export type RunStatus = "passed" | "failed" | "cancelled";
 export type StepStatus = "passed" | "failed" | "skipped";
 export type LastRunStatus = "passed" | "failed" | "never";
@@ -11,6 +11,8 @@ export interface LastRun {
 
 export interface Scenario {
 	id: string;
+	projectId: string;
+	tunnelId: string;
 	name: string;
 	platform: Platform;
 	browser: "chromium" | "firefox" | "webkit";
@@ -26,6 +28,22 @@ export interface Environment {
 	label: string;
 	baseURL: string;
 	variables: Record<string, string>;
+}
+
+export interface Project {
+	id: string;
+	name: string;
+	description: string;
+	environments: Environment[];
+	createdAt: string;
+}
+
+export interface Tunnel {
+	id: string;
+	projectId: string;
+	name: string;
+	order: number;
+	createdAt: string;
 }
 
 export interface ReportStep {

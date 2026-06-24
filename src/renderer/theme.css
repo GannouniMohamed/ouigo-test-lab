@@ -1398,3 +1398,76 @@ body {
 	opacity: 0.5;
 	cursor: not-allowed;
 }
+
+.otl-projectbar {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 0.75rem;
+	padding: 8px 18px;
+	border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+	background: var(--otl-sidebar-bg);
+}
+.otl-projectbar__left {
+	display: flex;
+	align-items: center;
+	gap: 0.6rem;
+}
+.otl-projectbar__label {
+	font-size: 10.5px;
+	font-weight: 600;
+	text-transform: uppercase;
+	letter-spacing: 0.08em;
+	color: var(--otl-text-2);
+}
+.otl-projectbar__manage {
+	background: none;
+	border: none;
+	color: var(--otl-text-3);
+	font-size: 12px;
+	cursor: pointer;
+	text-decoration: underline;
+}
+.otl-projectbar__manage:hover {
+	color: var(--otl-text);
+}
+
+.otl-tunnel-group {
+	margin-bottom: 1.5rem;
+}
+.otl-tunnel-group__title {
+	display: flex;
+	align-items: center;
+	gap: 0.5rem;
+	font-size: 13px;
+	font-weight: 600;
+	text-transform: uppercase;
+	letter-spacing: 0.06em;
+	color: var(--otl-text-2);
+	margin: 0 0 0.6rem;
+}
+.otl-tunnel-group__count {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	min-width: 18px;
+	height: 18px;
+	padding: 0 5px;
+	border-radius: 9px;
+	background: var(--otl-hover);
+	color: var(--otl-text-3);
+	font-size: 11px;
+	font-weight: 600;
+}
+
+.otl-projects-create {
+	display: flex;
+	gap: 0.5rem;
+	flex-wrap: wrap;
+	align-items: center;
+}
+.otl-env-editor {
+	margin-top: 1.5rem;
+	padding-top: 1.25rem;
+	border-top: 1px solid rgba(255, 255, 255, 0.06);
+}

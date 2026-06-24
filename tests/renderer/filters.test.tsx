@@ -3,11 +3,14 @@ import userEvent from "@testing-library/user-event";
 import { MemoryRouter } from "react-router-dom";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import HubLibrary from "../../src/renderer/screens/HubLibrary";
+import { useAppStore } from "../../src/renderer/store";
 import type { Scenario } from "../../src/shared/types";
 
 const scenarios: Scenario[] = [
 	{
 		id: "login",
+		projectId: "default",
+		tunnelId: "general",
 		name: "Parcours de connexion",
 		platform: "web",
 		browser: "chromium",
@@ -19,12 +22,27 @@ const scenarios: Scenario[] = [
 	},
 	{
 		id: "mob",
+		projectId: "default",
+		tunnelId: "general",
 		name: "Connexion mobile",
 		platform: "mobile",
 		browser: "chromium",
 		defaultEnvironmentId: "preprod",
 		tags: [],
 		specFile: "mob.spec.ts",
+		createdAt: "2026-06-23T00:00:00Z",
+		lastRun: { status: "never" },
+	},
+	{
+		id: "resp",
+		projectId: "default",
+		tunnelId: "general",
+		name: "Parcours responsive",
+		platform: "responsive",
+		browser: "chromium",
+		defaultEnvironmentId: "preprod",
+		tags: [],
+		specFile: "resp.spec.ts",
 		createdAt: "2026-06-23T00:00:00Z",
 		lastRun: { status: "never" },
 	},
@@ -40,7 +58,16 @@ beforeEach(() => {
 	navigateMock.mockReset();
 	// biome-ignore lint/suspicious/noExplicitAny: test stub
 	(globalThis as any).window.api = {
-		listScenarios: vi.fn().mockResolvedValue(scenarios),
+		listScenariosByProject: vi.fn().mockResolvedValue(scenarios),
+		listTunnels: vi.fn().mockResolvedValue([
+			{
+				id: "general",
+				projectId: "default",
+				name: "Général",
+				order: 0,
+				createdAt: "2026-06-24T00:00:00Z",
+			},
+		]),
 		listEnvironments: vi.fn().mockResolvedValue([
 			{
 				id: "preprod",
@@ -57,10 +84,12 @@ beforeEach(() => {
 		]),
 		runScenario: vi.fn().mockResolvedValue({ runId: "run-x" }),
 	};
+	useAppStore.setState({ activeProjectId: "default" });
 });
 afterEach(() => {
 	// biome-ignore lint/suspicious/noExplicitAny: cleanup
 	Reflect.deleteProperty((globalThis as any).window, "api");
+	useAppStore.setState({ activeProjectId: "", scenarios: [] });
 });
 
 describe("HubLibrary filtres/recherche/env", () => {
@@ -99,6 +128,17 @@ describe("HubLibrary filtres/recherche/env", () => {
 		);
 		expect(
 			window.api.runScenario as unknown as ReturnType<typeof vi.fn>,
-		).toHaveBeenCalledWith("login", "recette");
+		).toHaveBeenCalledWith("default", "general", "login", "recette");
+	});
+	it("filtre par plateforme Responsive", async () => {
+		render(
+			<MemoryRouter>
+				<HubLibrary />
+			</MemoryRouter>,
+		);
+		await screen.findByText("Parcours de connexion");
+		await userEvent.click(screen.getByRole("button", { name: "Responsive" }));
+		expect(screen.getByText("Parcours responsive")).toBeInTheDocument();
+		expect(screen.queryByText("Parcours de connexion")).not.toBeInTheDocument();
 	});
 });
