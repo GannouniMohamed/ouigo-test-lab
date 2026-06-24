@@ -52,7 +52,7 @@ beforeEach(() => {
 afterEach(() => {
 	// biome-ignore lint/suspicious/noExplicitAny: cleanup
 	Reflect.deleteProperty((globalThis as any).window, "api");
-	useAppStore.setState({ activeProjectId: "" });
+	useAppStore.setState({ activeProjectId: "", firstRunScenarioId: null });
 });
 
 describe("NewScenario", () => {
