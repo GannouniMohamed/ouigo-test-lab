@@ -1576,3 +1576,91 @@ body {
 .otl-envtable__head .otl-field-label:nth-child(2) {
 	flex: 1;
 }
+.otl-projects-header {
+	display: flex;
+	align-items: flex-start;
+	justify-content: space-between;
+	margin-bottom: 1.5rem;
+}
+.otl-project-grid {
+	display: grid;
+	grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+	gap: 14px;
+}
+.otl-project-card {
+	flex-direction: column;
+	align-items: stretch;
+	gap: 12px;
+}
+.otl-project-card__top {
+	display: flex;
+	align-items: flex-start;
+	gap: 10px;
+}
+.otl-project-card__icon {
+	width: 34px;
+	height: 34px;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	border-radius: 10px;
+	background: rgba(0, 201, 177, 0.12);
+	color: var(--otl-cyan);
+}
+.otl-project-card__head {
+	flex: 1;
+}
+.otl-project-card__del {
+	background: none;
+	border: none;
+	color: var(--otl-text-3);
+	cursor: pointer;
+	padding: 4px;
+}
+.otl-project-card__del:hover:not(:disabled) {
+	color: var(--otl-danger-soft);
+}
+.otl-project-card__del:disabled {
+	opacity: 0.3;
+	cursor: not-allowed;
+}
+.otl-project-card__pills {
+	display: flex;
+	gap: 8px;
+}
+.otl-pill {
+	display: inline-flex;
+	align-items: center;
+	padding: 3px 9px;
+	border-radius: 8px;
+	background: var(--otl-hover);
+	color: var(--otl-text-2);
+	font-size: 11.5px;
+}
+.otl-project-card__actions {
+	display: flex;
+	gap: 8px;
+}
+.otl-empty {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	justify-content: center;
+	gap: 10px;
+	text-align: center;
+	padding: 4rem 1rem;
+	color: var(--otl-text-3);
+}
+.otl-empty__icon {
+	color: var(--otl-text-3);
+	opacity: 0.6;
+}
+.otl-empty__title {
+	font-size: 16px;
+	font-weight: 600;
+	color: var(--otl-text);
+}
+.otl-empty__sub {
+	max-width: 380px;
+	font-size: 13px;
+}
