@@ -47,6 +47,8 @@ export default function HubLibrary(): JSX.Element {
 	const scenarios = useAppStore((s) => s.scenarios);
 	const setScenarios = useAppStore((s) => s.setScenarios);
 	const activeEnvByProject = useAppStore((s) => s.activeEnvByProject);
+	const firstRunScenarioId = useAppStore((s) => s.firstRunScenarioId);
+	const setFirstRunScenarioId = useAppStore((s) => s.setFirstRunScenarioId);
 
 	const [tunnels, setTunnels] = useState<Tunnel[]>([]);
 	const [groupFilter, setGroupFilter] = useState<GroupFilter>("all");
@@ -60,8 +62,19 @@ export default function HubLibrary(): JSX.Element {
 			window.api.listTunnels(activeProjectId),
 		]);
 		setScenarios(s);
+		if (firstRunScenarioId) {
+			const sc = s.find((x) => x.id === firstRunScenarioId);
+			if (!sc || sc.lastRun.status !== "never") {
+				setFirstRunScenarioId(null);
+			}
+		}
 		setTunnels(t);
-	}, [activeProjectId, setScenarios]);
+	}, [
+		activeProjectId,
+		setScenarios,
+		firstRunScenarioId,
+		setFirstRunScenarioId,
+	]);
 
 	useEffect(() => {
 		reload();
@@ -254,20 +267,34 @@ export default function HubLibrary(): JSX.Element {
 											</div>
 										</div>
 										<div className="otl-card__right">
-											<StatusBadge status={scenario.lastRun.status} />
-											<span className="otl-card__time">
-												{formatRelative(scenario.lastRun.at)}
-											</span>
-											<span className="otl-card__duration">
-												{formatDuration(scenario.lastRun.durationMs)}
-											</span>
-											<button
-												type="button"
-												className="otl-btn-launch"
-												onClick={() => handleLancer(scenario)}
-											>
-												Lancer
-											</button>
+											{firstRunScenarioId === scenario.id ? (
+												<>
+													<span className="otl-badge otl-badge--new">
+														<span className="otl-badge__dot" />
+														<span className="otl-badge__label">Nouveau</span>
+													</span>
+													<span className="otl-card__firstrun">
+														1ʳᵉ exécution…
+													</span>
+												</>
+											) : (
+												<>
+													<StatusBadge status={scenario.lastRun.status} />
+													<span className="otl-card__time">
+														{formatRelative(scenario.lastRun.at)}
+													</span>
+													<span className="otl-card__duration">
+														{formatDuration(scenario.lastRun.durationMs)}
+													</span>
+													<button
+														type="button"
+														className="otl-btn-launch"
+														onClick={() => handleLancer(scenario)}
+													>
+														Lancer
+													</button>
+												</>
+											)}
 										</div>
 									</div>
 								))}
