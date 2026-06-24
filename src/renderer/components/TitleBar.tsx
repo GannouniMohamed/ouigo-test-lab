@@ -11,6 +11,7 @@ function pageTitle(pathname: string): string {
 	if (pathname.startsWith("/run")) return "Exécution en cours";
 	if (pathname.startsWith("/report")) return "Rapport d'exécution";
 	if (pathname.startsWith("/reports")) return "Rapports";
+	if (pathname.startsWith("/projects")) return "Projets";
 	return "Ouigo Test Lab";
 }
 

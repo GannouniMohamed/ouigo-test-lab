@@ -14,6 +14,7 @@ describe("Sidebar", () => {
 		expect(screen.getByText("Exéc.")).toBeInTheDocument();
 		expect(screen.getByText("Rapports")).toBeInTheDocument();
 		expect(screen.getByText("IA")).toBeInTheDocument();
+		expect(screen.getByText("Projets")).toBeInTheDocument();
 	});
 	it("désactive l'item IA", () => {
 		render(
