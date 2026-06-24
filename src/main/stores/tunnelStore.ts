@@ -7,8 +7,17 @@ import {
 	writeFileSync,
 } from "node:fs";
 import { join } from "node:path";
+import { DEFAULT_TUNNEL_COLOR } from "../../shared/groups";
 import type { Tunnel } from "../../shared/types";
 import { getWorkspaceDir } from "../workspace";
+
+function normalize(raw: Tunnel): Tunnel {
+	return {
+		...raw,
+		color: raw.color ?? DEFAULT_TUNNEL_COLOR,
+		description: raw.description ?? "",
+	};
+}
 
 function tunnelsDir(projectId: string): string {
 	return join(getWorkspaceDir(), "projects", projectId, "tunnels");
@@ -30,7 +39,7 @@ export function listTunnels(projectId: string): Tunnel[] {
 		if (!entry.isDirectory()) continue;
 		const meta = join(base, entry.name, "tunnel.json");
 		if (!existsSync(meta)) continue;
-		results.push(JSON.parse(readFileSync(meta, "utf-8")) as Tunnel);
+		results.push(normalize(JSON.parse(readFileSync(meta, "utf-8")) as Tunnel));
 	}
 	return results.sort((a, b) => a.order - b.order);
 }
@@ -40,7 +49,7 @@ export function getTunnel(projectId: string, tunnelId: string): Tunnel {
 	if (!existsSync(meta)) {
 		throw new Error(`Tunnel not found: ${tunnelId} in project ${projectId}`);
 	}
-	return JSON.parse(readFileSync(meta, "utf-8")) as Tunnel;
+	return normalize(JSON.parse(readFileSync(meta, "utf-8")) as Tunnel);
 }
 
 export function saveTunnel(t: Tunnel): void {

@@ -3,6 +3,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import * as store from "../../src/main/stores/tunnelStore";
+import { DEFAULT_TUNNEL_COLOR } from "../../src/shared/groups";
 import type { Tunnel } from "../../src/shared/types";
 
 let dir: string;
@@ -21,6 +22,8 @@ function tunnel(id: string, order: number): Tunnel {
 		projectId: "p1",
 		name: `Tunnel ${id}`,
 		order,
+		color: DEFAULT_TUNNEL_COLOR,
+		description: "",
 		createdAt: "2026-06-24T00:00:00Z",
 	};
 }
@@ -68,5 +71,44 @@ describe("tunnelStore", () => {
 		store.saveTunnel(tunnel("b", 1));
 		addScenarioDir("a", "s1");
 		expect(() => store.deleteTunnel("p1", "a")).toThrow();
+	});
+
+	it("listTunnels rétro-remplit color/description pour les tunnels legacy", () => {
+		// Write a legacy tunnel.json without color/description.
+		const tdir = join(dir, "projects", "p1", "tunnels", "t-legacy");
+		mkdirSync(tdir, { recursive: true });
+		writeFileSync(
+			join(tdir, "tunnel.json"),
+			JSON.stringify({
+				id: "t-legacy",
+				projectId: "p1",
+				name: "Legacy",
+				order: 0,
+				createdAt: "2026-01-01T00:00:00.000Z",
+			}),
+			"utf-8",
+		);
+		const [t] = store.listTunnels("p1");
+		expect(t.color).toBe(DEFAULT_TUNNEL_COLOR);
+		expect(t.description).toBe("");
+	});
+
+	it("getTunnel rétro-remplit color/description", () => {
+		const tdir = join(dir, "projects", "p2", "tunnels", "t-legacy2");
+		mkdirSync(tdir, { recursive: true });
+		writeFileSync(
+			join(tdir, "tunnel.json"),
+			JSON.stringify({
+				id: "t-legacy2",
+				projectId: "p2",
+				name: "Legacy2",
+				order: 0,
+				createdAt: "2026-01-01T00:00:00.000Z",
+			}),
+			"utf-8",
+		);
+		const t = store.getTunnel("p2", "t-legacy2");
+		expect(t.color).toBe(DEFAULT_TUNNEL_COLOR);
+		expect(t.description).toBe("");
 	});
 });
