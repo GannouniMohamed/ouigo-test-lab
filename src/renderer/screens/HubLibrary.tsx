@@ -4,7 +4,8 @@ import type { Platform, Scenario, Tunnel } from "../../shared/types";
 import { EnvPicker } from "../components/EnvPicker";
 import { PlatformIcon } from "../components/PlatformIcon";
 import { StatusBadge } from "../components/StatusBadge";
-import { formatAt, formatDuration } from "../lib/time";
+import { formatGroupStats } from "../lib/groupStats";
+import { formatDuration, formatRelative } from "../lib/time";
 import { useAppStore } from "../store";
 
 const PLATFORM_LABELS: Record<Platform, string> = {
@@ -13,7 +14,13 @@ const PLATFORM_LABELS: Record<Platform, string> = {
 	mobile: "Mobile",
 };
 
-type Filter = "all" | Platform;
+function browserLabel(b: Scenario["browser"]): string {
+	if (b === "firefox") return "Firefox";
+	if (b === "webkit") return "WebKit";
+	return "Chromium";
+}
+
+type GroupFilter = "all" | string; // "all" or a tunnelId
 
 function MagnifierIcon(): JSX.Element {
 	return (
@@ -42,11 +49,9 @@ export default function HubLibrary(): JSX.Element {
 	const activeEnvByProject = useAppStore((s) => s.activeEnvByProject);
 
 	const [tunnels, setTunnels] = useState<Tunnel[]>([]);
-	const [filter, setFilter] = useState<Filter>("all");
+	const [groupFilter, setGroupFilter] = useState<GroupFilter>("all");
 	const [query, setQuery] = useState("");
 	const [envId, setEnvId] = useState("");
-	const [creatingTunnel, setCreatingTunnel] = useState(false);
-	const [tunnelName, setTunnelName] = useState("");
 
 	const reload = useCallback(async (): Promise<void> => {
 		if (!activeProjectId) return;
@@ -76,33 +81,25 @@ export default function HubLibrary(): JSX.Element {
 		navigate(`/run/${runId}`);
 	}
 
-	async function handleCreateTunnel(): Promise<void> {
-		const name = tunnelName.trim();
-		if (!name || !activeProjectId) return;
-		await window.api.createTunnel({ projectId: activeProjectId, name });
-		setTunnelName("");
-		setCreatingTunnel(false);
-		await reload();
-	}
-
 	const visible = useMemo(
 		() =>
 			scenarios.filter((s) => {
-				if (filter !== "all" && s.platform !== filter) return false;
 				if (query && !s.name.toLowerCase().includes(query.toLowerCase()))
 					return false;
 				return true;
 			}),
-		[scenarios, filter, query],
+		[scenarios, query],
 	);
 
 	const groups = useMemo(
 		() =>
-			tunnels.map((t) => ({
-				tunnel: t,
-				items: visible.filter((s) => s.tunnelId === t.id),
-			})),
-		[tunnels, visible],
+			tunnels
+				.filter((t) => groupFilter === "all" || t.id === groupFilter)
+				.map((t) => ({
+					tunnel: t,
+					items: visible.filter((s) => s.tunnelId === t.id),
+				})),
+		[tunnels, visible, groupFilter],
 	);
 
 	return (
@@ -124,13 +121,6 @@ export default function HubLibrary(): JSX.Element {
 				<div style={{ display: "flex", gap: "0.5rem" }}>
 					<button
 						type="button"
-						className="otl-tab"
-						onClick={() => setCreatingTunnel((v) => !v)}
-					>
-						+ Tunnel
-					</button>
-					<button
-						type="button"
 						className="otl-btn-primary"
 						onClick={() => navigate("/scenarios/new")}
 					>
@@ -138,25 +128,6 @@ export default function HubLibrary(): JSX.Element {
 					</button>
 				</div>
 			</div>
-
-			{creatingTunnel && (
-				<div style={{ display: "flex", gap: "0.5rem", marginBottom: "1rem" }}>
-					<input
-						type="text"
-						className="otl-input"
-						placeholder="Nom du tunnel"
-						value={tunnelName}
-						onChange={(e) => setTunnelName(e.target.value)}
-					/>
-					<button
-						type="button"
-						className="otl-btn-primary"
-						onClick={handleCreateTunnel}
-					>
-						Créer
-					</button>
-				</div>
-			)}
 
 			<div
 				style={{
@@ -167,17 +138,41 @@ export default function HubLibrary(): JSX.Element {
 				}}
 			>
 				<EnvPicker value={envId} onChange={setEnvId} />
-				<div style={{ display: "flex", gap: "0.5rem" }}>
-					{(["all", "web", "responsive", "mobile"] as Filter[]).map((f) => (
+				<div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap" }}>
+					<button
+						type="button"
+						className={
+							groupFilter === "all" ? "otl-tab otl-tab--active" : "otl-tab"
+						}
+						onClick={() => setGroupFilter("all")}
+					>
+						Tous · {visible.length}
+					</button>
+					{tunnels.map((t) => (
 						<button
-							key={f}
+							key={t.id}
 							type="button"
-							className={filter === f ? "otl-tab otl-tab--active" : "otl-tab"}
-							onClick={() => setFilter(f)}
+							className={
+								groupFilter === t.id ? "otl-tab otl-tab--active" : "otl-tab"
+							}
+							onClick={() => setGroupFilter(t.id)}
 						>
-							{f === "all" ? "Tous" : PLATFORM_LABELS[f]}
+							<span
+								className="otl-group-dot"
+								style={{ background: t.color }}
+								aria-hidden="true"
+							/>
+							{t.name} · {visible.filter((s) => s.tunnelId === t.id).length}
 						</button>
 					))}
+					<button
+						type="button"
+						className="otl-tab"
+						aria-label="Nouveau groupe"
+						onClick={() => navigate("/scenarios/groups/new")}
+					>
+						+
+					</button>
 				</div>
 			</div>
 
@@ -202,10 +197,29 @@ export default function HubLibrary(): JSX.Element {
 					.map((g) => (
 						<section key={g.tunnel.id} className="otl-tunnel-group">
 							<h2 className="otl-tunnel-group__title">
+								<span
+									className="otl-group-dot"
+									style={{ background: g.tunnel.color }}
+									aria-hidden="true"
+								/>
 								{g.tunnel.name}
 								<span className="otl-tunnel-group__count">
 									{g.items.length}
 								</span>
+								{formatGroupStats(g.items) && (
+									<span className="otl-group-stats">
+										{formatGroupStats(g.items)}
+									</span>
+								)}
+								<button
+									type="button"
+									className="otl-tunnel-group__edit"
+									onClick={() =>
+										navigate(`/scenarios/groups/${g.tunnel.id}/edit`)
+									}
+								>
+									Éditer
+								</button>
 							</h2>
 							<div className="otl-card-list">
 								{g.items.map((scenario) => (
@@ -225,13 +239,16 @@ export default function HubLibrary(): JSX.Element {
 											<div className="otl-card__name">{scenario.name}</div>
 											<div className="otl-card__meta">
 												{PLATFORM_LABELS[scenario.platform]} ·{" "}
-												{scenario.browser}
+												{browserLabel(scenario.browser)}
+												{scenario.lastRun.stepCount != null
+													? ` · ${scenario.lastRun.stepCount} étapes`
+													: ""}
 											</div>
 										</div>
 										<div className="otl-card__right">
 											<StatusBadge status={scenario.lastRun.status} />
 											<span className="otl-card__time">
-												{formatAt(scenario.lastRun.at)}
+												{formatRelative(scenario.lastRun.at)}
 											</span>
 											<span className="otl-card__duration">
 												{formatDuration(scenario.lastRun.durationMs)}

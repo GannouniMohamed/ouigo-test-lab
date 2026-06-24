@@ -1,4 +1,4 @@
-import { render, screen, within } from "@testing-library/react";
+import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter } from "react-router-dom";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -23,7 +23,7 @@ const scenarios: Scenario[] = [
 	{
 		id: "mob",
 		projectId: "default",
-		tunnelId: "general",
+		tunnelId: "booking",
 		name: "Connexion mobile",
 		platform: "mobile",
 		browser: "chromium",
@@ -36,7 +36,7 @@ const scenarios: Scenario[] = [
 	{
 		id: "resp",
 		projectId: "default",
-		tunnelId: "general",
+		tunnelId: "booking",
 		name: "Parcours responsive",
 		platform: "responsive",
 		browser: "chromium",
@@ -65,6 +65,17 @@ beforeEach(() => {
 				projectId: "default",
 				name: "Général",
 				order: 0,
+				color: "#00c9b1",
+				description: "",
+				createdAt: "2026-06-24T00:00:00Z",
+			},
+			{
+				id: "booking",
+				projectId: "default",
+				name: "Réservation",
+				order: 1,
+				color: "#2f6bff",
+				description: "",
 				createdAt: "2026-06-24T00:00:00Z",
 			},
 		]),
@@ -93,16 +104,35 @@ afterEach(() => {
 });
 
 describe("HubLibrary filtres/recherche/env", () => {
-	it("filtre par plateforme Web", async () => {
+	it("filtre par groupe (Général masque les scénarios des autres groupes)", async () => {
 		render(
 			<MemoryRouter>
 				<HubLibrary />
 			</MemoryRouter>,
 		);
 		await screen.findByText("Parcours de connexion");
-		await userEvent.click(screen.getByRole("button", { name: "Web" }));
+		// Click the "Général · N" group tab
+		const tab = await screen.findByRole("button", { name: /Général · \d/ });
+		await userEvent.click(tab);
+		// "Parcours de connexion" is in Général — still visible
 		expect(screen.getByText("Parcours de connexion")).toBeInTheDocument();
+		// "Connexion mobile" is in Réservation — hidden
 		expect(screen.queryByText("Connexion mobile")).not.toBeInTheDocument();
+	});
+	it("filtre par groupe (Réservation masque les scénarios des autres groupes)", async () => {
+		render(
+			<MemoryRouter>
+				<HubLibrary />
+			</MemoryRouter>,
+		);
+		await screen.findByText("Parcours de connexion");
+		// Click the "Réservation · N" group tab
+		const tab = await screen.findByRole("button", { name: /Réservation · \d/ });
+		await userEvent.click(tab);
+		// "Connexion mobile" is in Réservation — visible
+		expect(screen.getByText("Connexion mobile")).toBeInTheDocument();
+		// "Parcours de connexion" is in Général — hidden
+		expect(screen.queryByText("Parcours de connexion")).not.toBeInTheDocument();
 	});
 	it("recherche par nom", async () => {
 		render(
@@ -129,16 +159,5 @@ describe("HubLibrary filtres/recherche/env", () => {
 		expect(
 			window.api.runScenario as unknown as ReturnType<typeof vi.fn>,
 		).toHaveBeenCalledWith("default", "general", "login", "recette");
-	});
-	it("filtre par plateforme Responsive", async () => {
-		render(
-			<MemoryRouter>
-				<HubLibrary />
-			</MemoryRouter>,
-		);
-		await screen.findByText("Parcours de connexion");
-		await userEvent.click(screen.getByRole("button", { name: "Responsive" }));
-		expect(screen.getByText("Parcours responsive")).toBeInTheDocument();
-		expect(screen.queryByText("Parcours de connexion")).not.toBeInTheDocument();
 	});
 });

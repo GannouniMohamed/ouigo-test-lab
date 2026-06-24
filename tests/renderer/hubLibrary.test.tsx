@@ -39,6 +39,8 @@ const tunnels = [
 		projectId: "default",
 		name: "Général",
 		order: 0,
+		color: "#00c9b1",
+		description: "",
 		createdAt: "2026-06-24T00:00:00Z",
 	},
 	{
@@ -46,6 +48,8 @@ const tunnels = [
 		projectId: "default",
 		name: "Réservation",
 		order: 1,
+		color: "#2f6bff",
+		description: "",
 		createdAt: "2026-06-24T00:00:00Z",
 	},
 ];
@@ -74,6 +78,19 @@ describe("HubLibrary", () => {
 		expect(screen.getByText("Réservation")).toBeTruthy();
 		expect(screen.getByText("Connexion")).toBeTruthy();
 		expect(screen.getByText("Recherche train")).toBeTruthy();
+	});
+
+	it("affiche les stats de groupe dans l'en-tête", async () => {
+		render(
+			<MemoryRouter>
+				<HubLibrary />
+			</MemoryRouter>,
+		);
+		// "Général" has 1 scenario with status "never" → "1 jamais exécuté"
+		// "Réservation" has 1 scenario with status "passed" → "1 réussi"
+		await screen.findByText("Connexion");
+		expect(screen.getByText("1 jamais exécuté")).toBeInTheDocument();
+		expect(screen.getByText("1 réussi")).toBeInTheDocument();
 	});
 
 	it("lance avec l'environnement actif du projet", async () => {
