@@ -42,6 +42,20 @@ function killProcessTree(child: ChildProcess): void {
 	}
 }
 
+function waitForExitOrTimeout(child: ChildProcess, ms: number): Promise<void> {
+	return new Promise((resolve) => {
+		let done = false;
+		const finish = () => {
+			if (done) return;
+			done = true;
+			resolve();
+		};
+		child.once("exit", finish);
+		child.once("close", finish);
+		setTimeout(finish, ms);
+	});
+}
+
 function uniqueId(projectId: string, tunnelId: string, base: string): string {
 	let candidate = base;
 	let counter = 2;
@@ -142,10 +156,22 @@ export const playwrightRecorder = {
 			await new Promise((r) => setTimeout(r, pollIntervalMs));
 		}
 
-		// Output exists — now stop the codegen process tree and read it.
-		killProcessTree(session.child);
+		// Graceful stop: let codegen flush its throttled output (BeforeClose/exit)
+		// before we read, so the last recorded action is not lost.
+		const pid = session.child.pid;
+		if (!isWindows && pid !== undefined) {
+			try {
+				process.kill(-pid, "SIGTERM");
+			} catch {
+				/* already gone */
+			}
+		}
+		await waitForExitOrTimeout(session.child, 700);
 
 		const specContent = readFileSync(session.outFile, "utf-8");
+
+		// Guarantee cleanup of any survivor.
+		killProcessTree(session.child);
 
 		const id = uniqueId(
 			session.projectId,
