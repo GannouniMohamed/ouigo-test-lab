@@ -1724,3 +1724,42 @@ body {
 	letter-spacing: .08em;
 	color: var(--otl-text-2);
 }
+
+/* ===== Color palette swatches ===== */
+.otl-swatches {
+	display: flex;
+	gap: 8px;
+	flex-wrap: wrap;
+}
+.otl-swatch {
+	width: 26px;
+	height: 26px;
+	border-radius: 50%;
+	border: 2px solid transparent;
+	cursor: pointer;
+	padding: 0;
+}
+.otl-swatch--active {
+	border-color: var(--otl-text);
+	box-shadow: 0 0 0 2px rgba(0, 0, 0, 0.4);
+}
+.otl-group-preview,
+.otl-group-existing__row {
+	display: flex;
+	align-items: center;
+	gap: 4px;
+	padding: 10px 12px;
+	border-radius: 10px;
+	background: rgba(255, 255, 255, 0.04);
+	font-size: 14px;
+}
+.otl-group-existing {
+	display: flex;
+	flex-direction: column;
+	gap: 6px;
+}
+.otl-textarea {
+	min-height: 64px;
+	resize: vertical;
+	padding-top: 8px;
+}
