@@ -3,22 +3,53 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import {
+	handleCreateProject,
+	handleCreateTunnel,
 	handleDeleteScenario,
 	handleGetReport,
-	handleGetScenario,
-	handleListEnvironments,
+	handleListProjects,
 	handleListReports,
-	handleListScenarios,
-	handleSaveEnvironment,
+	handleListScenariosByProject,
+	handleListTunnels,
 } from "../../src/main/ipc/handlers";
+import { saveProject } from "../../src/main/stores/projectStore";
 import { saveReport } from "../../src/main/stores/reportStore";
 import { saveScenario } from "../../src/main/stores/scenarioStore";
-import type { Environment, Report, Scenario } from "../../src/shared/types";
+import { saveTunnel } from "../../src/main/stores/tunnelStore";
+import type { Report, Scenario } from "../../src/shared/types";
 
 let dir: string;
 beforeEach(() => {
 	dir = mkdtempSync(join(tmpdir(), "otl-handlers-"));
 	process.env.OTL_WORKSPACE = dir;
+	// Seed a default project with a general tunnel
+	saveProject({
+		id: "default",
+		name: "Projet par défaut",
+		description: "",
+		environments: [
+			{
+				id: "preprod",
+				label: "Préprod",
+				baseURL: "https://preprod.ouigo.example",
+				variables: {},
+			},
+			{
+				id: "recette",
+				label: "Recette",
+				baseURL: "https://recette.ouigo.example",
+				variables: {},
+			},
+		],
+		createdAt: "2026-06-24T00:00:00Z",
+	});
+	saveTunnel({
+		id: "general",
+		projectId: "default",
+		name: "Général",
+		order: 0,
+		createdAt: "2026-06-24T00:00:00Z",
+	});
 });
 afterEach(() => {
 	rmSync(dir, { recursive: true, force: true });
@@ -27,6 +58,8 @@ afterEach(() => {
 
 const sample: Scenario = {
 	id: "login",
+	projectId: "default",
+	tunnelId: "general",
 	name: "Connexion",
 	platform: "web",
 	browser: "chromium",
@@ -37,66 +70,25 @@ const sample: Scenario = {
 	lastRun: { status: "never" },
 };
 
-const sampleEnv: Environment = {
-	id: "staging",
-	label: "Staging",
-	baseURL: "https://staging.example",
-	variables: {},
-};
-
 describe("handlers", () => {
-	describe("handleListScenarios", () => {
+	describe("handleListScenariosByProject", () => {
 		it("returns seeded scenario", () => {
 			saveScenario(sample, 'test("ok", () => {});');
-			const result = handleListScenarios();
+			const result = handleListScenariosByProject("default");
 			expect(result).toHaveLength(1);
 			expect(result[0].name).toBe("Connexion");
 		});
 
 		it("returns empty array when no scenarios", () => {
-			expect(handleListScenarios()).toEqual([]);
-		});
-	});
-
-	describe("handleGetScenario", () => {
-		it("returns scenario by id", () => {
-			saveScenario(sample, "x");
-			const result = handleGetScenario("login");
-			expect(result.specFile).toBe("login.spec.ts");
-		});
-
-		it("throws when scenario not found", () => {
-			expect(() => handleGetScenario("nonexistent")).toThrow(
-				"Scenario not found",
-			);
+			expect(handleListScenariosByProject("default")).toEqual([]);
 		});
 	});
 
 	describe("handleDeleteScenario", () => {
 		it("deletes a scenario", () => {
 			saveScenario(sample, "x");
-			handleDeleteScenario("login");
-			expect(handleListScenarios()).toHaveLength(0);
-		});
-	});
-
-	describe("handleListEnvironments", () => {
-		it("contains preprod by default", () => {
-			const envs = handleListEnvironments();
-			expect(envs.map((e) => e.id)).toContain("preprod");
-		});
-
-		it("contains recette by default", () => {
-			const envs = handleListEnvironments();
-			expect(envs.map((e) => e.id)).toContain("recette");
-		});
-	});
-
-	describe("handleSaveEnvironment", () => {
-		it("persists and retrieves an environment", () => {
-			handleSaveEnvironment(sampleEnv);
-			const envs = handleListEnvironments();
-			expect(envs.map((e) => e.id)).toContain("staging");
+			handleDeleteScenario("default", "general", "login");
+			expect(handleListScenariosByProject("default")).toHaveLength(0);
 		});
 	});
 
@@ -171,5 +163,23 @@ describe("handlers", () => {
 		it("throws when report not found", () => {
 			expect(() => handleGetReport("nonexistent")).toThrow("Report not found");
 		});
+	});
+
+	it("handleCreateProject crée un projet avec tunnel Général et environnements", () => {
+		const p = handleCreateProject({ name: "Site Web", description: "" });
+		expect(p.name).toBe("Site Web");
+		expect(p.environments.length).toBeGreaterThanOrEqual(2);
+		expect(handleListTunnels(p.id).map((t) => t.id)).toEqual(["general"]);
+		expect(handleListProjects().some((x) => x.id === p.id)).toBe(true);
+	});
+
+	it("handleCreateTunnel ajoute un tunnel ordonné", () => {
+		const p = handleCreateProject({ name: "Site Web", description: "" });
+		const t = handleCreateTunnel({ projectId: p.id, name: "Réservation" });
+		expect(t.name).toBe("Réservation");
+		expect(t.order).toBe(1);
+		expect(handleListTunnels(p.id).map((t2) => t2.name)).toContain(
+			"Réservation",
+		);
 	});
 });

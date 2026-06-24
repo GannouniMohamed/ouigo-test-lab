@@ -28,6 +28,8 @@ test("long", async ({ page }) => {
 
 const scenario: Scenario = {
 	id: "long",
+	projectId: "default",
+	tunnelId: "general",
 	name: "Long",
 	platform: "web",
 	browser: "chromium",

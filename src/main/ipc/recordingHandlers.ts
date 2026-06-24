@@ -5,6 +5,8 @@ export interface StartRecordingOpts {
 	name: string;
 	browser: "chromium" | "firefox" | "webkit";
 	environmentId: string;
+	projectId: string;
+	tunnelId: string;
 }
 
 export function handleStartRecording(

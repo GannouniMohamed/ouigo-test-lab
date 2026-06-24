@@ -1,9 +1,11 @@
 import type {
 	Environment,
+	Project,
 	Report,
 	ReportSummary,
 	RunEvent,
 	Scenario,
+	Tunnel,
 } from "../shared/types";
 
 interface OtlApi {
@@ -15,20 +17,51 @@ interface OtlApi {
 	};
 	browsersReady(): Promise<boolean>;
 	installBrowsers(): Promise<boolean>;
-	listScenarios(): Promise<Scenario[]>;
-	getScenario(id: string): Promise<Scenario>;
-	deleteScenario(id: string): Promise<void>;
-	listEnvironments(): Promise<Environment[]>;
-	saveEnvironment(env: Environment): Promise<void>;
-	runScenario(scenarioId: string, envId: string): Promise<{ runId: string }>;
+
+	listProjects(): Promise<Project[]>;
+	getProject(id: string): Promise<Project>;
+	createProject(input: {
+		name: string;
+		description: string;
+	}): Promise<Project>;
+	updateProject(p: Project): Promise<void>;
+	deleteProject(id: string): Promise<void>;
+
+	listEnvironments(projectId: string): Promise<Environment[]>;
+	saveEnvironment(projectId: string, env: Environment): Promise<void>;
+	deleteEnvironment(projectId: string, envId: string): Promise<void>;
+
+	listTunnels(projectId: string): Promise<Tunnel[]>;
+	createTunnel(input: {
+		projectId: string;
+		name: string;
+	}): Promise<Tunnel>;
+	deleteTunnel(projectId: string, tunnelId: string): Promise<void>;
+
+	listScenariosByProject(projectId: string): Promise<Scenario[]>;
+	deleteScenario(
+		projectId: string,
+		tunnelId: string,
+		scenarioId: string,
+	): Promise<void>;
+	runScenario(
+		projectId: string,
+		tunnelId: string,
+		scenarioId: string,
+		envId: string,
+	): Promise<{ runId: string }>;
 	cancelRun(runId: string): Promise<void>;
 	onRunEvent(runId: string, cb: (e: RunEvent) => void): () => void;
+
 	listReports(scenarioId?: string): Promise<ReportSummary[]>;
 	getReport(runId: string): Promise<Report>;
+
 	startRecording(opts: {
 		name: string;
 		browser: "chromium" | "firefox" | "webkit";
 		environmentId: string;
+		projectId: string;
+		tunnelId: string;
 	}): Promise<{ recordingId: string }>;
 	stopRecording(recordingId: string): Promise<Scenario>;
 }
