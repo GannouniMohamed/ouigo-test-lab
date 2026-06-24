@@ -1,5 +1,11 @@
 import { contextBridge, ipcRenderer } from "electron";
-import type { Environment, Project, RunEvent, Tunnel } from "../shared/types";
+import type {
+	Environment,
+	Platform,
+	Project,
+	RunEvent,
+	Tunnel,
+} from "../shared/types";
 
 contextBridge.exposeInMainWorld("api", {
 	platform: process.platform,
@@ -118,6 +124,7 @@ contextBridge.exposeInMainWorld("api", {
 		environmentId: string;
 		projectId: string;
 		tunnelId: string;
+		platform?: Platform;
 	}) {
 		return ipcRenderer.invoke("recording:start", opts);
 	},

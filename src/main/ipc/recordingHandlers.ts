@@ -1,4 +1,4 @@
-import type { Scenario } from "../../shared/types";
+import type { Platform, Scenario } from "../../shared/types";
 import { playwrightRecorder } from "../recorder/playwrightRecorder";
 
 export interface StartRecordingOpts {
@@ -7,6 +7,7 @@ export interface StartRecordingOpts {
 	environmentId: string;
 	projectId: string;
 	tunnelId: string;
+	platform?: Platform;
 }
 
 export function handleStartRecording(
