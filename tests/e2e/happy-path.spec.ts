@@ -19,6 +19,8 @@ test("happy path: lancer le scénario seed et voir Réussi", async () => {
 	try {
 		const win = await app.firstWindow();
 		await win.waitForLoadState("domcontentloaded");
+		// App now opens on /projects — navigate to the scenarios Hub first
+		await win.getByRole("button", { name: "Scénarios" }).click();
 		// Library shows the seeded scenario
 		await expect(win.getByText("Parcours d'accueil")).toBeVisible({
 			timeout: 15000,
