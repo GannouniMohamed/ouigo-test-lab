@@ -52,6 +52,10 @@ it("le reporter custom capte les étapes page.*/expect et exclut l'infra", () =>
 				NODE_PATH: join(REPO, "node_modules"),
 			},
 			stdio: "pipe",
+			// Windows: spawning npx.cmd requires a shell (Node throws EINVAL on
+			// .cmd/.bat without it since the CVE-2024-27980 patch). Mirrors the
+			// runner's `shell: isWindows`.
+			shell: process.platform === "win32",
 		},
 	);
 	expect(existsSync(stepsOut)).toBe(true);
