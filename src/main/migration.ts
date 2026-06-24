@@ -1,5 +1,6 @@
 import { existsSync, readFileSync, readdirSync, rmSync } from "node:fs";
 import { join } from "node:path";
+import { DEFAULT_TUNNEL_COLOR } from "../shared/groups";
 import type { Environment, Platform, Scenario } from "../shared/types";
 import {
 	defaultEnvironments,
@@ -52,6 +53,8 @@ export function migrateWorkspaceIfNeeded(): void {
 		id: GENERAL_TUNNEL_ID,
 		projectId: DEFAULT_PROJECT_ID,
 		name: "Général",
+		color: DEFAULT_TUNNEL_COLOR,
+		description: "",
 		order: 0,
 		createdAt: now,
 	});

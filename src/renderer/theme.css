@@ -1459,6 +1459,37 @@ body {
 	font-size: 11px;
 	font-weight: 600;
 }
+.otl-group-dot {
+	display: inline-block;
+	width: 9px;
+	height: 9px;
+	border-radius: 50%;
+	margin-right: 6px;
+	vertical-align: middle;
+	flex: 0 0 auto;
+}
+.otl-group-stats {
+	margin-left: 10px;
+	font-size: 11px;
+	font-weight: 500;
+	color: var(--otl-text-2);
+	text-transform: none;
+	letter-spacing: 0;
+}
+.otl-tunnel-group__edit {
+	margin-left: auto;
+	background: none;
+	border: none;
+	color: var(--otl-text-2);
+	font-size: 11px;
+	cursor: pointer;
+	padding: 2px 6px;
+	border-radius: 6px;
+}
+.otl-tunnel-group__edit:hover {
+	color: var(--otl-text);
+	background: rgba(255, 255, 255, 0.06);
+}
 
 .otl-projects-create {
 	display: flex;
@@ -1692,4 +1723,43 @@ body {
 	text-transform: uppercase;
 	letter-spacing: .08em;
 	color: var(--otl-text-2);
+}
+
+/* ===== Color palette swatches ===== */
+.otl-swatches {
+	display: flex;
+	gap: 8px;
+	flex-wrap: wrap;
+}
+.otl-swatch {
+	width: 26px;
+	height: 26px;
+	border-radius: 50%;
+	border: 2px solid transparent;
+	cursor: pointer;
+	padding: 0;
+}
+.otl-swatch--active {
+	border-color: var(--otl-text);
+	box-shadow: 0 0 0 2px rgba(0, 0, 0, 0.4);
+}
+.otl-group-preview,
+.otl-group-existing__row {
+	display: flex;
+	align-items: center;
+	gap: 4px;
+	padding: 10px 12px;
+	border-radius: 10px;
+	background: rgba(255, 255, 255, 0.04);
+	font-size: 14px;
+}
+.otl-group-existing {
+	display: flex;
+	flex-direction: column;
+	gap: 6px;
+}
+.otl-empty-hint {
+	color: var(--otl-text-2);
+	font-size: 13px;
+	padding: 8px 2px;
 }

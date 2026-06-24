@@ -12,12 +12,14 @@ import {
 	handleListScenariosByProject,
 	handleListTunnels,
 	handleRunScenario,
+	handleUpdateTunnel,
 } from "../../src/main/ipc/handlers";
 import { playwrightRunner } from "../../src/main/runner/playwrightRunner";
 import { saveProject } from "../../src/main/stores/projectStore";
 import { saveReport } from "../../src/main/stores/reportStore";
 import { saveScenario } from "../../src/main/stores/scenarioStore";
 import { saveTunnel } from "../../src/main/stores/tunnelStore";
+import { DEFAULT_TUNNEL_COLOR } from "../../src/shared/groups";
 import type { Report, Scenario } from "../../src/shared/types";
 
 let dir: string;
@@ -49,6 +51,8 @@ beforeEach(() => {
 		id: "general",
 		projectId: "default",
 		name: "Général",
+		color: DEFAULT_TUNNEL_COLOR,
+		description: "",
 		order: 0,
 		createdAt: "2026-06-24T00:00:00Z",
 	});
@@ -231,6 +235,57 @@ describe("handlers", () => {
 		expect(p.id.length).toBeGreaterThan(0);
 	});
 
+	it("handleCreateTunnel applique les défauts couleur/description", () => {
+		const t = handleCreateTunnel({ projectId: "p1", name: "Sans couleur" });
+		expect(t.color).toBe(DEFAULT_TUNNEL_COLOR);
+		expect(t.description).toBe("");
+	});
+
+	it("handleCreateTunnel respecte couleur/description fournies", () => {
+		const t = handleCreateTunnel({
+			projectId: "p1",
+			name: "Avec couleur",
+			color: "#ff3366",
+			description: "Parcours d'achat",
+		});
+		expect(t.color).toBe("#ff3366");
+		expect(t.description).toBe("Parcours d'achat");
+	});
+
+	it("handleUpdateTunnel modifie name/color/description en préservant l'identité", () => {
+		const created = handleCreateTunnel({ projectId: "p1", name: "Avant" });
+		const updated = handleUpdateTunnel({
+			...created,
+			name: "Après",
+			color: "#22c55e",
+			description: "maj",
+		});
+		expect(updated.id).toBe(created.id);
+		expect(updated.order).toBe(created.order);
+		expect(updated.createdAt).toBe(created.createdAt);
+		expect(updated.name).toBe("Après");
+		expect(updated.color).toBe("#22c55e");
+		expect(updated.description).toBe("maj");
+		// persisted
+		const reread = handleListTunnels("p1").find((x) => x.id === created.id);
+		expect(reread?.name).toBe("Après");
+		expect(reread?.color).toBe("#22c55e");
+	});
+
+	it("handleUpdateTunnel lève si le tunnel n'existe pas", () => {
+		expect(() =>
+			handleUpdateTunnel({
+				id: "ghost",
+				projectId: "p1",
+				name: "x",
+				order: 0,
+				color: "#2f6bff",
+				description: "",
+				createdAt: "2026-01-01T00:00:00.000Z",
+			}),
+		).toThrow();
+	});
+
 	it("handleRunScenario résout le scénario et l'environnement scopés projet", async () => {
 		// seed: project "default" with env "preprod" + tunnel "general" + scenario "login"
 		saveProject({
@@ -251,6 +306,8 @@ describe("handlers", () => {
 			id: "general",
 			projectId: "default",
 			name: "Général",
+			color: DEFAULT_TUNNEL_COLOR,
+			description: "",
 			order: 0,
 			createdAt: "2026-06-24T00:00:00Z",
 		});

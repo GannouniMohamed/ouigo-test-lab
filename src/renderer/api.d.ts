@@ -36,7 +36,10 @@ interface OtlApi {
 	createTunnel(input: {
 		projectId: string;
 		name: string;
+		color?: string;
+		description?: string;
 	}): Promise<Tunnel>;
+	updateTunnel(t: Tunnel): Promise<Tunnel>;
 	deleteTunnel(projectId: string, tunnelId: string): Promise<void>;
 
 	listScenariosByProject(projectId: string): Promise<Scenario[]>;

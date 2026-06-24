@@ -7,6 +7,7 @@ export interface LastRun {
 	status: LastRunStatus;
 	at?: string;
 	durationMs?: number;
+	stepCount?: number;
 }
 
 export interface Scenario {
@@ -43,6 +44,8 @@ export interface Tunnel {
 	projectId: string;
 	name: string;
 	order: number;
+	color: string;
+	description: string;
 	createdAt: string;
 }
 

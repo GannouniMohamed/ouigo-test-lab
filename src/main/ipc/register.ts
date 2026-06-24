@@ -1,5 +1,5 @@
 import { BrowserWindow, ipcMain } from "electron";
-import type { Environment, Project } from "../../shared/types";
+import type { Environment, Project, Tunnel } from "../../shared/types";
 import { installBrowser } from "../runner/ensureBrowsers";
 import { playwrightRunner } from "../runner/playwrightRunner";
 import {
@@ -20,6 +20,7 @@ import {
 	handleRunScenario,
 	handleSaveEnvironment,
 	handleUpdateProject,
+	handleUpdateTunnel,
 } from "./handlers";
 import { handleStartRecording, handleStopRecording } from "./recordingHandlers";
 
@@ -79,9 +80,17 @@ export function registerIpc(): void {
 	);
 	ipcMain.handle(
 		"tunnel:create",
-		(_e, input: { projectId: string; name: string }) =>
-			handleCreateTunnel(input),
+		(
+			_e,
+			input: {
+				projectId: string;
+				name: string;
+				color?: string;
+				description?: string;
+			},
+		) => handleCreateTunnel(input),
 	);
+	ipcMain.handle("tunnel:update", (_e, t: Tunnel) => handleUpdateTunnel(t));
 	ipcMain.handle("tunnel:delete", (_e, projectId: string, tunnelId: string) =>
 		handleDeleteTunnel(projectId, tunnelId),
 	);
