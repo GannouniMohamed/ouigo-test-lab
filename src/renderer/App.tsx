@@ -7,6 +7,7 @@ import { TitleBar } from "./components/TitleBar";
 import History from "./screens/History";
 import HubLibrary from "./screens/HubLibrary";
 import LiveRun from "./screens/LiveRun";
+import NewProject from "./screens/NewProject";
 import NewScenario from "./screens/NewScenario";
 import Projects from "./screens/Projects";
 import Report from "./screens/Report";
@@ -38,6 +39,7 @@ function App(): JSX.Element {
 								<Route path="/report/:runId" element={<Report />} />
 								<Route path="/reports" element={<History />} />
 								<Route path="/projects" element={<Projects />} />
+								<Route path="/projects/new" element={<NewProject />} />
 							</Routes>
 						</AppGate>
 					</main>
