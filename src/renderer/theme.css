@@ -1431,3 +1431,31 @@ body {
 .otl-projectbar__manage:hover {
 	color: var(--otl-text);
 }
+
+.otl-tunnel-group {
+	margin-bottom: 1.5rem;
+}
+.otl-tunnel-group__title {
+	display: flex;
+	align-items: center;
+	gap: 0.5rem;
+	font-size: 13px;
+	font-weight: 600;
+	text-transform: uppercase;
+	letter-spacing: 0.06em;
+	color: var(--otl-text-2);
+	margin: 0 0 0.6rem;
+}
+.otl-tunnel-group__count {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	min-width: 18px;
+	height: 18px;
+	padding: 0 5px;
+	border-radius: 9px;
+	background: var(--otl-hover);
+	color: var(--otl-text-3);
+	font-size: 11px;
+	font-weight: 600;
+}
