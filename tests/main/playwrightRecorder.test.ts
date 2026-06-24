@@ -10,6 +10,7 @@ import {
 	listScenarios,
 } from "../../src/main/stores/scenarioStore";
 import { saveTunnel } from "../../src/main/stores/tunnelStore";
+import { DEFAULT_TUNNEL_COLOR } from "../../src/shared/groups";
 
 const REPO = resolve(__dirname, "../..");
 let dir: string;
@@ -26,6 +27,8 @@ function seedDefaultProject(baseURL: string): void {
 		id: "general",
 		projectId: "default",
 		name: "Général",
+		color: DEFAULT_TUNNEL_COLOR,
+		description: "",
 		order: 0,
 		createdAt: "2026-06-24T00:00:00Z",
 	});

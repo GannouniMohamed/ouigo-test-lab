@@ -1,3 +1,4 @@
+import { DEFAULT_TUNNEL_COLOR } from "../../shared/groups";
 import type {
 	Environment,
 	Project,
@@ -92,6 +93,8 @@ export function handleCreateProject(input: {
 		id: "general",
 		projectId: id,
 		name: "Général",
+		color: DEFAULT_TUNNEL_COLOR,
+		description: "",
 		order: 0,
 		createdAt: now,
 	});
@@ -138,6 +141,8 @@ export function handleCreateTunnel(input: {
 		id,
 		projectId: input.projectId,
 		name: input.name,
+		color: DEFAULT_TUNNEL_COLOR,
+		description: "",
 		order,
 		createdAt: new Date().toISOString(),
 	};

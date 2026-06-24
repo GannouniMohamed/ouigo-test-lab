@@ -1,6 +1,7 @@
 import { existsSync, readFileSync, readdirSync } from "node:fs";
 import { join } from "node:path";
 import { pathToFileURL } from "node:url";
+import { DEFAULT_TUNNEL_COLOR } from "../shared/groups";
 import type { Environment, Scenario } from "../shared/types";
 import {
 	defaultEnvironments,
@@ -65,6 +66,8 @@ export function seedIfEmpty(appRoot: string): void {
 			id: GENERAL_TUNNEL_ID,
 			projectId: DEFAULT_PROJECT_ID,
 			name: "Général",
+			color: DEFAULT_TUNNEL_COLOR,
+			description: "",
 			order: 0,
 			createdAt: new Date().toISOString(),
 		});
