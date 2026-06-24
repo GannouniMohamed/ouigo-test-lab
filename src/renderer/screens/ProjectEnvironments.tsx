@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import type { Environment, Project } from "../../shared/types";
 
@@ -8,15 +8,15 @@ export default function ProjectEnvironments(): JSX.Element {
 	const [project, setProject] = useState<Project | null>(null);
 	const [rows, setRows] = useState<Environment[]>([]);
 
-	async function load(): Promise<void> {
+	const load = useCallback(async (): Promise<void> => {
 		const p = await window.api.getProject(id);
 		setProject(p);
 		setRows(p.environments);
-	}
-	// biome-ignore lint/correctness/useExhaustiveDependencies: keyed on id, load is stable intent
+	}, [id]);
+
 	useEffect(() => {
 		load();
-	}, [id]);
+	}, [load]);
 
 	function updateRow(envId: string, patch: Partial<Environment>): void {
 		setRows((rs) => rs.map((r) => (r.id === envId ? { ...r, ...patch } : r)));
