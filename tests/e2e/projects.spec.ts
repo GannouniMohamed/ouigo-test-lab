@@ -40,10 +40,15 @@ test("création d'un projet avec environnements puis retour à la liste", async 
 		await win.getByRole("button", { name: /créer le projet/i }).click();
 
 		// Return to the projects list via the context-bar breadcrumb
-		await expect(win.locator(".otl-ctxbar").getByRole("button", { name: "Projets" })).toBeVisible({
+		await expect(
+			win.locator(".otl-ctxbar").getByRole("button", { name: "Projets" }),
+		).toBeVisible({
 			timeout: 15000,
 		});
-		await win.locator(".otl-ctxbar").getByRole("button", { name: "Projets" }).click();
+		await win
+			.locator(".otl-ctxbar")
+			.getByRole("button", { name: "Projets" })
+			.click();
 
 		// The new project should appear with its environment count
 		await expect(win.getByText("Démo E2E")).toBeVisible({ timeout: 15000 });
