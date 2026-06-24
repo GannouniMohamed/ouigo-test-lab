@@ -189,38 +189,46 @@ export default function HubLibrary(): JSX.Element {
 				/>
 			</div>
 
-			{groups.every((g) => g.items.length === 0) ? (
-				<p style={{ color: "var(--otl-text-2)" }}>Aucun scénario</p>
-			) : (
-				groups
-					.filter((g) => g.items.length > 0)
-					.map((g) => (
-						<section key={g.tunnel.id} className="otl-tunnel-group">
-							<h2 className="otl-tunnel-group__title">
-								<span
-									className="otl-group-dot"
-									style={{ background: g.tunnel.color }}
-									aria-hidden="true"
-								/>
-								{g.tunnel.name}
-								<span className="otl-tunnel-group__count">
-									{g.items.length}
+			{(() => {
+				// When "all" is selected: hide empty groups, show global placeholder if none have items.
+				// When a specific group is selected: always render its section (even if empty).
+				const sectionsToRender =
+					groupFilter === "all"
+						? groups.filter((g) => g.items.length > 0)
+						: groups;
+
+				if (groupFilter === "all" && sectionsToRender.length === 0) {
+					return <p style={{ color: "var(--otl-text-2)" }}>Aucun scénario</p>;
+				}
+
+				return sectionsToRender.map((g) => (
+					<section key={g.tunnel.id} className="otl-tunnel-group">
+						<h2 className="otl-tunnel-group__title">
+							<span
+								className="otl-group-dot"
+								style={{ background: g.tunnel.color }}
+								aria-hidden="true"
+							/>
+							{g.tunnel.name}
+							<span className="otl-tunnel-group__count">{g.items.length}</span>
+							{formatGroupStats(g.items) && (
+								<span className="otl-group-stats">
+									{formatGroupStats(g.items)}
 								</span>
-								{formatGroupStats(g.items) && (
-									<span className="otl-group-stats">
-										{formatGroupStats(g.items)}
-									</span>
-								)}
-								<button
-									type="button"
-									className="otl-tunnel-group__edit"
-									onClick={() =>
-										navigate(`/scenarios/groups/${g.tunnel.id}/edit`)
-									}
-								>
-									Éditer
-								</button>
-							</h2>
+							)}
+							<button
+								type="button"
+								className="otl-tunnel-group__edit"
+								onClick={() =>
+									navigate(`/scenarios/groups/${g.tunnel.id}/edit`)
+								}
+							>
+								Éditer
+							</button>
+						</h2>
+						{g.items.length === 0 ? (
+							<p className="otl-empty-hint">Aucun scénario dans ce groupe.</p>
+						) : (
 							<div className="otl-card-list">
 								{g.items.map((scenario) => (
 									<div
@@ -264,9 +272,10 @@ export default function HubLibrary(): JSX.Element {
 									</div>
 								))}
 							</div>
-						</section>
-					))
-			)}
+						)}
+					</section>
+				));
+			})()}
 		</div>
 	);
 }

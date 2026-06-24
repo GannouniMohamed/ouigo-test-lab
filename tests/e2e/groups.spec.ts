@@ -53,46 +53,27 @@ test("groupe: créer / filtrer / éditer / supprimer", async () => {
 			win.getByRole("button", { name: /Réservation\s*·\s*0/ }),
 		).toBeVisible({ timeout: 15000 });
 
-		// 6. Click the "Réservation" group tab → filter is active, group is empty
-		//    so "Aucun scénario" placeholder is visible
-		await win.getByRole("button", { name: /Réservation\s*·\s*0/ }).click();
-		await expect(win.getByText("Aucun scénario")).toBeVisible({
-			timeout: 15000,
-		});
-
-		// 7. Open the edit screen: navigate directly since the edit button is in the
-		//    group header which only renders when the group has scenarios.
-		//    We click the "Tous" tab first so we can see the default group's edit button,
-		//    but for "Réservation" we navigate via the URL pattern.
-		//    Strategy: click "Tous" to show all groups, then click "Éditer" scoped
-		//    to the Réservation group header.
-		//    Because Réservation has 0 scenarios, its section header is hidden when
-		//    "Tous" is active (filter hides empty groups). Navigate directly instead.
-		await win.getByRole("button", { name: /Tous\s*·/ }).click();
-		// The "Réservation" group section header only appears if it has items.
-		// Since it's empty, we navigate programmatically to the edit screen.
-		// Use the breadcrumb nav in NewGroupe/EditGroupe which accepts navigation.
-		// We'll find the tunnelId from the tab button's click handler by navigating
-		// to /scenarios and then triggering edit via URL.
-		// Best approach: use Electron's evaluate to get the current hash and tunnelId.
-		// Alternatively: click "Réservation · 0" tab to set the filter, then navigate
-		// using the app's evaluate.
+		// 6. Click the "Réservation" group tab → filter is active, group section renders
+		//    (even though empty) with the "Éditer" button visible.
 		await win.getByRole("button", { name: /Réservation\s*·\s*0/ }).click();
 
-		// Evaluate to get the tunnel id from the IPC
-		const tunnelId = await win.evaluate(async () => {
-			const projects = await window.api.listProjects();
-			const project = projects[0];
-			const tunnels = await window.api.listTunnels(project.id);
-			const t = tunnels.find((x: { name: string }) => x.name === "Réservation");
-			return t?.id ?? null;
+		// The group section header should now be rendered with the "Éditer" button.
+		// Scope to the Réservation section to avoid ambiguity with other groups.
+		const reservationSection = win.locator("section.otl-tunnel-group", {
+			has: win.locator("h2", { hasText: "Réservation" }),
 		});
-		expect(tunnelId).not.toBeNull();
+		const editerBtn = reservationSection.getByRole("button", {
+			name: "Éditer",
+		});
+		await expect(editerBtn).toBeVisible({ timeout: 15000 });
 
-		// Navigate to the edit screen
-		await win.evaluate((id: string) => {
-			window.location.hash = `/scenarios/groups/${id}/edit`;
-		}, tunnelId as string);
+		// Also verify the empty hint is shown inside the section
+		await expect(
+			reservationSection.getByText("Aucun scénario dans ce groupe."),
+		).toBeVisible({ timeout: 15000 });
+
+		// 7. Click "Éditer" to open the edit screen
+		await editerBtn.click();
 
 		await expect(
 			win.getByRole("heading", { name: "Modifier le groupe" }),
@@ -111,10 +92,12 @@ test("groupe: créer / filtrer / éditer / supprimer", async () => {
 			timeout: 15000,
 		});
 
-		// 8. Re-open edit screen and assert "Supprimer" is enabled (empty group, not last)
-		await win.evaluate((id: string) => {
-			window.location.hash = `/scenarios/groups/${id}/edit`;
-		}, tunnelId as string);
+		// 8. Click the Réservation tab again and use the "Éditer" button to re-open
+		await win.getByRole("button", { name: /Réservation\s*·\s*0/ }).click();
+		const reservationSection2 = win.locator("section.otl-tunnel-group", {
+			has: win.locator("h2", { hasText: "Réservation" }),
+		});
+		await reservationSection2.getByRole("button", { name: "Éditer" }).click();
 
 		await expect(
 			win.getByRole("heading", { name: "Modifier le groupe" }),

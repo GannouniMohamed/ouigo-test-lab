@@ -1758,3 +1758,8 @@ body {
 	flex-direction: column;
 	gap: 6px;
 }
+.otl-empty-hint {
+	color: var(--otl-text-2);
+	font-size: 13px;
+	padding: 8px 2px;
+}
