@@ -7,6 +7,8 @@ import { useAppStore } from "../store";
 export default function NewScenario(): JSX.Element {
 	const navigate = useNavigate();
 	const activeProjectId = useAppStore((s) => s.activeProjectId);
+	const activeEnvByProject = useAppStore((s) => s.activeEnvByProject);
+	const setFirstRunScenarioId = useAppStore((s) => s.setFirstRunScenarioId);
 
 	const [name, setName] = useState("");
 	const [envId, setEnvId] = useState("");
@@ -30,14 +32,32 @@ export default function NewScenario(): JSX.Element {
 			environmentId: envId || "local",
 			projectId: activeProjectId,
 			tunnelId: tunnelId || "general",
+			platform,
 		});
 		setRecordingId(id);
 	}
 
 	async function handleStop() {
 		if (!recordingId) return;
-		await window.api.stopRecording(recordingId);
-		navigate("/scenarios");
+		try {
+			const scenario = await window.api.stopRecording(recordingId);
+			const env =
+				activeEnvByProject[scenario.projectId] ||
+				envId ||
+				scenario.defaultEnvironmentId ||
+				"local";
+			setFirstRunScenarioId(scenario.id);
+			const { runId } = await window.api.runScenario(
+				scenario.projectId,
+				scenario.tunnelId,
+				scenario.id,
+				env,
+			);
+			navigate(`/run/${runId}`, { state: { auto: true } });
+		} catch {
+			setFirstRunScenarioId(null);
+			navigate("/scenarios");
+		}
 	}
 
 	return (
@@ -74,7 +94,7 @@ export default function NewScenario(): JSX.Element {
 							</svg>
 						</span>
 						<span className="otl-platform__labels">
-							<span className="otl-platform__name">Web</span>
+							<span className="otl-platform__name">Web Desktop</span>
 							<span className="otl-platform__sub">Playwright</span>
 						</span>
 						<span className="otl-platform__check">
@@ -188,10 +208,10 @@ export default function NewScenario(): JSX.Element {
 
 				{/* Tunnel */}
 				<div>
-					<div className="otl-field-label">Tunnel</div>
+					<div className="otl-field-label">Groupe</div>
 					<select
 						className="otl-select"
-						aria-label="Tunnel"
+						aria-label="Groupe"
 						value={tunnelId}
 						onChange={(e) => setTunnelId(e.target.value)}
 					>
