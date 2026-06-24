@@ -28,7 +28,12 @@ import {
 	getScenario,
 	listScenariosByProject,
 } from "../stores/scenarioStore";
-import { deleteTunnel, listTunnels, saveTunnel } from "../stores/tunnelStore";
+import {
+	deleteTunnel,
+	getTunnel,
+	listTunnels,
+	saveTunnel,
+} from "../stores/tunnelStore";
 
 function uniqueProjectId(base: string): string {
 	const existing = new Set(listProjects().map((p) => p.id));
@@ -134,6 +139,8 @@ export function handleListTunnels(projectId: string): Tunnel[] {
 export function handleCreateTunnel(input: {
 	projectId: string;
 	name: string;
+	color?: string;
+	description?: string;
 }): Tunnel {
 	const id = uniqueTunnelId(input.projectId, slugify(input.name));
 	const order = listTunnels(input.projectId).length;
@@ -141,13 +148,25 @@ export function handleCreateTunnel(input: {
 		id,
 		projectId: input.projectId,
 		name: input.name,
-		color: DEFAULT_TUNNEL_COLOR,
-		description: "",
 		order,
+		color: input.color ?? DEFAULT_TUNNEL_COLOR,
+		description: input.description ?? "",
 		createdAt: new Date().toISOString(),
 	};
 	saveTunnel(tunnel);
 	return tunnel;
+}
+
+export function handleUpdateTunnel(input: Tunnel): Tunnel {
+	const existing = getTunnel(input.projectId, input.id); // throws if missing
+	const updated: Tunnel = {
+		...existing,
+		name: input.name,
+		color: input.color,
+		description: input.description,
+	};
+	saveTunnel(updated);
+	return updated;
 }
 
 export function handleDeleteTunnel(projectId: string, tunnelId: string): void {

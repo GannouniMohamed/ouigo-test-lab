@@ -1,5 +1,5 @@
 import { contextBridge, ipcRenderer } from "electron";
-import type { Environment, Project, RunEvent } from "../shared/types";
+import type { Environment, Project, RunEvent, Tunnel } from "../shared/types";
 
 contextBridge.exposeInMainWorld("api", {
 	platform: process.platform,
@@ -54,8 +54,16 @@ contextBridge.exposeInMainWorld("api", {
 	listTunnels(projectId: string) {
 		return ipcRenderer.invoke("tunnel:list", projectId);
 	},
-	createTunnel(input: { projectId: string; name: string }) {
+	createTunnel(input: {
+		projectId: string;
+		name: string;
+		color?: string;
+		description?: string;
+	}) {
 		return ipcRenderer.invoke("tunnel:create", input);
+	},
+	updateTunnel(t: Tunnel) {
+		return ipcRenderer.invoke("tunnel:update", t);
 	},
 	deleteTunnel(projectId: string, tunnelId: string) {
 		return ipcRenderer.invoke("tunnel:delete", projectId, tunnelId);
