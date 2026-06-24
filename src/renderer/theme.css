@@ -1763,3 +1763,31 @@ body {
 	font-size: 13px;
 	padding: 8px 2px;
 }
+.live-run__auto-badge {
+	display: inline-flex;
+	align-items: center;
+	padding: 2px 8px;
+	border-radius: 6px;
+	font-size: 11px;
+	font-weight: 700;
+	letter-spacing: 0.04em;
+	color: #04121a;
+	background: linear-gradient(90deg, var(--otl-cyan), var(--otl-blue));
+}
+.live-run__auto-banner {
+	margin: 0 0 1rem;
+	padding: 12px 14px;
+	border-radius: 10px;
+	background: rgba(0, 201, 177, 0.08);
+	border: 1px solid rgba(0, 201, 177, 0.25);
+}
+.live-run__auto-banner-title {
+	font-size: 13px;
+	font-weight: 600;
+	color: var(--otl-text);
+}
+.live-run__auto-banner-text {
+	margin-top: 4px;
+	font-size: 12.5px;
+	color: var(--otl-text-2);
+}
