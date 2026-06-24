@@ -18,9 +18,9 @@ describe("workspace", () => {
 	it("utilise OTL_WORKSPACE quand défini", () => {
 		expect(getWorkspaceDir()).toBe(dir);
 	});
-	it("crée les sous-dossiers scenarios/ runs/", () => {
+	it("crée les sous-dossiers projects/ runs/", () => {
 		ensureWorkspace();
-		expect(existsSync(join(dir, "scenarios"))).toBe(true);
+		expect(existsSync(join(dir, "projects"))).toBe(true);
 		expect(existsSync(join(dir, "runs"))).toBe(true);
 	});
 });
