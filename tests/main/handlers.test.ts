@@ -1,7 +1,7 @@
 import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
 	handleCreateProject,
 	handleCreateTunnel,
@@ -11,7 +11,9 @@ import {
 	handleListReports,
 	handleListScenariosByProject,
 	handleListTunnels,
+	handleRunScenario,
 } from "../../src/main/ipc/handlers";
+import { playwrightRunner } from "../../src/main/runner/playwrightRunner";
 import { saveProject } from "../../src/main/stores/projectStore";
 import { saveReport } from "../../src/main/stores/reportStore";
 import { saveScenario } from "../../src/main/stores/scenarioStore";
@@ -192,5 +194,71 @@ describe("handlers", () => {
 		const p = handleCreateProject({ name: "!!!", description: "" });
 		expect(p.id).not.toMatch(/^-/);
 		expect(p.id.length).toBeGreaterThan(0);
+	});
+
+	it("handleRunScenario résout le scénario et l'environnement scopés projet", async () => {
+		// seed: project "default" with env "preprod" + tunnel "general" + scenario "login"
+		saveProject({
+			id: "default",
+			name: "P",
+			description: "",
+			environments: [
+				{
+					id: "preprod",
+					label: "Préprod",
+					baseURL: "https://pp",
+					variables: {},
+				},
+			],
+			createdAt: "2026-06-24T00:00:00Z",
+		});
+		saveTunnel({
+			id: "general",
+			projectId: "default",
+			name: "Général",
+			order: 0,
+			createdAt: "2026-06-24T00:00:00Z",
+		});
+		saveScenario(
+			{
+				id: "login",
+				projectId: "default",
+				tunnelId: "general",
+				name: "Connexion",
+				platform: "web",
+				browser: "chromium",
+				defaultEnvironmentId: "preprod",
+				tags: [],
+				specFile: "login.spec.ts",
+				createdAt: "2026-06-24T00:00:00Z",
+				lastRun: { status: "never" },
+			},
+			'test("x", () => {});',
+		);
+
+		const spy = vi
+			.spyOn(playwrightRunner, "run")
+			.mockImplementation((_s, _e, cb) => {
+				cb({ type: "run-started", runId: "run-1" });
+				return Promise.resolve({
+					runId: "run-1",
+					status: "passed",
+					durationMs: 1,
+					report: {} as never,
+				});
+			});
+
+		const res = await handleRunScenario(
+			"default",
+			"general",
+			"login",
+			"preprod",
+			() => {},
+		);
+		expect(res.runId).toBe("run-1");
+		const [passedScenario, passedEnv] = spy.mock.calls[0];
+		expect(passedScenario.id).toBe("login");
+		expect(passedEnv.id).toBe("preprod");
+		spy.mockRestore();
 	});
 });

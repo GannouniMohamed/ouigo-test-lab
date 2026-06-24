@@ -4,7 +4,7 @@ import { describe, expect, it } from "vitest";
 import { Sidebar } from "../../src/renderer/components/Sidebar";
 
 describe("Sidebar", () => {
-	it("affiche les 4 items de navigation", () => {
+	it("affiche les 5 items de navigation", () => {
 		render(
 			<MemoryRouter>
 				<Sidebar />

@@ -3,11 +3,13 @@ import type {
 	Project,
 	Report,
 	ReportSummary,
+	RunEvent,
 	Scenario,
 	Tunnel,
 } from "../../shared/types";
 import { slugify } from "../recorder/slugify";
 import { isBrowserInstalled } from "../runner/ensureBrowsers";
+import { playwrightRunner } from "../runner/playwrightRunner";
 import {
 	defaultEnvironments,
 	deleteEnvironment,
@@ -22,14 +24,10 @@ import {
 import { getReport, listReports } from "../stores/reportStore";
 import {
 	deleteScenario,
+	getScenario,
 	listScenariosByProject,
 } from "../stores/scenarioStore";
-import {
-	deleteTunnel,
-	getTunnel,
-	listTunnels,
-	saveTunnel,
-} from "../stores/tunnelStore";
+import { deleteTunnel, listTunnels, saveTunnel } from "../stores/tunnelStore";
 
 function uniqueProjectId(base: string): string {
 	const existing = new Set(listProjects().map((p) => p.id));
@@ -156,4 +154,26 @@ export function handleBrowsersReady(): boolean {
 	return isBrowserInstalled("chromium");
 }
 
-export { getEnvironment, getTunnel };
+export async function handleRunScenario(
+	projectId: string,
+	tunnelId: string,
+	scenarioId: string,
+	envId: string,
+	sendEvent: (channel: string, payload: RunEvent) => void,
+): Promise<{ runId: string }> {
+	const scenario = getScenario(projectId, tunnelId, scenarioId);
+	const env = getEnvironment(projectId, envId);
+	let runId = "";
+	const ready = new Promise<string>((resolve) => {
+		void playwrightRunner.run(scenario, env, (ev) => {
+			if (ev.type === "run-started") {
+				runId = ev.runId;
+				resolve(runId);
+			}
+			if (runId) sendEvent(`run-event:${runId}`, ev);
+		});
+	});
+	return { runId: await ready };
+}
+
+export { getEnvironment };

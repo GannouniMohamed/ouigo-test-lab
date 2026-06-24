@@ -1,14 +1,11 @@
-import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAppStore } from "../store";
-import { EnvPicker } from "./EnvPicker";
 
 export function ProjectSwitcher(): JSX.Element {
 	const navigate = useNavigate();
 	const projects = useAppStore((s) => s.projects);
 	const activeProjectId = useAppStore((s) => s.activeProjectId);
 	const setActiveProjectId = useAppStore((s) => s.setActiveProjectId);
-	const [envId, setEnvId] = useState("");
 
 	return (
 		<div className="otl-projectbar">
@@ -33,9 +30,6 @@ export function ProjectSwitcher(): JSX.Element {
 				>
 					Gérer les projets
 				</button>
-			</div>
-			<div className="otl-projectbar__right">
-				<EnvPicker value={envId} onChange={setEnvId} />
 			</div>
 		</div>
 	);

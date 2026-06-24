@@ -2,9 +2,7 @@ import { BrowserWindow, ipcMain } from "electron";
 import type { Environment, Project } from "../../shared/types";
 import { installBrowser } from "../runner/ensureBrowsers";
 import { playwrightRunner } from "../runner/playwrightRunner";
-import { getScenario } from "../stores/scenarioStore";
 import {
-	getEnvironment,
 	handleBrowsersReady,
 	handleCreateProject,
 	handleCreateTunnel,
@@ -19,6 +17,7 @@ import {
 	handleListReports,
 	handleListScenariosByProject,
 	handleListTunnels,
+	handleRunScenario,
 	handleSaveEnvironment,
 	handleUpdateProject,
 } from "./handlers";
@@ -98,29 +97,20 @@ export function registerIpc(): void {
 
 	ipcMain.handle(
 		"scenario:run",
-		async (
+		(
 			event,
 			projectId: string,
 			tunnelId: string,
 			scenarioId: string,
 			envId: string,
-		) => {
-			const scenario = getScenario(projectId, tunnelId, scenarioId);
-			const env = getEnvironment(projectId, envId);
-
-			let runId = "";
-			const ready = new Promise<string>((resolve) => {
-				void playwrightRunner.run(scenario, env, (ev) => {
-					if (ev.type === "run-started") {
-						runId = ev.runId;
-						resolve(runId);
-					}
-					if (runId) event.sender.send(`run-event:${runId}`, ev);
-				});
-			});
-
-			return { runId: await ready };
-		},
+		) =>
+			handleRunScenario(
+				projectId,
+				tunnelId,
+				scenarioId,
+				envId,
+				(channel, payload) => event.sender.send(channel, payload),
+			),
 	);
 
 	ipcMain.handle("run:cancel", (_e, runId: string) =>
