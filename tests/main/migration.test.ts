@@ -2,6 +2,7 @@ import {
 	existsSync,
 	mkdirSync,
 	mkdtempSync,
+	readFileSync,
 	rmSync,
 	writeFileSync,
 } from "node:fs";
@@ -99,5 +100,20 @@ describe("migrateWorkspaceIfNeeded", () => {
 		migrateWorkspaceIfNeeded();
 		expect(listProjects()).toHaveLength(1);
 		expect(listScenariosByProject("default")).toHaveLength(1);
+	});
+	it("préserve le contenu du fichier spec migré", () => {
+		writeLegacy();
+		migrateWorkspaceIfNeeded();
+		const specPath = join(
+			dir,
+			"projects",
+			"default",
+			"tunnels",
+			"general",
+			"scenarios",
+			"login",
+			"login.spec.ts",
+		);
+		expect(readFileSync(specPath, "utf-8")).toBe("// spec");
 	});
 });

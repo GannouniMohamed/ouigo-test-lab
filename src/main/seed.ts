@@ -72,7 +72,9 @@ export function seedIfEmpty(appRoot: string): void {
 		return;
 	}
 
-	// Projects already exist (fresh seed done, or migrated): ensure 'local' env.
+	// Projects already exist (fresh seed done, or migrated): ensure 'local' env
+	// on the default project — but only if it still exists (it may have been deleted).
+	if (!listProjects().some((p) => p.id === DEFAULT_PROJECT_ID)) return;
 	const project = getProject(DEFAULT_PROJECT_ID);
 	if (!project.environments.some((e) => e.id === "local")) {
 		saveEnvironment(DEFAULT_PROJECT_ID, local);

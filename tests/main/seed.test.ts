@@ -7,6 +7,7 @@ import {
 	getProject,
 	listEnvironments,
 	listProjects,
+	saveProject,
 } from "../../src/main/stores/projectStore";
 import { listScenariosByProject } from "../../src/main/stores/scenarioStore";
 
@@ -75,5 +76,17 @@ describe("seedIfEmpty", () => {
 				(s) => s.name === "Parcours d'accueil",
 			),
 		).toBe(true);
+	});
+	it("ne plante pas si des projets existent mais pas le projet par défaut", () => {
+		saveProject({
+			id: "autre",
+			name: "Autre",
+			description: "",
+			environments: [
+				{ id: "x", label: "X", baseURL: "https://x", variables: {} },
+			],
+			createdAt: "2026-06-24T00:00:00Z",
+		});
+		expect(() => seedIfEmpty(REPO_ROOT)).not.toThrow();
 	});
 });
