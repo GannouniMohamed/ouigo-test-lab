@@ -1758,8 +1758,3 @@ body {
 	flex-direction: column;
 	gap: 6px;
 }
-.otl-textarea {
-	min-height: 64px;
-	resize: vertical;
-	padding-top: 8px;
-}
