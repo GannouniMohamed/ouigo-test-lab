@@ -1,6 +1,7 @@
 import { join } from "node:path";
 import { BrowserWindow, app } from "electron";
 import { registerIpc } from "./ipc/register";
+import { migrateWorkspaceIfNeeded } from "./migration";
 import { seedIfEmpty } from "./seed";
 import { ensureWorkspace } from "./workspace";
 
@@ -43,6 +44,7 @@ function createWindow(): void {
 app.whenReady().then(() => {
 	const appRoot = app.isPackaged ? app.getAppPath() : process.cwd();
 	ensureWorkspace();
+	migrateWorkspaceIfNeeded();
 	seedIfEmpty(appRoot);
 	registerIpc();
 	createWindow();
