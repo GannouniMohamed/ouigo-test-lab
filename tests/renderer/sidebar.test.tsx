@@ -16,6 +16,17 @@ describe("Sidebar", () => {
 		expect(screen.getByText("IA")).toBeInTheDocument();
 		expect(screen.getByText("Projets")).toBeInTheDocument();
 	});
+	it("affiche Projets en premier", () => {
+		render(
+			<MemoryRouter>
+				<Sidebar />
+			</MemoryRouter>,
+		);
+		const labels = screen
+			.getAllByText(/Projets|Scénarios|Exéc\.|Rapports/)
+			.map((n) => n.textContent);
+		expect(labels.indexOf("Projets")).toBeLessThan(labels.indexOf("Scénarios"));
+	});
 	it("désactive l'item IA", () => {
 		render(
 			<MemoryRouter>

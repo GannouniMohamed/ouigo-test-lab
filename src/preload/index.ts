@@ -27,7 +27,11 @@ contextBridge.exposeInMainWorld("api", {
 	getProject(id: string) {
 		return ipcRenderer.invoke("project:get", id);
 	},
-	createProject(input: { name: string; description: string }) {
+	createProject(input: {
+		name: string;
+		description: string;
+		environments?: Array<{ label: string; baseURL: string }>;
+	}) {
 		return ipcRenderer.invoke("project:create", input);
 	},
 	updateProject(p: Project) {

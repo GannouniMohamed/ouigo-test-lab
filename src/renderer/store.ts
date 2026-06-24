@@ -19,6 +19,27 @@ function writeActiveId(id: string): void {
 	}
 }
 
+const ENV_KEY = "otl.activeEnvByProject";
+
+function readActiveEnvMap(): Record<string, string> {
+	try {
+		return JSON.parse(localStorage.getItem(ENV_KEY) ?? "{}") as Record<
+			string,
+			string
+		>;
+	} catch {
+		return {};
+	}
+}
+
+function writeActiveEnvMap(map: Record<string, string>): void {
+	try {
+		localStorage.setItem(ENV_KEY, JSON.stringify(map));
+	} catch {
+		/* ignore */
+	}
+}
+
 interface AppState {
 	scenarios: Scenario[];
 	setScenarios: (s: Scenario[]) => void;
@@ -27,6 +48,8 @@ interface AppState {
 	setProjects: (p: Project[]) => void;
 	setActiveProjectId: (id: string) => void;
 	loadProjects: () => Promise<void>;
+	activeEnvByProject: Record<string, string>;
+	setActiveEnv: (projectId: string, envId: string) => void;
 }
 
 export const useAppStore = create<AppState>((set, get) => ({
@@ -46,5 +69,11 @@ export const useAppStore = create<AppState>((set, get) => ({
 		const activeProjectId = valid ? stored : (projects[0]?.id ?? "");
 		writeActiveId(activeProjectId);
 		set({ projects, activeProjectId });
+	},
+	activeEnvByProject: readActiveEnvMap(),
+	setActiveEnv: (projectId, envId) => {
+		const next = { ...get().activeEnvByProject, [projectId]: envId };
+		writeActiveEnvMap(next);
+		set({ activeEnvByProject: next });
 	},
 }));

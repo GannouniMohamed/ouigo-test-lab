@@ -21,6 +21,8 @@ test("enregistrement → scénario → exécution Réussi", async () => {
 	try {
 		const win = await app.firstWindow();
 		await win.waitForLoadState("domcontentloaded");
+		// App now opens on /projects — navigate to the scenarios Hub first
+		await win.getByRole("button", { name: "Scénarios" }).click();
 		await win.getByRole("button", { name: /nouveau scénario/i }).click();
 		await win.getByPlaceholder("Nom du scénario").fill("Mon parcours");
 		await win

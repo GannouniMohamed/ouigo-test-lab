@@ -1471,3 +1471,225 @@ body {
 	padding-top: 1.25rem;
 	border-top: 1px solid rgba(255, 255, 255, 0.06);
 }
+.otl-screen {
+	padding: 2rem;
+}
+.otl-breadcrumb {
+	display: flex;
+	align-items: center;
+	gap: .5rem;
+	font-size: 12.5px;
+	color: var(--otl-text-3);
+	margin-bottom: 1rem;
+}
+.otl-breadcrumb__link {
+	background: none;
+	border: none;
+	color: var(--otl-text-2);
+	cursor: pointer;
+	font-size: 12.5px;
+}
+.otl-breadcrumb__link:hover {
+	color: var(--otl-text);
+}
+.otl-breadcrumb__sep {
+	opacity: 0.5;
+}
+.otl-create {
+	display: flex;
+	flex-direction: column;
+	gap: 18px;
+	max-width: 640px;
+}
+.otl-textarea {
+	height: auto;
+	min-height: 64px;
+	padding: 10px 12px;
+	resize: vertical;
+}
+.otl-create__envhead {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+}
+.otl-create__warn {
+	font-size: 11px;
+	font-weight: 600;
+	color: var(--otl-danger-soft);
+}
+.otl-envrow {
+	display: flex;
+	align-items: flex-start;
+	gap: 8px;
+	margin-bottom: 8px;
+}
+.otl-envrow__label {
+	flex: 0 0 160px;
+}
+.otl-envrow__urlwrap {
+	flex: 1;
+	display: flex;
+	flex-direction: column;
+	gap: 4px;
+}
+.otl-input--error {
+	border-color: var(--otl-danger);
+}
+.otl-envrow__err {
+	font-size: 11px;
+	color: var(--otl-danger-soft);
+}
+.otl-envrow__remove {
+	width: 34px;
+	height: 40px;
+	border-radius: 9px;
+	border: 1px solid rgba(255, 255, 255, 0.08);
+	background: rgba(15, 23, 42, 0.4);
+	color: var(--otl-text-3);
+	cursor: pointer;
+}
+.otl-create__actions {
+	display: flex;
+	align-items: center;
+	gap: 12px;
+	flex-wrap: wrap;
+}
+.otl-create__hint {
+	font-size: 12px;
+	color: var(--otl-text-3);
+}
+.otl-envtable {
+	display: flex;
+	flex-direction: column;
+	gap: 8px;
+	max-width: 720px;
+	margin-top: 1rem;
+}
+.otl-envtable__head {
+	display: flex;
+	gap: 8px;
+	padding: 0 2px;
+}
+.otl-envtable__head .otl-field-label:first-child {
+	flex: 0 0 160px;
+}
+.otl-envtable__head .otl-field-label:nth-child(2) {
+	flex: 1;
+}
+.otl-projects-header {
+	display: flex;
+	align-items: flex-start;
+	justify-content: space-between;
+	margin-bottom: 1.5rem;
+}
+.otl-project-grid {
+	display: grid;
+	grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+	gap: 14px;
+}
+.otl-project-card {
+	flex-direction: column;
+	align-items: stretch;
+	gap: 12px;
+}
+.otl-project-card__top {
+	display: flex;
+	align-items: flex-start;
+	gap: 10px;
+}
+.otl-project-card__icon {
+	width: 34px;
+	height: 34px;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	border-radius: 10px;
+	background: rgba(0, 201, 177, 0.12);
+	color: var(--otl-cyan);
+}
+.otl-project-card__head {
+	flex: 1;
+}
+.otl-project-card__del {
+	background: none;
+	border: none;
+	color: var(--otl-text-3);
+	cursor: pointer;
+	padding: 4px;
+}
+.otl-project-card__del:hover:not(:disabled) {
+	color: var(--otl-danger-soft);
+}
+.otl-project-card__del:disabled {
+	opacity: 0.3;
+	cursor: not-allowed;
+}
+.otl-project-card__pills {
+	display: flex;
+	gap: 8px;
+}
+.otl-pill {
+	display: inline-flex;
+	align-items: center;
+	padding: 3px 9px;
+	border-radius: 8px;
+	background: var(--otl-hover);
+	color: var(--otl-text-2);
+	font-size: 11.5px;
+}
+.otl-project-card__actions {
+	display: flex;
+	gap: 8px;
+}
+.otl-empty {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	justify-content: center;
+	gap: 10px;
+	text-align: center;
+	padding: 4rem 1rem;
+	color: var(--otl-text-3);
+}
+.otl-empty__icon {
+	color: var(--otl-text-3);
+	opacity: 0.6;
+}
+.otl-empty__title {
+	font-size: 16px;
+	font-weight: 600;
+	color: var(--otl-text);
+}
+.otl-empty__sub {
+	max-width: 380px;
+	font-size: 13px;
+}
+.otl-ctxbar {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: .75rem;
+	padding: 8px 18px;
+	border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+	background: var(--otl-sidebar-bg);
+}
+.otl-ctxbar__crumb {
+	display: flex;
+	align-items: center;
+	gap: .5rem;
+}
+.otl-ctxbar__project {
+	font-weight: 600;
+}
+.otl-ctxbar__env {
+	display: flex;
+	align-items: center;
+	gap: .5rem;
+}
+.otl-ctxbar__envlabel {
+	font-size: 10.5px;
+	font-weight: 600;
+	text-transform: uppercase;
+	letter-spacing: .08em;
+	color: var(--otl-text-2);
+}

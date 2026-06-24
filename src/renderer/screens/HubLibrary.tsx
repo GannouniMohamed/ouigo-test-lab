@@ -54,6 +54,7 @@ export default function HubLibrary(): JSX.Element {
 	const activeProjectId = useAppStore((s) => s.activeProjectId);
 	const scenarios = useAppStore((s) => s.scenarios);
 	const setScenarios = useAppStore((s) => s.setScenarios);
+	const activeEnvByProject = useAppStore((s) => s.activeEnvByProject);
 
 	const [tunnels, setTunnels] = useState<Tunnel[]>([]);
 	const [filter, setFilter] = useState<Filter>("all");
@@ -77,7 +78,10 @@ export default function HubLibrary(): JSX.Element {
 	}, [reload]);
 
 	async function handleLancer(scenario: Scenario): Promise<void> {
-		const env = envId || scenario.defaultEnvironmentId;
+		const env =
+			activeEnvByProject[scenario.projectId] ||
+			envId ||
+			scenario.defaultEnvironmentId;
 		const { runId } = await window.api.runScenario(
 			scenario.projectId,
 			scenario.tunnelId,

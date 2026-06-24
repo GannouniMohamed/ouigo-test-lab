@@ -19,6 +19,8 @@ test("failure path: scénario en échec → Échec + capture", async () => {
 	try {
 		const win = await app.firstWindow();
 		await win.waitForLoadState("domcontentloaded");
+		// App now opens on /projects — navigate to the scenarios Hub first
+		await win.getByRole("button", { name: "Scénarios" }).click();
 		await expect(win.getByText("Parcours en échec")).toBeVisible({
 			timeout: 15000,
 		});

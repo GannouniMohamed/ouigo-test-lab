@@ -94,16 +94,16 @@ const icons = {
 
 const navItems: NavItem[] = [
 	{
-		label: "Scénarios",
-		icon: icons.scenarios,
-		to: "/scenarios",
-		match: (p) => p === "/" || p.startsWith("/scenarios"),
-	},
-	{
 		label: "Projets",
 		icon: icons.projects,
 		to: "/projects",
-		match: (p) => p.startsWith("/projects"),
+		match: (p) => p === "/" || p.startsWith("/projects"),
+	},
+	{
+		label: "Scénarios",
+		icon: icons.scenarios,
+		to: "/scenarios",
+		match: (p) => p.startsWith("/scenarios"),
 	},
 	{
 		label: "Exéc.",

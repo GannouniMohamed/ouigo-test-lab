@@ -55,17 +55,36 @@ export function handleGetProject(id: string): Project {
 	return getProject(id);
 }
 
+function buildEnvironments(
+	rows: Array<{ label: string; baseURL: string }>,
+): Environment[] {
+	const used = new Set<string>();
+	return rows.map((row) => {
+		const base = slugify(row.label);
+		let id = base;
+		let n = 2;
+		while (used.has(id)) id = `${base}-${n++}`;
+		used.add(id);
+		return { id, label: row.label, baseURL: row.baseURL, variables: {} };
+	});
+}
+
 export function handleCreateProject(input: {
 	name: string;
 	description: string;
+	environments?: Array<{ label: string; baseURL: string }>;
 }): Project {
 	const id = uniqueProjectId(slugify(input.name));
 	const now = new Date().toISOString();
+	const environments =
+		input.environments && input.environments.length > 0
+			? buildEnvironments(input.environments)
+			: defaultEnvironments();
 	const project: Project = {
 		id,
 		name: input.name,
 		description: input.description,
-		environments: defaultEnvironments(),
+		environments,
 		createdAt: now,
 	};
 	saveProject(project);

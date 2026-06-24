@@ -48,8 +48,14 @@ export function registerIpc(): void {
 	ipcMain.handle("project:get", (_e, id: string) => handleGetProject(id));
 	ipcMain.handle(
 		"project:create",
-		(_e, input: { name: string; description: string }) =>
-			handleCreateProject(input),
+		(
+			_e,
+			input: {
+				name: string;
+				description: string;
+				environments?: Array<{ label: string; baseURL: string }>;
+			},
+		) => handleCreateProject(input),
 	);
 	ipcMain.handle("project:update", (_e, p: Project) => handleUpdateProject(p));
 	ipcMain.handle("project:delete", (_e, id: string) => handleDeleteProject(id));
