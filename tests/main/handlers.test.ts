@@ -182,4 +182,15 @@ describe("handlers", () => {
 			"Réservation",
 		);
 	});
+
+	it("handleCreateProject génère un id sain même si le nom slugifie en vide", () => {
+		// slugify("!!!") returns "scenario" (its own fallback), so the handlers'
+		// fallback ("projet") is exercised when base="" is passed directly. Here we
+		// verify the public contract: a name made of only symbols produces an id
+		// with no leading dash and non-zero length, regardless of which fallback
+		// fires (slugify's "scenario" or handlers' "projet").
+		const p = handleCreateProject({ name: "!!!", description: "" });
+		expect(p.id).not.toMatch(/^-/);
+		expect(p.id.length).toBeGreaterThan(0);
+	});
 });

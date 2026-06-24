@@ -33,17 +33,19 @@ import {
 
 function uniqueProjectId(base: string): string {
 	const existing = new Set(listProjects().map((p) => p.id));
-	let candidate = base || "projet";
+	const safeBase = base || "projet";
+	let candidate = safeBase;
 	let n = 2;
-	while (existing.has(candidate)) candidate = `${base}-${n++}`;
+	while (existing.has(candidate)) candidate = `${safeBase}-${n++}`;
 	return candidate;
 }
 
 function uniqueTunnelId(projectId: string, base: string): string {
 	const existing = new Set(listTunnels(projectId).map((t) => t.id));
-	let candidate = base || "tunnel";
+	const safeBase = base || "tunnel";
+	let candidate = safeBase;
 	let n = 2;
-	while (existing.has(candidate)) candidate = `${base}-${n++}`;
+	while (existing.has(candidate)) candidate = `${safeBase}-${n++}`;
 	return candidate;
 }
 
