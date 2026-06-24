@@ -4,23 +4,8 @@ import type { Platform, Scenario, Tunnel } from "../../shared/types";
 import { EnvPicker } from "../components/EnvPicker";
 import { PlatformIcon } from "../components/PlatformIcon";
 import { StatusBadge } from "../components/StatusBadge";
+import { formatAt, formatDuration } from "../lib/time";
 import { useAppStore } from "../store";
-
-function formatAt(at?: string): string {
-	if (!at) return "—";
-	return new Date(at).toLocaleString("fr-FR", {
-		day: "2-digit",
-		month: "2-digit",
-		year: "numeric",
-		hour: "2-digit",
-		minute: "2-digit",
-	});
-}
-
-function formatDuration(ms?: number): string {
-	if (ms == null) return "—";
-	return `${(ms / 1000).toFixed(1)}s`;
-}
 
 const PLATFORM_LABELS: Record<Platform, string> = {
 	web: "Web",
