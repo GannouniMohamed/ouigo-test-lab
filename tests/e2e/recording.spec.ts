@@ -40,6 +40,10 @@ test("enregistrement → auto-run → Rapport Réussi", async () => {
 		await expect(win.getByText("Réussi", { exact: true })).toBeVisible({
 			timeout: 120000,
 		});
+		// Fix 1-2: recorded actions (goto + expect) must appear as real steps
+		await expect(win.getByText(/[1-9]\d*\/[1-9]\d* étapes/)).toBeVisible({
+			timeout: 15000,
+		});
 	} finally {
 		await app.close();
 		rmSync(workspace, { recursive: true, force: true });
