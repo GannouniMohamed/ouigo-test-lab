@@ -1664,3 +1664,32 @@ body {
 	max-width: 380px;
 	font-size: 13px;
 }
+.otl-ctxbar {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: .75rem;
+	padding: 8px 18px;
+	border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+	background: var(--otl-sidebar-bg);
+}
+.otl-ctxbar__crumb {
+	display: flex;
+	align-items: center;
+	gap: .5rem;
+}
+.otl-ctxbar__project {
+	font-weight: 600;
+}
+.otl-ctxbar__env {
+	display: flex;
+	align-items: center;
+	gap: .5rem;
+}
+.otl-ctxbar__envlabel {
+	font-size: 10.5px;
+	font-weight: 600;
+	text-transform: uppercase;
+	letter-spacing: .08em;
+	color: var(--otl-text-2);
+}

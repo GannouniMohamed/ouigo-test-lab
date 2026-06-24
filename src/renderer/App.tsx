@@ -1,7 +1,7 @@
 import { useEffect } from "react";
 import { HashRouter, Navigate, Route, Routes } from "react-router-dom";
 import { AppGate } from "./components/AppGate";
-import { ProjectSwitcher } from "./components/ProjectSwitcher";
+import { ProjectContextBar } from "./components/ProjectContextBar";
 import { Sidebar } from "./components/Sidebar";
 import { TitleBar } from "./components/TitleBar";
 import History from "./screens/History";
@@ -24,7 +24,7 @@ function App(): JSX.Element {
 		<HashRouter>
 			<div className="otl-root">
 				<TitleBar />
-				<ProjectSwitcher />
+				<ProjectContextBar />
 				<div className="otl-app">
 					<Sidebar />
 					<main className="otl-main">
