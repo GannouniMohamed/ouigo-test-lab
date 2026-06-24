@@ -186,6 +186,7 @@ export const playwrightRunner: TestRunner = {
 					status: report.status === "passed" ? "passed" : "failed",
 					at: startedAt,
 					durationMs: report.durationMs,
+					stepCount: report.steps.length,
 				});
 				onEvent({
 					type: "run-finished",
