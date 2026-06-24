@@ -13,11 +13,16 @@ class StepReporter {
 			cat === "expect" ||
 			(cat === "pw:api" && !String(step.title).startsWith("browser"));
 		if (!keep) return;
+		const failed = Boolean(step.error);
 		this._steps.push({
 			title: step.title,
 			durationMs: typeof step.duration === "number" ? step.duration : 0,
-			status: step.error ? "failed" : "passed",
-			error: step.error ? step.error.message : undefined,
+			status: failed ? "failed" : "passed",
+			error: failed
+				? step.error && (step.error.message || step.error.stack)
+					? step.error.message || step.error.stack
+					: "Échec de l'étape"
+				: undefined,
 		});
 	}
 	onEnd() {

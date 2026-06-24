@@ -1,14 +1,16 @@
 import { spawn } from "node:child_process";
 import type { ChildProcess } from "node:child_process";
 import { randomUUID } from "node:crypto";
-import { mkdirSync, readFileSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync } from "node:fs";
 import { delimiter, dirname, join, resolve } from "node:path";
 import type {
 	Environment,
 	Report,
+	ReportStep,
 	RunEvent,
 	RunResult,
 	Scenario,
+	StepStatus,
 } from "../../shared/types";
 import { saveReport } from "../stores/reportStore";
 import { updateLastRun } from "../stores/scenarioStore";
@@ -22,6 +24,31 @@ interface RunState {
 }
 
 const activeRuns = new Map<string, RunState>();
+
+export function readCustomSteps(stepsOut: string): ReportStep[] | null {
+	if (!existsSync(stepsOut)) return null;
+	try {
+		const raw = JSON.parse(readFileSync(stepsOut, "utf-8")) as Array<{
+			title: string;
+			durationMs?: number;
+			status?: string;
+			error?: string;
+		}>;
+		if (!Array.isArray(raw)) return null;
+		return raw.map((s, index) => {
+			const step: ReportStep = {
+				index,
+				title: s.title,
+				status: (s.status === "failed" ? "failed" : "passed") as StepStatus,
+				durationMs: typeof s.durationMs === "number" ? s.durationMs : 0,
+			};
+			if (s.error) step.error = s.error;
+			return step;
+		});
+	} catch {
+		return null;
+	}
+}
 
 function buildMinimalFailedReport(ctx: {
 	runId: string;
@@ -76,6 +103,7 @@ export const playwrightRunner: TestRunner = {
 		mkdirSync(artifactsDir, { recursive: true });
 
 		const jsonOut = join(runDir, "playwright.json");
+		const stepsOut = join(runDir, "steps.json");
 		const scenarioDir = join(
 			getWorkspaceDir(),
 			"projects",
@@ -103,6 +131,7 @@ export const playwrightRunner: TestRunner = {
 			PLAYWRIGHT_BASE_URL: env.baseURL,
 			OTL_TEST_DIR: scenarioDir,
 			OTL_JSON_OUT: jsonOut,
+			OTL_STEPS_OUT: stepsOut,
 			OTL_ARTIFACTS: artifactsDir,
 			NODE_PATH: nodePath,
 			...env.variables,
@@ -254,6 +283,27 @@ export const playwrightRunner: TestRunner = {
 					environmentLabel: env.label,
 					startedAt,
 				});
+
+				// Capture screenshot from JSON-mapped report before potentially overriding steps
+				const failedJsonStep = report.steps.find(
+					(s) => s.status === "failed" && s.screenshotPath !== undefined,
+				);
+				const preservedScreenshot = failedJsonStep?.screenshotPath;
+
+				// Override report.steps with real recorded actions from custom reporter
+				const customSteps = readCustomSteps(stepsOut);
+				if (customSteps && customSteps.length > 0) {
+					// Carry over the failure screenshot to the first failed custom step
+					if (preservedScreenshot !== undefined) {
+						const firstFailedCustomStep = customSteps.find(
+							(s) => s.status === "failed",
+						);
+						if (firstFailedCustomStep !== undefined) {
+							firstFailedCustomStep.screenshotPath = preservedScreenshot;
+						}
+					}
+					report.steps = customSteps;
+				}
 
 				if (state.cancelled) report.status = "cancelled";
 
