@@ -76,6 +76,25 @@ describe("HubLibrary", () => {
 		expect(screen.getByText("Recherche train")).toBeTruthy();
 	});
 
+	it("lance avec l'environnement actif du projet", async () => {
+		useAppStore.setState({ activeEnvByProject: { default: "recette" } });
+		render(
+			<MemoryRouter>
+				<HubLibrary />
+			</MemoryRouter>,
+		);
+		await screen.findByText("Connexion");
+		fireEvent.click(screen.getAllByRole("button", { name: /lancer/i })[0]);
+		await waitFor(() =>
+			expect(
+				window.api.runScenario as unknown as ReturnType<typeof vi.fn>,
+			).toHaveBeenCalled(),
+		);
+		const call = (window.api.runScenario as unknown as ReturnType<typeof vi.fn>)
+			.mock.calls[0];
+		expect(call[3]).toBe("recette"); // envId
+	});
+
 	it("Lancer appelle runScenario avec projectId et tunnelId", async () => {
 		render(
 			<MemoryRouter>

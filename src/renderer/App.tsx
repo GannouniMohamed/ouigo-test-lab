@@ -30,10 +30,7 @@ function App(): JSX.Element {
 					<main className="otl-main">
 						<AppGate>
 							<Routes>
-								<Route
-									path="/"
-									element={<Navigate to="/scenarios" replace />}
-								/>
+								<Route path="/" element={<Navigate to="/projects" replace />} />
 								<Route path="/scenarios" element={<HubLibrary />} />
 								<Route path="/scenarios/new" element={<NewScenario />} />
 								<Route path="/run/:runId" element={<LiveRun />} />
