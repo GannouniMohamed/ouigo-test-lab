@@ -148,6 +148,56 @@ describe("NewScenario", () => {
 		expect(screen.getByText("Préprod")).toBeInTheDocument();
 	});
 
+	it("affiche le 1er env du projet (pas « Local ») quand aucun n'est sélectionné", async () => {
+		// Fresh project: nothing in activeEnvByProject, but the project has envs.
+		// biome-ignore lint/suspicious/noExplicitAny: test stub
+		(globalThis as any).window.api.listEnvironments = vi
+			.fn()
+			.mockResolvedValue([
+				{
+					id: "preprod",
+					label: "Préprod",
+					baseURL: "https://preprod.example.com",
+					variables: {},
+				},
+				{
+					id: "recette",
+					label: "Recette",
+					baseURL: "https://recette.example.com",
+					variables: {},
+				},
+			]);
+		useAppStore.setState({
+			activeProjectId: "default",
+			activeEnvByProject: {},
+		});
+		render(
+			<MemoryRouter>
+				<NewScenario />
+			</MemoryRouter>,
+		);
+		await screen.findByText("Général");
+		// Banner shows the project's first env, not the literal "Local".
+		await waitFor(() =>
+			expect(screen.getByText("Préprod")).toBeInTheDocument(),
+		);
+		expect(screen.queryByText("Local")).not.toBeInTheDocument();
+
+		// And recording starts against that inherited env id.
+		await userEvent.type(
+			screen.getByPlaceholderText("Nom du scénario"),
+			"Parcours",
+		);
+		await userEvent.click(
+			screen.getByRole("button", { name: /démarrer l'enregistrement/i }),
+		);
+		await waitFor(() =>
+			expect(window.api.startRecording).toHaveBeenCalledWith(
+				expect.objectContaining({ environmentId: "preprod" }),
+			),
+		);
+	});
+
 	it("retombe sur « Local » quand aucun env n'est hérité", async () => {
 		useAppStore.setState({
 			activeProjectId: "default",
