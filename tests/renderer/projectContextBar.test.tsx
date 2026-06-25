@@ -53,9 +53,15 @@ describe("ProjectContextBar", () => {
 	});
 	it("choisir un environnement met à jour activeEnvByProject", () => {
 		renderAt("/scenarios");
-		fireEvent.change(screen.getByLabelText(/environnement actif/i), {
-			target: { value: "recette" },
-		});
+		fireEvent.click(screen.getByLabelText(/environnement actif/i));
+		fireEvent.click(screen.getByRole("option", { name: "Recette" }));
 		expect(useAppStore.getState().activeEnvByProject.ouigo).toBe("recette");
+	});
+
+	it("affiche le placeholder « Environnement » quand aucun env n'est choisi", () => {
+		renderAt("/scenarios");
+		expect(screen.getByLabelText(/environnement actif/i).textContent).toContain(
+			"Environnement",
+		);
 	});
 });

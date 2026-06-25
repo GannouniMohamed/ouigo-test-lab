@@ -1,6 +1,7 @@
 import { useLocation } from "react-router-dom";
 import { useAppStore } from "../store";
 import { Breadcrumb } from "./Breadcrumb";
+import { Select } from "./Select";
 
 export function ProjectContextBar(): JSX.Element | null {
 	const { pathname } = useLocation();
@@ -34,19 +35,16 @@ export function ProjectContextBar(): JSX.Element | null {
 			</div>
 			<div className="otl-ctxbar__env">
 				<span className="otl-ctxbar__envlabel">Environnement</span>
-				<select
-					className="otl-select"
-					aria-label="Environnement actif"
+				<Select
+					ariaLabel="Environnement actif"
 					value={envId}
-					onChange={(e) => setActiveEnv(activeProjectId, e.target.value)}
-				>
-					<option value="">Par défaut</option>
-					{(project?.environments ?? []).map((env) => (
-						<option key={env.id} value={env.id}>
-							{env.label}
-						</option>
-					))}
-				</select>
+					onChange={(v) => setActiveEnv(activeProjectId, v)}
+					options={(project?.environments ?? []).map((e) => ({
+						value: e.id,
+						label: e.label,
+					}))}
+					placeholder="Environnement"
+				/>
 			</div>
 		</div>
 	);
