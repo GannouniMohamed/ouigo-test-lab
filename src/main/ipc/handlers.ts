@@ -1,6 +1,10 @@
+import { randomUUID } from "node:crypto";
 import { DEFAULT_TUNNEL_COLOR } from "../../shared/groups";
 import { parseRecordedSteps } from "../../shared/spec";
 import type {
+	BatchEvent,
+	BatchOptions,
+	BatchReport,
 	Environment,
 	Project,
 	RecordedStep,
@@ -12,8 +16,10 @@ import type {
 	Tunnel,
 } from "../../shared/types";
 import { slugify } from "../recorder/slugify";
+import { makeBatchReport, orchestrateBatch } from "../runner/batchRunner";
 import { isBrowserInstalled } from "../runner/ensureBrowsers";
 import { playwrightRunner } from "../runner/playwrightRunner";
+import { getBatch, saveBatch } from "../stores/batchStore";
 import {
 	defaultEnvironments,
 	deleteEnvironment,
@@ -223,6 +229,46 @@ export function handleGetReport(runId: string): Report {
 
 export function handleBrowsersReady(): boolean {
 	return isBrowserInstalled("chromium");
+}
+
+export function handleGetBatch(batchId: string): BatchReport {
+	return getBatch(batchId);
+}
+
+// Launch a batch of N runs of the same scenario (Feature 2). Returns the
+// batchId immediately; iterations stream batch events on `batch-event:<id>`
+// and each persists a full Report (reused single-run pipeline) so the summary
+// can drill into any one. A snapshot is saved up front so a freshly-opened
+// summary screen has state even before the first live event.
+export function handleRunBatch(
+	projectId: string,
+	tunnelId: string,
+	scenarioId: string,
+	envId: string,
+	options: BatchOptions,
+	sendEvent: (channel: string, payload: BatchEvent) => void,
+): { batchId: string } {
+	const scenario = getScenario(projectId, tunnelId, scenarioId);
+	const env = getEnvironment(projectId, envId);
+	const batchId = randomUUID();
+	const report = makeBatchReport(
+		batchId,
+		scenario,
+		env,
+		options.execution,
+		options.total,
+		new Date().toISOString(),
+	);
+	saveBatch(report);
+	void orchestrateBatch(
+		report,
+		scenario,
+		env,
+		options,
+		(ev) => sendEvent(`batch-event:${batchId}`, ev),
+		saveBatch,
+	);
+	return { batchId };
 }
 
 export async function handleRunScenario(

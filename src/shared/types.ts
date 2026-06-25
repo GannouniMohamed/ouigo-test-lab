@@ -148,3 +148,96 @@ export interface RunOptions {
 	// "Relancer" without persisting). The runner compiles it for the mode.
 	specDraft?: string;
 }
+
+// ── Batch runs (Feature 2: lancer N fois pour valider KPI / trackings) ───────
+
+// How the N iterations are scheduled. Sequential is the default — gentlest on
+// weak machines and the only mode that keeps tracking/KPI attribution clean
+// (parallel browser sessions race and pollute analytics). Parallel is capped
+// at two concurrent runs.
+export type BatchExecutionMode = "sequential" | "parallel";
+
+export type BatchItemStatus =
+	| "pending"
+	| "running"
+	| "passed"
+	| "failed"
+	| "cancelled";
+
+// One iteration within a batch. Each references its saved Report by runId, so
+// the summary can drill down into any single run's full step list.
+export interface BatchItem {
+	index: number; // 1-based position in the batch
+	runId?: string; // set once the iteration starts
+	status: BatchItemStatus;
+	durationMs?: number;
+}
+
+export interface BatchReport {
+	batchId: string;
+	scenarioId: string;
+	scenarioName: string;
+	projectId?: string;
+	tunnelId?: string;
+	environmentId?: string;
+	environmentLabel: string;
+	mode: RunMode;
+	execution: BatchExecutionMode;
+	total: number;
+	startedAt: string;
+	finishedAt?: string;
+	items: BatchItem[];
+}
+
+// Options chosen at launch for a multi-run batch.
+export interface BatchOptions {
+	headed?: boolean;
+	execution: BatchExecutionMode;
+	total: number;
+}
+
+export type BatchEvent =
+	| { type: "batch-started"; batchId: string; total: number }
+	| { type: "item-started"; index: number; runId: string }
+	| {
+			type: "item-finished";
+			index: number;
+			runId: string;
+			status: RunStatus;
+			durationMs: number;
+	  }
+	| { type: "batch-finished"; batchId: string };
+
+export interface BatchStats {
+	total: number;
+	done: number;
+	passed: number;
+	failed: number;
+	minMs?: number;
+	avgMs?: number;
+	maxMs?: number;
+}
+
+// Aggregate a batch's items into headline KPIs (X/N réussis, durées min/moy/max).
+export function summarizeBatch(items: BatchItem[]): BatchStats {
+	const finished = items.filter(
+		(i) => i.status === "passed" || i.status === "failed",
+	);
+	const durations = finished
+		.map((i) => i.durationMs)
+		.filter((d): d is number => typeof d === "number");
+	const stats: BatchStats = {
+		total: items.length,
+		done: finished.length,
+		passed: items.filter((i) => i.status === "passed").length,
+		failed: items.filter((i) => i.status === "failed").length,
+	};
+	if (durations.length > 0) {
+		stats.minMs = Math.min(...durations);
+		stats.maxMs = Math.max(...durations);
+		stats.avgMs = Math.round(
+			durations.reduce((a, b) => a + b, 0) / durations.length,
+		);
+	}
+	return stats;
+}

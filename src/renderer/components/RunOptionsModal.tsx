@@ -1,13 +1,21 @@
 import { useState } from "react";
-import type { Environment } from "../../shared/types";
+import type { BatchExecutionMode, Environment } from "../../shared/types";
+
+export interface RunLaunchOptions {
+	headed: boolean;
+	repeat: number;
+	execution: BatchExecutionMode;
+}
 
 interface RunOptionsModalProps {
 	scenarioName: string;
 	environments: Environment[];
 	defaultEnvId: string;
 	onCancel: () => void;
-	onConfirm: (envId: string, opts: { headed: boolean }) => void;
+	onConfirm: (envId: string, opts: RunLaunchOptions) => void;
 }
+
+const MAX_REPEAT = 20;
 
 export default function RunOptionsModal({
 	scenarioName,
@@ -22,6 +30,11 @@ export default function RunOptionsModal({
 		defaultEnvId;
 	const [envId, setEnvId] = useState(initialEnv);
 	const [headed, setHeaded] = useState(true);
+	const [repeat, setRepeat] = useState(1);
+	const [execution, setExecution] = useState<BatchExecutionMode>("sequential");
+
+	const clampRepeat = (n: number): number =>
+		Math.max(1, Math.min(MAX_REPEAT, Math.round(Number.isNaN(n) ? 1 : n)));
 
 	return (
 		<div className="otl-modal-overlay">
@@ -76,11 +89,89 @@ export default function RunOptionsModal({
 					</button>
 				</div>
 
+				<span className="otl-field-label otl-modal__group-label">
+					Répéter le lancement
+				</span>
+				<div className="otl-modal__repeat">
+					<div className="otl-modal__stepper">
+						<button
+							type="button"
+							className="otl-modal__stepper-btn"
+							aria-label="Moins"
+							disabled={repeat <= 1}
+							onClick={() => setRepeat((r) => clampRepeat(r - 1))}
+						>
+							−
+						</button>
+						<input
+							type="number"
+							className="otl-modal__stepper-input"
+							aria-label="Nombre de lancements"
+							min={1}
+							max={MAX_REPEAT}
+							value={repeat}
+							onChange={(e) => setRepeat(clampRepeat(e.target.valueAsNumber))}
+						/>
+						<button
+							type="button"
+							className="otl-modal__stepper-btn"
+							aria-label="Plus"
+							disabled={repeat >= MAX_REPEAT}
+							onClick={() => setRepeat((r) => clampRepeat(r + 1))}
+						>
+							+
+						</button>
+					</div>
+					<span className="otl-modal__repeat-hint">
+						{repeat <= 1
+							? "un seul lancement"
+							: `${repeat} lancements — pour vérifier KPI & trackings`}
+					</span>
+				</div>
+
+				{repeat > 1 && (
+					<>
+						<span className="otl-field-label otl-modal__group-label">
+							Exécution
+						</span>
+						<div className="otl-modal__toggle">
+							<button
+								type="button"
+								className={`otl-modal__toggle-btn${execution === "sequential" ? " otl-modal__toggle-btn--active" : ""}`}
+								aria-pressed={execution === "sequential"}
+								onClick={() => setExecution("sequential")}
+							>
+								Séquentiel
+								<span className="otl-modal__toggle-hint">
+									l'un après l'autre (recommandé)
+								</span>
+							</button>
+							<button
+								type="button"
+								className={`otl-modal__toggle-btn${execution === "parallel" ? " otl-modal__toggle-btn--active" : ""}`}
+								aria-pressed={execution === "parallel"}
+								onClick={() => setExecution("parallel")}
+							>
+								Parallèle
+								<span className="otl-modal__toggle-hint">
+									2 en même temps, plus rapide
+								</span>
+							</button>
+						</div>
+					</>
+				)}
+
 				<div className="otl-modal__actions">
 					<button
 						type="button"
 						className="otl-btn-primary"
-						onClick={() => onConfirm(envId, { headed })}
+						onClick={() =>
+							onConfirm(envId, {
+								headed,
+								repeat: clampRepeat(repeat),
+								execution,
+							})
+						}
 					>
 						Démarrer
 					</button>

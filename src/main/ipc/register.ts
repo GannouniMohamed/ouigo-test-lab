@@ -1,5 +1,6 @@
 import { BrowserWindow, ipcMain } from "electron";
 import type {
+	BatchOptions,
 	Environment,
 	Project,
 	RunOptions,
@@ -15,6 +16,7 @@ import {
 	handleDeleteProject,
 	handleDeleteScenario,
 	handleDeleteTunnel,
+	handleGetBatch,
 	handleGetProject,
 	handleGetReport,
 	handleGetScenarioSpec,
@@ -23,6 +25,7 @@ import {
 	handleListReports,
 	handleListScenariosByProject,
 	handleListTunnels,
+	handleRunBatch,
 	handleRunScenario,
 	handleSaveEnvironment,
 	handleSaveScenarioSpec,
@@ -136,6 +139,28 @@ export function registerIpc(): void {
 				opts,
 			),
 	);
+
+	ipcMain.handle(
+		"scenario:runBatch",
+		(
+			event,
+			projectId: string,
+			tunnelId: string,
+			scenarioId: string,
+			envId: string,
+			options: BatchOptions,
+		) =>
+			handleRunBatch(
+				projectId,
+				tunnelId,
+				scenarioId,
+				envId,
+				options,
+				(channel, payload) => event.sender.send(channel, payload),
+			),
+	);
+
+	ipcMain.handle("batch:get", (_e, batchId: string) => handleGetBatch(batchId));
 
 	ipcMain.handle("run:cancel", (_e, runId: string) =>
 		playwrightRunner.cancel(runId),

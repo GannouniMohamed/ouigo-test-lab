@@ -1,4 +1,7 @@
 import type {
+	BatchEvent,
+	BatchOptions,
+	BatchReport,
 	Environment,
 	Platform,
 	Project,
@@ -68,8 +71,17 @@ interface OtlApi {
 		scenarioId: string,
 		spec: string,
 	): Promise<RecordedStep[]>;
+	runBatch(
+		projectId: string,
+		tunnelId: string,
+		scenarioId: string,
+		envId: string,
+		options: BatchOptions,
+	): Promise<{ batchId: string }>;
+	getBatch(batchId: string): Promise<BatchReport>;
 	cancelRun(runId: string): Promise<void>;
 	onRunEvent(runId: string, cb: (e: RunEvent) => void): () => void;
+	onBatchEvent(batchId: string, cb: (e: BatchEvent) => void): () => void;
 
 	listReports(scenarioId?: string): Promise<ReportSummary[]>;
 	getReport(runId: string): Promise<Report>;

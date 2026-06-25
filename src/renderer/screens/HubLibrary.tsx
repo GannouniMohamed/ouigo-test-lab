@@ -9,6 +9,7 @@ import type {
 import { EnvPicker } from "../components/EnvPicker";
 import { PlatformIcon } from "../components/PlatformIcon";
 import RunOptionsModal from "../components/RunOptionsModal";
+import type { RunLaunchOptions } from "../components/RunOptionsModal";
 import { StatusBadge } from "../components/StatusBadge";
 import { formatGroupStats } from "../lib/groupStats";
 import { formatDuration, formatRelative } from "../lib/time";
@@ -103,15 +104,32 @@ export default function HubLibrary(): JSX.Element {
 	async function startRun(
 		scenario: Scenario,
 		chosenEnvId: string,
-		opts: { headed: boolean },
+		opts: RunLaunchOptions,
 	): Promise<void> {
 		setRunModal(null);
+		// N>1 → batch flow (live grid + KPI summary). N=1 keeps the existing
+		// single-run path (Live Run → Report) untouched.
+		if (opts.repeat > 1) {
+			const { batchId } = await window.api.runBatch(
+				scenario.projectId,
+				scenario.tunnelId,
+				scenario.id,
+				chosenEnvId,
+				{
+					headed: opts.headed,
+					execution: opts.execution,
+					total: opts.repeat,
+				},
+			);
+			navigate(`/batch/${batchId}`);
+			return;
+		}
 		const { runId } = await window.api.runScenario(
 			scenario.projectId,
 			scenario.tunnelId,
 			scenario.id,
 			chosenEnvId,
-			opts,
+			{ headed: opts.headed },
 		);
 		navigate(`/run/${runId}`);
 	}
