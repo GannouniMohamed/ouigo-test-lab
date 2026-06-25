@@ -3,7 +3,11 @@ import type { ChildProcess } from "node:child_process";
 import { randomUUID } from "node:crypto";
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { delimiter, dirname, join, resolve } from "node:path";
-import { compileSpecForMode, parseRecordedSteps } from "../../shared/spec";
+import {
+	compileSpecForMode,
+	parseRecordedSteps,
+	rebaseSpecUrls,
+} from "../../shared/spec";
 import type {
 	Environment,
 	Report,
@@ -16,6 +20,7 @@ import type {
 	StepStatus,
 } from "../../shared/types";
 import { stepActiveInMode } from "../../shared/types";
+import { getEnvironment } from "../stores/projectStore";
 import { saveReport } from "../stores/reportStore";
 import { updateLastRun } from "../stores/scenarioStore";
 import { getWorkspaceDir } from "../workspace";
@@ -147,9 +152,23 @@ export const playwrightRunner: TestRunner = {
 		// Source spec: a draft (step-management "Relancer") or the stored spec.
 		// Compile it for the mode (activate applicable steps, comment the rest)
 		// and run THAT — written into the isolated run dir.
-		const source =
+		const rawSource =
 			opts?.specDraft ??
 			readFileSync(join(scenarioDir, scenario.specFile), "utf-8");
+		// Recorded specs hardcode the absolute URL captured at record time, so they
+		// ignore the selected env. Rebase from the recorded env's baseURL to this
+		// run's env so switching env actually redirects the navigation. The recorded
+		// env may have been deleted — degrade to no rebase rather than failing.
+		let recordedBaseURL = "";
+		try {
+			recordedBaseURL = getEnvironment(
+				scenario.projectId,
+				scenario.defaultEnvironmentId,
+			).baseURL;
+		} catch {
+			/* recorded env gone — leave spec URLs untouched */
+		}
+		const source = rebaseSpecUrls(rawSource, recordedBaseURL, env.baseURL);
 		const recordedSteps = parseRecordedSteps(source);
 		// The planned steps that will ACTUALLY execute in this mode, in order.
 		// This length matches what the reporter emits (kept steps), so LiveRun can
