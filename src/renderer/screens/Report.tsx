@@ -9,6 +9,7 @@ import type {
 	StepStatus,
 } from "../../shared/types";
 import { stepActiveInMode } from "../../shared/types";
+import { formatDuration } from "../lib/time";
 import { useAppStore } from "../store";
 
 interface StepRow {
@@ -38,15 +39,6 @@ function statusModifier(status: ReportData["status"]): string {
 	if (status === "passed") return "otl-report-status--passed";
 	if (status === "failed") return "otl-report-status--failed";
 	return "otl-report-status--cancelled";
-}
-
-function formatMs(ms: number): string {
-	if (ms < 1000) return `${ms}ms`;
-	const totalSec = Math.floor(ms / 1000);
-	const m = Math.floor(totalSec / 60);
-	const s = totalSec % 60;
-	if (m > 0) return `${m}:${s.toString().padStart(2, "0")}`;
-	return `${totalSec}s`;
 }
 
 function basename(path: string): string {
@@ -350,7 +342,7 @@ export default function Report(): JSX.Element {
 					<span className="otl-report__duration">
 						Durée{" "}
 						<code className="otl-report__duration-val">
-							{formatMs(report.durationMs)}
+							{formatDuration(report.durationMs)}
 						</code>
 					</span>
 				</div>
@@ -446,7 +438,7 @@ export default function Report(): JSX.Element {
 									) : (
 										typeof step.durationMs === "number" && (
 											<code className="otl-rstep__duration">
-												{formatMs(step.durationMs)}
+												{formatDuration(step.durationMs)}
 											</code>
 										)
 									)}
@@ -573,7 +565,7 @@ export default function Report(): JSX.Element {
 				</div>
 
 				{/* Right panel */}
-				<div className="otl-report__right">
+				<div className="otl-report__right" hidden={report.status !== "failed"}>
 					{/* Screenshot card */}
 					<div className="otl-shot-title">Capture au moment de l'échec</div>
 					<div className="otl-shot">

@@ -25,6 +25,19 @@ const failed: Rep = {
 	],
 };
 
+const passed: Rep = {
+	runId: "run-9",
+	scenarioId: "login",
+	scenarioName: "Parcours de connexion",
+	environmentLabel: "Préprod",
+	status: "passed",
+	durationMs: 8400,
+	startedAt: "2026-06-23T14:31:00Z",
+	steps: [
+		{ index: 0, title: "Ouvrir la page", status: "passed", durationMs: 1200 },
+	],
+};
+
 const editable: Rep = {
 	...failed,
 	projectId: "distribution",
@@ -77,6 +90,24 @@ describe("Report", () => {
 		const img = await screen.findByTestId("failure-screenshot");
 		expect(img).toHaveAttribute("src", "file:///tmp/run-1/artifacts/fail.png");
 	});
+	it("masque le bloc capture sur un run réussi", async () => {
+		(
+			window.api.getReport as unknown as ReturnType<typeof vi.fn>
+		).mockResolvedValue(passed);
+		renderAt();
+		await screen.findByText("Réussi");
+		expect(
+			screen.queryByText("Capture au moment de l'échec"),
+		).not.toBeVisible();
+	});
+
+	it("affiche la durée au format secondes cohérent (8.4s, pas 8400ms)", async () => {
+		renderAt();
+		await screen.findByText("Échec");
+		expect(screen.getByText("8.4s")).toBeInTheDocument();
+		expect(screen.queryByText("8400ms")).toBeNull();
+	});
+
 	it("le bloc réparation IA est présent (visuel)", async () => {
 		renderAt();
 		await screen.findByText("Échec");
