@@ -278,25 +278,29 @@ export async function handleRunScenario(
 	envId: string,
 	sendEvent: (channel: string, payload: RunEvent) => void,
 	opts?: RunOptions,
-): Promise<{ runId: string }> {
+): Promise<{ runId: string; steps?: string[] }> {
 	const scenario = getScenario(projectId, tunnelId, scenarioId);
 	const env = getEnvironment(projectId, envId);
 	let runId = "";
-	const ready = new Promise<string>((resolve) => {
+	// The run-started event (which carries the step plan) is emitted before the
+	// renderer knows the runId and can subscribe, so it never reaches the live
+	// screen. Return the plan with the runId so the caller can seed LiveRun via
+	// navigation state; subsequent step events then stream in normally.
+	const ready = new Promise<{ runId: string; steps?: string[] }>((resolve) => {
 		void playwrightRunner.run(
 			scenario,
 			env,
 			(ev) => {
 				if (ev.type === "run-started") {
 					runId = ev.runId;
-					resolve(runId);
+					resolve({ runId, steps: ev.steps });
 				}
 				if (runId) sendEvent(`run-event:${runId}`, ev);
 			},
 			opts,
 		);
 	});
-	return { runId: await ready };
+	return ready;
 }
 
 export { getEnvironment };

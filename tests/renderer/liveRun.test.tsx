@@ -117,6 +117,19 @@ describe("LiveRun", () => {
 		).toBeInTheDocument();
 	});
 
+	it("affiche le parcours depuis l'état de navigation, AVANT tout événement", async () => {
+		// The run-started event is lost (emitted before the screen subscribes),
+		// so the plan must come from navigation state and render with no event.
+		renderAt({ steps: ["Étape A", "Étape B"] });
+
+		expect(screen.getByText("Étape A")).toBeInTheDocument();
+		expect(screen.getByText("Étape B")).toBeInTheDocument();
+		expect(screen.getAllByText("non atteint")).toHaveLength(2);
+		expect(
+			screen.getByText((_content, el) => el?.textContent === "Étape 0 sur 2"),
+		).toBeInTheDocument();
+	});
+
 	it("met à jour le plan complet au fil des étapes en direct", async () => {
 		renderAt({ auto: true });
 		emit({

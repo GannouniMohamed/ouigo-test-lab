@@ -122,14 +122,14 @@ export default function HubLibrary(): JSX.Element {
 			navigate(`/batch/${batchId}`);
 			return;
 		}
-		const { runId } = await window.api.runScenario(
+		const { runId, steps } = await window.api.runScenario(
 			scenario.projectId,
 			scenario.tunnelId,
 			scenario.id,
 			chosenEnvId,
 			{ headed: opts.headed },
 		);
-		navigate(`/run/${runId}`);
+		navigate(`/run/${runId}`, { state: { steps } });
 	}
 
 	const visible = useMemo(

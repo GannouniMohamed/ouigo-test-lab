@@ -57,13 +57,13 @@ export default function NewScenario(): JSX.Element {
 				"local";
 			setFirstRunScenarioId(scenario.id);
 			setCurrentScenarioName(scenario.name);
-			const { runId } = await window.api.runScenario(
+			const { runId, steps } = await window.api.runScenario(
 				scenario.projectId,
 				scenario.tunnelId,
 				scenario.id,
 				env,
 			);
-			navigate(`/run/${runId}`, { state: { auto: true } });
+			navigate(`/run/${runId}`, { state: { auto: true, steps } });
 		} catch {
 			setFirstRunScenarioId(null);
 			navigate("/scenarios");

@@ -101,15 +101,26 @@ function formatDuration(ms: number): string {
 export default function LiveRun(): JSX.Element {
 	const { runId } = useParams<{ runId: string }>();
 	const navigate = useNavigate();
-	const auto =
-		(useLocation().state as { auto?: boolean } | null)?.auto ?? false;
+	const navState =
+		(useLocation().state as { auto?: boolean; steps?: string[] } | null) ??
+		null;
+	const auto = navState?.auto ?? false;
 
-	const [state, setState] = useState<LiveState>({
-		steps: [],
+	// Seed the full parcours from the plan passed at launch (navigation state),
+	// so the journey is visible immediately. The run-started event also carries
+	// the plan, but it is emitted before this screen subscribes (the runId is
+	// only known to the renderer after the run has started), so navigation state
+	// is the reliable source. Live step events then light the rows up.
+	const [state, setState] = useState<LiveState>(() => ({
+		steps: (navState?.steps ?? []).map((title, index) => ({
+			index,
+			title,
+			status: "pending" as const,
+		})),
 		logs: [],
 		finished: false,
 		runId: null,
-	});
+	}));
 	const [elapsed, setElapsed] = useState(0);
 	const finishedRef = useRef(false);
 
