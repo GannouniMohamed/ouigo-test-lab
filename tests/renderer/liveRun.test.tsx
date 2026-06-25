@@ -95,6 +95,64 @@ describe("LiveRun", () => {
 		expect(progress).toBeInTheDocument();
 	});
 
+	it("affiche tout le parcours dès le run-started (plan complet, non atteint)", async () => {
+		renderAt({ auto: true });
+		emit({
+			type: "run-started",
+			runId: "run-1",
+			steps: ["Étape A", "Étape B", "Étape C"],
+		});
+
+		// All three rows render immediately
+		expect(await screen.findByText("Étape A")).toBeInTheDocument();
+		expect(screen.getByText("Étape B")).toBeInTheDocument();
+		expect(screen.getByText("Étape C")).toBeInTheDocument();
+
+		// All "non atteint" at start
+		expect(screen.getAllByText("non atteint")).toHaveLength(3);
+
+		// Progress: 0 started, 3 total
+		expect(
+			screen.getByText((_content, el) => el?.textContent === "Étape 0 sur 3"),
+		).toBeInTheDocument();
+	});
+
+	it("affiche le parcours depuis l'état de navigation, AVANT tout événement", async () => {
+		// The run-started event is lost (emitted before the screen subscribes),
+		// so the plan must come from navigation state and render with no event.
+		renderAt({ steps: ["Étape A", "Étape B"] });
+
+		expect(screen.getByText("Étape A")).toBeInTheDocument();
+		expect(screen.getByText("Étape B")).toBeInTheDocument();
+		expect(screen.getAllByText("non atteint")).toHaveLength(2);
+		expect(
+			screen.getByText((_content, el) => el?.textContent === "Étape 0 sur 2"),
+		).toBeInTheDocument();
+	});
+
+	it("met à jour le plan complet au fil des étapes en direct", async () => {
+		renderAt({ auto: true });
+		emit({
+			type: "run-started",
+			runId: "run-1",
+			steps: ["Étape A", "Étape B", "Étape C"],
+		});
+
+		// Start step 0 → "en cours…", progress Étape 1 sur 3
+		emit({ type: "step-started", index: 0, title: "Étape A" });
+		expect(await screen.findByText(/en cours…/i)).toBeInTheDocument();
+		expect(
+			screen.getByText(
+				(_content, el) => el?.textContent === "Étape 1 sur 3 · Étape A",
+			),
+		).toBeInTheDocument();
+
+		// Pass step 0 → shows 2.1s, others still non atteint
+		emit({ type: "step-passed", index: 0, durationMs: 2100 });
+		expect(await screen.findByText("2.1s")).toBeInTheDocument();
+		expect(screen.getAllByText("non atteint")).toHaveLength(2);
+	});
+
 	it("le bouton est libellé Arrêter et appelle cancelRun", async () => {
 		const { default: userEvent } = await import("@testing-library/user-event");
 		const user = userEvent.setup();

@@ -59,7 +59,7 @@ interface OtlApi {
 		scenarioId: string,
 		envId: string,
 		opts?: { headed?: boolean; specDraft?: string },
-	): Promise<{ runId: string }>;
+	): Promise<{ runId: string; steps?: string[] }>;
 	getScenarioSpec(
 		projectId: string,
 		tunnelId: string,

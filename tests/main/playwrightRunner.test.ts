@@ -61,7 +61,18 @@ describe("playwrightRunner", () => {
 		);
 
 		expect(res.status).toBe("passed");
-		expect(events.find((e) => e.type === "run-started")).toBeTruthy();
+		const runStarted = events.find((e) => e.type === "run-started");
+		expect(runStarted).toBeTruthy();
+		// The step plan is carried at run-started so LiveRun can render the full
+		// parcours from the very start (no more "Étape 0 sur 0").
+		expect(
+			runStarted?.type === "run-started" ? runStarted.steps : undefined,
+		).toBeTruthy();
+		expect(
+			(runStarted?.type === "run-started" ? runStarted.steps : [])?.length,
+		).toBeGreaterThan(0);
+		// Step events arrive (live or fallback) for the run.
+		expect(events.some((e) => e.type === "step-started")).toBe(true);
 		expect(events.find((e) => e.type === "run-finished")?.status).toBe(
 			"passed",
 		);
