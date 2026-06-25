@@ -116,4 +116,50 @@ describe("NewScenario", () => {
 		});
 		expect(useAppStore.getState().firstRunScenarioId).toBe("scn-1");
 	});
+
+	it("n'affiche aucun sélecteur d'environnement et montre le bandeau hérité", async () => {
+		// biome-ignore lint/suspicious/noExplicitAny: test stub
+		(globalThis as any).window.api.listEnvironments = vi
+			.fn()
+			.mockResolvedValue([
+				{
+					id: "preprod",
+					label: "Préprod",
+					baseURL: "https://preprod.example.com",
+					variables: {},
+				},
+			]);
+		useAppStore.setState({
+			activeProjectId: "default",
+			activeEnvByProject: { default: "preprod" },
+		});
+		render(
+			<MemoryRouter>
+				<NewScenario />
+			</MemoryRouter>,
+		);
+		await screen.findByText("Général");
+		// No env selector (combobox) labelled "Environnement".
+		expect(screen.queryByLabelText(/environnement/i)).not.toBeInTheDocument();
+		// The inherited-env read-only banner is shown with the project's env label.
+		await waitFor(() =>
+			expect(screen.getByText(/hérité du projet/i)).toBeInTheDocument(),
+		);
+		expect(screen.getByText("Préprod")).toBeInTheDocument();
+	});
+
+	it("retombe sur « Local » quand aucun env n'est hérité", async () => {
+		useAppStore.setState({
+			activeProjectId: "default",
+			activeEnvByProject: {},
+		});
+		render(
+			<MemoryRouter>
+				<NewScenario />
+			</MemoryRouter>,
+		);
+		await screen.findByText("Général");
+		expect(screen.getByText(/hérité du projet/i)).toBeInTheDocument();
+		expect(screen.getByText("Local")).toBeInTheDocument();
+	});
 });
