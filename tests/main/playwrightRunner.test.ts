@@ -68,4 +68,25 @@ describe("playwrightRunner", () => {
 		// report persisté
 		expect(getReport(res.runId).status).toBe("passed");
 	}, 120_000);
+
+	it("estampille le batchId fourni dans les options sur le rapport persisté", async () => {
+		const specContent = readFileSync(
+			join(REPO, "fixtures/seed-scenarios/passing/passing.spec.ts"),
+			"utf-8",
+		);
+		saveScenario(scenario, specContent);
+		const siteUrl = pathToFileURL(join(REPO, "fixtures/site/index.html")).href;
+		const env: Environment = {
+			id: "local",
+			label: "Local",
+			baseURL: siteUrl,
+			variables: {},
+		};
+
+		const res = await playwrightRunner.run(scenario, env, () => {}, {
+			batchId: "batch-xyz",
+		});
+
+		expect(getReport(res.runId).batchId).toBe("batch-xyz");
+	}, 120_000);
 });

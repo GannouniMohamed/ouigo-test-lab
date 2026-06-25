@@ -112,6 +112,9 @@ export interface Report {
 	durationMs: number;
 	startedAt: string;
 	steps: ReportStep[];
+	// Set when this run is one iteration of a batch (Feature 2). Lets the history
+	// group every run of the same lot together. Undefined for simple runs.
+	batchId?: string;
 }
 
 export interface ReportSummary {
@@ -120,6 +123,9 @@ export interface ReportSummary {
 	status: RunStatus;
 	startedAt: string;
 	durationMs: number;
+	// Mirrors Report.batchId so the history can group runs by lot without
+	// loading every full report.
+	batchId?: string;
 }
 
 export type RunEvent =
@@ -147,6 +153,9 @@ export interface RunOptions {
 	// Run this draft spec instead of the scenario's stored spec (step-management
 	// "Relancer" without persisting). The runner compiles it for the mode.
 	specDraft?: string;
+	// Set when this run is one iteration of a batch — stamped onto the persisted
+	// Report so the history can group the lot. Undefined for simple runs.
+	batchId?: string;
 }
 
 // ── Batch runs (Feature 2: lancer N fois pour valider KPI / trackings) ───────
