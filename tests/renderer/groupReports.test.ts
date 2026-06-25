@@ -1,5 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { groupReports } from "../../src/renderer/lib/groupReports";
+import {
+	type HistoryGroup,
+	downsampleRuns,
+	filterGroups,
+	groupReports,
+} from "../../src/renderer/lib/groupReports";
 import type { ReportSummary } from "../../src/shared/types";
 
 function r(over: Partial<ReportSummary>): ReportSummary {
@@ -78,5 +83,83 @@ describe("groupReports", () => {
 			max: 1500,
 		});
 		expect(Number.isNaN(g.stats.avg)).toBe(false);
+	});
+});
+
+describe("filterGroups", () => {
+	const single = (status: ReportSummary["status"]): HistoryGroup => ({
+		kind: "single",
+		report: r({ status }),
+	});
+	const batch = (passed: number, total: number): HistoryGroup => ({
+		kind: "batch",
+		batchId: "lot",
+		runs: [],
+		stats: { passed, total, min: 0, avg: 0, max: 0 },
+	});
+
+	it("« all/all » ne filtre rien", () => {
+		const groups = [single("passed"), batch(1, 2)];
+		expect(filterGroups(groups, { status: "all", type: "all" })).toHaveLength(
+			2,
+		);
+	});
+
+	it("type=batch ne garde que les lots", () => {
+		const groups = [single("passed"), batch(2, 2)];
+		const out = filterGroups(groups, { status: "all", type: "batch" });
+		expect(out).toHaveLength(1);
+		expect(out[0].kind).toBe("batch");
+	});
+
+	it("type=single ne garde que les exécutions simples", () => {
+		const groups = [single("passed"), batch(2, 2)];
+		const out = filterGroups(groups, { status: "all", type: "single" });
+		expect(out).toHaveLength(1);
+		expect(out[0].kind).toBe("single");
+	});
+
+	it("status=passed: single réussi OUI, single échec NON", () => {
+		const groups = [single("passed"), single("failed")];
+		const out = filterGroups(groups, { status: "passed", type: "all" });
+		expect(out).toHaveLength(1);
+		expect(out[0]).toEqual(single("passed"));
+	});
+
+	it("status=passed pour un lot: tout réussi OUI, partiel NON", () => {
+		const groups = [batch(2, 2), batch(1, 2)];
+		const out = filterGroups(groups, { status: "passed", type: "all" });
+		expect(out).toHaveLength(1);
+		expect(
+			(out[0] as Extract<HistoryGroup, { kind: "batch" }>).stats.passed,
+		).toBe(2);
+	});
+
+	it("status=failed: lot partiel OUI, single réussi NON", () => {
+		const groups = [batch(1, 2), single("passed")];
+		const out = filterGroups(groups, { status: "failed", type: "all" });
+		expect(out).toHaveLength(1);
+		expect(out[0].kind).toBe("batch");
+	});
+});
+
+describe("downsampleRuns", () => {
+	const runs = (n: number): ReportSummary[] =>
+		Array.from({ length: n }, (_, i) => r({ runId: `run-${i}` }));
+
+	it("renvoie la liste telle quelle quand elle tient dans max", () => {
+		const list = runs(5);
+		expect(downsampleRuns(list, 16)).toBe(list);
+	});
+
+	it("plafonne à max barres au-delà de la limite", () => {
+		expect(downsampleRuns(runs(20), 16)).toHaveLength(16);
+		expect(downsampleRuns(runs(100), 16)).toHaveLength(16);
+	});
+
+	it("conserve le premier et le dernier run", () => {
+		const out = downsampleRuns(runs(20), 16);
+		expect(out[0].runId).toBe("run-0");
+		expect(out[out.length - 1].runId).toBe("run-19");
 	});
 });

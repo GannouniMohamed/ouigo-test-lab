@@ -1,9 +1,19 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import type { BatchReport, ReportSummary, Scenario } from "../../shared/types";
 import { StatusBadge } from "../components/StatusBadge";
-import { type HistoryGroup, groupReports } from "../lib/groupReports";
+import {
+	type HistoryFilters,
+	type HistoryGroup,
+	type StatusFilter,
+	type TypeFilter,
+	downsampleRuns,
+	filterGroups,
+	groupReports,
+} from "../lib/groupReports";
 import { useAppStore } from "../store";
+
+const MAX_SPARK_BARS = 16;
 
 type BadgeStatus = "passed" | "failed" | "never";
 
@@ -31,10 +41,12 @@ function scenarioLabel(map: Map<string, string>, scenarioId: string): string {
 }
 
 function Sparkline({ runs }: { runs: ReportSummary[] }): JSX.Element {
-	const max = Math.max(1, ...runs.map((r) => r.durationMs));
+	// Cap the bar count so large parallel lots don't overflow the fixed-width box.
+	const bars = downsampleRuns(runs, MAX_SPARK_BARS);
+	const max = Math.max(1, ...bars.map((r) => r.durationMs));
 	return (
 		<span className="otl-spark" aria-hidden="true">
-			{runs.map((r) => {
+			{bars.map((r) => {
 				const pct = Math.max(8, Math.round((r.durationMs / max) * 100));
 				return (
 					<span
@@ -189,6 +201,110 @@ function BatchBlock({
 	);
 }
 
+const STATUS_OPTIONS: { value: StatusFilter; label: string }[] = [
+	{ value: "all", label: "Tous" },
+	{ value: "passed", label: "Réussis" },
+	{ value: "failed", label: "Échecs" },
+];
+const TYPE_OPTIONS: { value: TypeFilter; label: string }[] = [
+	{ value: "all", label: "Tous" },
+	{ value: "batch", label: "Lots" },
+	{ value: "single", label: "Simples" },
+];
+
+function FilterPopover({
+	filters,
+	onChange,
+}: {
+	filters: HistoryFilters;
+	onChange: (next: HistoryFilters) => void;
+}): JSX.Element {
+	const [open, setOpen] = useState(false);
+	const ref = useRef<HTMLDivElement>(null);
+	const active = filters.status !== "all" || filters.type !== "all";
+
+	const close = useCallback(() => setOpen(false), []);
+	useEffect(() => {
+		if (!open) return;
+		function onDocMouseDown(e: MouseEvent) {
+			if (ref.current && !ref.current.contains(e.target as Node)) close();
+		}
+		function onKey(e: KeyboardEvent) {
+			if (e.key === "Escape") close();
+		}
+		document.addEventListener("mousedown", onDocMouseDown);
+		document.addEventListener("keydown", onKey);
+		return () => {
+			document.removeEventListener("mousedown", onDocMouseDown);
+			document.removeEventListener("keydown", onKey);
+		};
+	}, [open, close]);
+
+	return (
+		<div className="otl-hist__filter-wrap" ref={ref}>
+			<button
+				type="button"
+				className={`otl-hist__filter${active ? " otl-hist__filter--active" : ""}`}
+				aria-haspopup="true"
+				aria-expanded={open}
+				onClick={() => setOpen((v) => !v)}
+			>
+				Filtrer
+				{active && <span className="otl-hist__filter-dot" aria-hidden="true" />}
+			</button>
+			{open && (
+				<div className="otl-hist__filter-panel">
+					<div className="otl-hist__filter-group">
+						<span className="otl-hist__filter-label">Statut</span>
+						<div className="otl-segmented">
+							{STATUS_OPTIONS.map((o) => (
+								<button
+									key={o.value}
+									type="button"
+									className={`otl-segmented__btn${
+										filters.status === o.value ? " otl-segmented__btn--on" : ""
+									}`}
+									aria-pressed={filters.status === o.value}
+									onClick={() => onChange({ ...filters, status: o.value })}
+								>
+									{o.label}
+								</button>
+							))}
+						</div>
+					</div>
+					<div className="otl-hist__filter-group">
+						<span className="otl-hist__filter-label">Type</span>
+						<div className="otl-segmented">
+							{TYPE_OPTIONS.map((o) => (
+								<button
+									key={o.value}
+									type="button"
+									className={`otl-segmented__btn${
+										filters.type === o.value ? " otl-segmented__btn--on" : ""
+									}`}
+									aria-pressed={filters.type === o.value}
+									onClick={() => onChange({ ...filters, type: o.value })}
+								>
+									{o.label}
+								</button>
+							))}
+						</div>
+					</div>
+					{active && (
+						<button
+							type="button"
+							className="otl-hist__filter-reset"
+							onClick={() => onChange({ status: "all", type: "all" })}
+						>
+							Réinitialiser
+						</button>
+					)}
+				</div>
+			)}
+		</div>
+	);
+}
+
 export default function History(): JSX.Element {
 	const navigate = useNavigate();
 	const activeProjectId = useAppStore((s) => s.activeProjectId);
@@ -199,6 +315,10 @@ export default function History(): JSX.Element {
 	const [scenarioMap, setScenarioMap] = useState<Map<string, string>>(
 		new Map(),
 	);
+	const [filters, setFilters] = useState<HistoryFilters>({
+		status: "all",
+		type: "all",
+	});
 
 	useEffect(() => {
 		Promise.all([
@@ -231,6 +351,10 @@ export default function History(): JSX.Element {
 	}, [reports, scenarioMap, activeProjectId, activeEnv]);
 
 	const groups = useMemo(() => groupReports(visibleReports), [visibleReports]);
+	const filteredGroups = useMemo(
+		() => filterGroups(groups, filters),
+		[groups, filters],
+	);
 	const open = (runId: string) => navigate(`/report/${runId}`);
 
 	return (
@@ -243,16 +367,18 @@ export default function History(): JSX.Element {
 						ligne.
 					</p>
 				</div>
-				<button type="button" className="otl-hist__filter">
-					Filtrer
-				</button>
+				<FilterPopover filters={filters} onChange={setFilters} />
 			</div>
 
 			{visibleReports.length === 0 ? (
 				<p className="otl-hist__empty">Aucune exécution</p>
+			) : filteredGroups.length === 0 ? (
+				<p className="otl-hist__empty">
+					Aucune exécution ne correspond aux filtres
+				</p>
 			) : (
 				<div className="otl-hist__list">
-					{groups.map((g) =>
+					{filteredGroups.map((g) =>
 						g.kind === "single" ? (
 							<SingleRow
 								key={g.report.runId}

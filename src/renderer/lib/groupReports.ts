@@ -51,6 +51,49 @@ export function groupReports(reports: ReportSummary[]): HistoryGroup[] {
 	return groups;
 }
 
+export type StatusFilter = "all" | "passed" | "failed";
+export type TypeFilter = "all" | "batch" | "single";
+
+export interface HistoryFilters {
+	status: StatusFilter;
+	type: TypeFilter;
+}
+
+// Filter grouped history at the group level. Type narrows to lots or singles.
+// Status: a single matches its own status; a lot is "passed" only when every run
+// passed, "failed" as soon as one run failed.
+export function filterGroups(
+	groups: HistoryGroup[],
+	filters: HistoryFilters,
+): HistoryGroup[] {
+	return groups.filter((g) => {
+		if (filters.type !== "all" && g.kind !== filters.type) return false;
+		if (filters.status === "all") return true;
+		const allPassed =
+			g.kind === "single"
+				? g.report.status === "passed"
+				: g.stats.passed === g.stats.total;
+		return filters.status === "passed" ? allPassed : !allPassed;
+	});
+}
+
+// Downsample a run list to at most `max` bars, evenly spaced, always keeping the
+// last run so the most recent result stays visible. Prevents the sparkline from
+// overflowing its fixed-width box on large parallel lots.
+export function downsampleRuns(
+	runs: ReportSummary[],
+	max: number,
+): ReportSummary[] {
+	if (max <= 1) return runs.slice(-1);
+	if (runs.length <= max) return runs;
+	const step = (runs.length - 1) / (max - 1);
+	const result: ReportSummary[] = [];
+	for (let i = 0; i < max; i++) {
+		result.push(runs[Math.round(i * step)]);
+	}
+	return result;
+}
+
 function computeStats(runs: ReportSummary[]): {
 	passed: number;
 	total: number;
