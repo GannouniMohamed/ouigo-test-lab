@@ -24,6 +24,11 @@ test("enregistrement → auto-run → Rapport Réussi", async () => {
 		await win.waitForLoadState("domcontentloaded");
 		// App now opens on /projects — navigate to the scenarios Hub first
 		await win.getByRole("button", { name: "Scénarios" }).click();
+		// A new scenario inherits the active env; the seeded default project's first
+		// env is "Préprod" (an unreachable placeholder URL). Pick "Local" — the only
+		// env wired to the on-disk fixture site — so the recorded auto-run can pass.
+		await win.getByLabel("Environnement actif").click();
+		await win.getByRole("option", { name: "Local", exact: true }).click();
 		await win.getByRole("button", { name: /nouveau scénario/i }).click();
 		await win.getByPlaceholder("Nom du scénario").fill("Mon parcours");
 		await win
