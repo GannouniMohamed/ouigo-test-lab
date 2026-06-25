@@ -211,6 +211,40 @@ describe("History", () => {
 		expect(screen.queryByText("checkout")).not.toBeInTheDocument();
 	});
 
+	it("le popover « Filtrer » restreint par statut", async () => {
+		render(
+			<MemoryRouter>
+				<History />
+			</MemoryRouter>,
+		);
+		// Two singles by default (one passed, one failed)
+		expect(await screen.findAllByText("Parcours de connexion")).toHaveLength(2);
+
+		await userEvent.click(screen.getByRole("button", { name: /filtrer/i }));
+		await userEvent.click(screen.getByRole("button", { name: "Échecs" }));
+
+		// Only the failed run remains
+		expect(screen.getAllByText("Parcours de connexion")).toHaveLength(1);
+		const remaining = screen.getByText("Parcours de connexion");
+		await userEvent.click(remaining);
+		expect(navigateMock).toHaveBeenCalledWith("/report/r2");
+	});
+
+	it("affiche un message quand aucun rapport ne correspond aux filtres", async () => {
+		render(
+			<MemoryRouter>
+				<History />
+			</MemoryRouter>,
+		);
+		await screen.findAllByText("Parcours de connexion");
+		await userEvent.click(screen.getByRole("button", { name: /filtrer/i }));
+		// No batches exist -> Type=Lots empties the list
+		await userEvent.click(screen.getByRole("button", { name: "Lots" }));
+		expect(
+			screen.getByText(/aucune exécution ne correspond aux filtres/i),
+		).toBeInTheDocument();
+	});
+
 	it("filtre par environnement actif quand un env est sélectionné", async () => {
 		useAppStore.setState({
 			activeProjectId: "p1",

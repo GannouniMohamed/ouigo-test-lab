@@ -2867,6 +2867,96 @@ body {
 	background: var(--otl-hover);
 }
 
+/* Filter popover */
+.otl-hist__filter-wrap {
+	position: relative;
+}
+.otl-hist__filter {
+	display: inline-flex;
+	align-items: center;
+	gap: 0.4rem;
+}
+.otl-hist__filter--active {
+	border-color: rgba(0, 201, 177, 0.5);
+	color: var(--otl-text);
+}
+.otl-hist__filter-dot {
+	width: 6px;
+	height: 6px;
+	border-radius: 50%;
+	background: var(--otl-cyan);
+}
+.otl-hist__filter-panel {
+	position: absolute;
+	z-index: 1000;
+	top: calc(100% + 8px);
+	right: 0;
+	display: flex;
+	flex-direction: column;
+	gap: 12px;
+	min-width: 240px;
+	padding: 14px;
+	background: rgba(15, 23, 42, 0.92);
+	backdrop-filter: blur(18px);
+	-webkit-backdrop-filter: blur(18px);
+	border: 1px solid rgba(255, 255, 255, 0.1);
+	border-radius: 12px;
+	box-shadow: 0 12px 32px rgba(0, 0, 0, 0.45);
+}
+.otl-hist__filter-group {
+	display: flex;
+	flex-direction: column;
+	gap: 6px;
+}
+.otl-hist__filter-label {
+	font-size: 10.5px;
+	font-weight: 600;
+	text-transform: uppercase;
+	letter-spacing: 0.08em;
+	color: var(--otl-text-2);
+}
+.otl-segmented {
+	display: inline-flex;
+	padding: 3px;
+	gap: 3px;
+	background: rgba(15, 23, 42, 0.5);
+	border: 1px solid rgba(255, 255, 255, 0.07);
+	border-radius: 9px;
+}
+.otl-segmented__btn {
+	flex: 1;
+	padding: 5px 10px;
+	border: none;
+	background: transparent;
+	color: var(--otl-text-2);
+	font-family: var(--otl-font);
+	font-size: 12px;
+	font-weight: 600;
+	border-radius: 7px;
+	cursor: pointer;
+	transition: background 0.12s ease, color 0.12s ease;
+}
+.otl-segmented__btn:hover {
+	color: var(--otl-text);
+}
+.otl-segmented__btn--on {
+	background: var(--otl-grad);
+	color: #061018;
+}
+.otl-hist__filter-reset {
+	align-self: flex-start;
+	padding: 4px 8px;
+	border: none;
+	background: none;
+	color: var(--otl-text-3);
+	font-family: var(--otl-font);
+	font-size: 12px;
+	cursor: pointer;
+}
+.otl-hist__filter-reset:hover {
+	color: var(--otl-text);
+}
+
 .otl-hist__empty {
 	color: var(--otl-text-2);
 }
@@ -3011,12 +3101,14 @@ body {
 	align-items: flex-end;
 	gap: 2px;
 	height: 24px;
-	width: 64px;
+	width: 84px;
+	flex: 0 0 auto;
+	overflow: hidden;
 }
 
 .otl-spark__bar {
-	flex: 1;
-	min-width: 3px;
+	flex: 1 1 0;
+	min-width: 2px;
 	border-radius: 2px 2px 0 0;
 	background: var(--otl-cyan);
 }
