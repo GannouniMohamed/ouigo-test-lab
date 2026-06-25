@@ -165,6 +165,10 @@ export default function Report(): JSX.Element {
 	const [editValue, setEditValue] = useState("");
 	const [scopeMenuIndex, setScopeMenuIndex] = useState<number | null>(null);
 	const [busy, setBusy] = useState(false);
+	// Presentational counter for the draft banner ("{N} modification(s) en
+	// attente"). It tracks how many step edits were applied since the last
+	// reset; it never gates the draft logic.
+	const [pendingEdits, setPendingEdits] = useState(0);
 
 	useEffect(() => {
 		if (!runId) return;
@@ -192,6 +196,7 @@ export default function Report(): JSX.Element {
 				));
 			setDraft(applyStepEdit(base, op));
 			setDirty(true);
+			setPendingEdits((n) => n + 1);
 			setEditingIndex(null);
 			setScopeMenuIndex(null);
 		} finally {
@@ -217,6 +222,7 @@ export default function Report(): JSX.Element {
 				window.api.getReport(newRunId).then((r) => {
 					setReport(r);
 					setDirty(false);
+					setPendingEdits(0);
 					setRunning(false);
 				});
 			}
@@ -233,11 +239,13 @@ export default function Report(): JSX.Element {
 		);
 		setDraft(null);
 		setDirty(false);
+		setPendingEdits(0);
 	}
 
 	function annuler(): void {
 		setDraft(null);
 		setDirty(false);
+		setPendingEdits(0);
 		setEditingIndex(null);
 		setScopeMenuIndex(null);
 	}
@@ -264,6 +272,55 @@ export default function Report(): JSX.Element {
 
 	return (
 		<div className="otl-report">
+			{/* Draft banner — shown while there are unsaved step edits. */}
+			{dirty && (
+				<div className="otl-draftbar">
+					<div className="otl-draftbar__info">
+						<span className="otl-draftbar__title">
+							<span className="otl-draftbar__dot" aria-hidden="true">
+								●
+							</span>
+							Brouillon non enregistré
+						</span>
+						<span className="otl-draftbar__count">
+							{pendingEdits} modification{pendingEdits > 1 ? "s" : ""} d'étape
+							{pendingEdits > 1 ? "s" : ""} en attente
+						</span>
+					</div>
+					<div className="otl-draftbar__actions">
+						<button
+							type="button"
+							className="otl-draftbar__btn otl-draftbar__btn--primary"
+							disabled={running || !canRelancer}
+							title={
+								canRelancer
+									? "Relancer avec les modifications"
+									: "Relance indisponible pour ce rapport — relancez depuis la bibliothèque"
+							}
+							onClick={relancer}
+						>
+							{running ? "Relance en cours…" : "↻ Relancer"}
+						</button>
+						<button
+							type="button"
+							className="otl-draftbar__btn"
+							disabled={running}
+							onClick={enregistrer}
+						>
+							Enregistrer
+						</button>
+						<button
+							type="button"
+							className="otl-draftbar__btn otl-draftbar__btn--ghost"
+							disabled={running}
+							onClick={annuler}
+						>
+							Annuler
+						</button>
+					</div>
+				</div>
+			)}
+
 			{/* Header */}
 			<header className="otl-report__header">
 				<div className="otl-report__header-left">
@@ -279,7 +336,7 @@ export default function Report(): JSX.Element {
 				<div className="otl-report__meta">
 					<span className="otl-report__env">{report.environmentLabel}</span>
 					<span className="otl-report__mode">
-						{mode === "visible" ? "Visible" : "Invisible"}
+						MODE {mode === "visible" ? "Visible" : "Invisible"}
 					</span>
 					<span className="otl-report__steps-count">
 						{completedSteps}/{totalSteps} étapes
@@ -293,240 +350,226 @@ export default function Report(): JSX.Element {
 				</div>
 			</header>
 
-			{dirty && (
-				<div className="otl-report__dirty">
-					<span>Scénario modifié (brouillon non enregistré).</span>
-					<div className="otl-report__dirty-actions">
-						<button
-							type="button"
-							className="otl-btn-primary"
-							disabled={running || !canRelancer}
-							title={
-								canRelancer
-									? "Relancer avec les modifications"
-									: "Relance indisponible pour ce rapport — relancez depuis la bibliothèque"
-							}
-							onClick={relancer}
-						>
-							{running ? "Relance en cours…" : "Relancer"}
-						</button>
-						<button
-							type="button"
-							className="otl-tab"
-							disabled={running}
-							onClick={enregistrer}
-						>
-							Enregistrer
-						</button>
-						<button
-							type="button"
-							className="otl-tab"
-							disabled={running}
-							onClick={annuler}
-						>
-							Annuler
-						</button>
-					</div>
-				</div>
-			)}
-
 			{/* Body: left step list + right panel */}
 			<div className="otl-report__body">
 				{/* Step list */}
-				<ol className="otl-report__steps">
-					{rows.map((step) => {
-						const neutralised = !stepActiveInMode(step.scope, mode);
-						const chip = scopeChipLabel(step.scope);
-						return (
-							<li
-								key={step.index}
-								className={`otl-rstep${step.status === "failed" ? " otl-rstep--failed" : ""}${neutralised ? " otl-rstep--ignored" : ""}`}
-							>
-								<span
-									className={`otl-rstep__icon otl-rstep__icon--${neutralised ? "skipped" : (step.status ?? "edited")}`}
+				<div className="otl-report__steps-col">
+					<div className="otl-report__steps-head">
+						<span className="otl-report__steps-title">
+							Déroulé des étapes · édition par mode
+						</span>
+						{canEdit && (
+							<span className="otl-report__steps-hint">
+								survolez une étape pour l'éditer
+							</span>
+						)}
+					</div>
+					<ol className="otl-report__steps">
+						{rows.map((step) => {
+							const neutralised = !stepActiveInMode(step.scope, mode);
+							const chip = scopeChipLabel(step.scope);
+							return (
+								<li
+									key={step.index}
+									className={`otl-rstep${step.status === "failed" ? " otl-rstep--failed" : ""}${neutralised ? " otl-rstep--ignored" : ""}`}
 								>
-									{!neutralised && step.status === "passed" && <CheckIcon />}
-									{!neutralised && step.status === "failed" && (
-										<XIcon size={12} />
-									)}
-									{!neutralised && step.status === "skipped" && <DashIcon />}
-									{neutralised && <DashIcon />}
-								</span>
-								<div className="otl-rstep__content">
-									{editingIndex === step.index ? (
-										<div className="otl-rstep__edit">
-											<input
-												className="otl-input otl-rstep__edit-input"
-												value={editValue}
-												// biome-ignore lint/a11y/noAutofocus: focus the field the user just opened
-												autoFocus
-												onChange={(e) => setEditValue(e.target.value)}
-												onKeyDown={(e) => {
-													if (e.key === "Enter")
+									<span
+										className={`otl-rstep__icon otl-rstep__icon--${neutralised ? "skipped" : (step.status ?? "edited")}`}
+									>
+										{!neutralised && step.status === "passed" && <CheckIcon />}
+										{!neutralised && step.status === "failed" && (
+											<XIcon size={12} />
+										)}
+										{!neutralised && step.status === "skipped" && <DashIcon />}
+										{neutralised && <DashIcon />}
+									</span>
+									<div className="otl-rstep__content">
+										{editingIndex === step.index ? (
+											<div className="otl-rstep__edit">
+												<input
+													className="otl-input otl-rstep__edit-input"
+													value={editValue}
+													// biome-ignore lint/a11y/noAutofocus: focus the field the user just opened
+													autoFocus
+													onChange={(e) => setEditValue(e.target.value)}
+													onKeyDown={(e) => {
+														if (e.key === "Enter")
+															applyEdit({
+																op: "edit",
+																index: step.index,
+																code: editValue,
+															});
+														if (e.key === "Escape") setEditingIndex(null);
+													}}
+												/>
+												<button
+													type="button"
+													className="otl-btn-primary otl-rstep__edit-save"
+													disabled={busy}
+													onClick={() =>
 														applyEdit({
 															op: "edit",
 															index: step.index,
 															code: editValue,
-														});
-													if (e.key === "Escape") setEditingIndex(null);
-												}}
-											/>
-											<button
-												type="button"
-												className="otl-btn-primary otl-rstep__edit-save"
-												disabled={busy}
-												onClick={() =>
-													applyEdit({
-														op: "edit",
-														index: step.index,
-														code: editValue,
-													})
-												}
-											>
-												OK
-											</button>
-											<button
-												type="button"
-												className="otl-tab"
-												onClick={() => setEditingIndex(null)}
-											>
-												Annuler
-											</button>
-										</div>
-									) : (
-										<span className="otl-rstep__title">{step.title}</span>
-									)}
-									{step.status === "failed" && step.error && (
-										<pre className="otl-rstep__err">{step.error}</pre>
-									)}
-								</div>
-								{chip ? (
-									<span className="otl-rstep__skipped-label">{chip}</span>
-								) : step.status === "skipped" ? (
-									<span className="otl-rstep__skipped-label">non atteint</span>
-								) : (
-									typeof step.durationMs === "number" && (
-										<code className="otl-rstep__duration">
-											{formatMs(step.durationMs)}
-										</code>
-									)
-								)}
-								{canEdit && editingIndex !== step.index && (
-									<div className="otl-rstep__actions">
-										{scopeMenuIndex === step.index ? (
-											<>
-												<button
-													type="button"
-													className="otl-rstep__action"
-													disabled={busy}
-													onClick={() =>
-														// Ignored in invisible ⇒ runs only in visible.
-														applyEdit({
-															op: "scope",
-															index: step.index,
-															scope: "visible",
 														})
 													}
 												>
-													Ignorer en invisible
+													OK
 												</button>
 												<button
 													type="button"
-													className="otl-rstep__action"
-													disabled={busy}
-													onClick={() =>
-														// Ignored in visible ⇒ runs only in invisible.
-														applyEdit({
-															op: "scope",
-															index: step.index,
-															scope: "invisible",
-														})
-													}
+													className="otl-tab"
+													onClick={() => setEditingIndex(null)}
 												>
-													Ignorer en visible
+													Annuler
 												</button>
-												<button
-													type="button"
-													className="otl-rstep__action"
-													disabled={busy}
-													onClick={() =>
-														applyEdit({
-															op: "scope",
-															index: step.index,
-															scope: "skip",
-														})
-													}
-												>
-													Partout
-												</button>
-												<button
-													type="button"
-													className="otl-rstep__action"
-													onClick={() => setScopeMenuIndex(null)}
-												>
-													×
-												</button>
-											</>
+											</div>
 										) : (
-											<>
-												{step.scope && step.scope !== "both" ? (
+											<span className="otl-rstep__title">{step.title}</span>
+										)}
+										{step.status === "failed" && step.error && (
+											<pre className="otl-rstep__err">{step.error}</pre>
+										)}
+									</div>
+									{chip ? (
+										<span className="otl-rstep__skipped-label">{chip}</span>
+									) : step.status === "skipped" ? (
+										<span className="otl-rstep__skipped-label">
+											non atteint
+										</span>
+									) : (
+										typeof step.durationMs === "number" && (
+											<code className="otl-rstep__duration">
+												{formatMs(step.durationMs)}
+											</code>
+										)
+									)}
+									{canEdit && editingIndex !== step.index && (
+										<div className="otl-rstep__actions">
+											{scopeMenuIndex === step.index ? (
+												<div className="otl-scopemenu">
+													<div className="otl-scopemenu__title">
+														Ignorer cette étape…
+													</div>
 													<button
 														type="button"
-														className="otl-rstep__action"
+														className="otl-scopemenu__item"
+														disabled={busy}
+														onClick={() =>
+															// Ignored in invisible ⇒ runs only in visible.
+															applyEdit({
+																op: "scope",
+																index: step.index,
+																scope: "visible",
+															})
+														}
+													>
+														En mode invisible
+													</button>
+													<button
+														type="button"
+														className="otl-scopemenu__item"
+														disabled={busy}
+														onClick={() =>
+															// Ignored in visible ⇒ runs only in invisible.
+															applyEdit({
+																op: "scope",
+																index: step.index,
+																scope: "invisible",
+															})
+														}
+													>
+														En mode visible
+													</button>
+													<button
+														type="button"
+														className="otl-scopemenu__item"
 														disabled={busy}
 														onClick={() =>
 															applyEdit({
 																op: "scope",
 																index: step.index,
-																scope: "both",
+																scope: "skip",
 															})
 														}
 													>
-														Réactiver
+														Partout
 													</button>
-												) : (
 													<button
 														type="button"
-														className="otl-rstep__action"
-														disabled={busy}
-														onClick={() => setScopeMenuIndex(step.index)}
+														className="otl-scopemenu__close"
+														onClick={() => setScopeMenuIndex(null)}
+														aria-label="Fermer le menu"
 													>
-														Ignorer…
+														×
 													</button>
-												)}
-												<button
-													type="button"
-													className="otl-rstep__action"
-													disabled={busy}
-													onClick={() => {
-														setEditingIndex(step.index);
-														setEditValue(step.title);
-													}}
-												>
-													Modifier
-												</button>
-												<button
-													type="button"
-													className="otl-rstep__action otl-rstep__action--danger"
-													disabled={busy}
-													onClick={() =>
-														applyEdit({ op: "delete", index: step.index })
-													}
-												>
-													Supprimer
-												</button>
-											</>
-										)}
-									</div>
-								)}
-							</li>
-						);
-					})}
-				</ol>
+												</div>
+											) : (
+												<>
+													{step.scope && step.scope !== "both" ? (
+														<button
+															type="button"
+															className="otl-rstep__action"
+															disabled={busy}
+															onClick={() =>
+																applyEdit({
+																	op: "scope",
+																	index: step.index,
+																	scope: "both",
+																})
+															}
+														>
+															Réactiver
+														</button>
+													) : (
+														<button
+															type="button"
+															className="otl-rstep__action"
+															disabled={busy}
+															onClick={() => setScopeMenuIndex(step.index)}
+														>
+															Ignorer…
+														</button>
+													)}
+													<button
+														type="button"
+														className="otl-rstep__action otl-rstep__action--icon"
+														disabled={busy}
+														aria-label="Modifier l'étape"
+														title="Modifier"
+														onClick={() => {
+															setEditingIndex(step.index);
+															setEditValue(step.title);
+														}}
+													>
+														✎
+													</button>
+													<button
+														type="button"
+														className="otl-rstep__action otl-rstep__action--icon otl-rstep__action--danger"
+														disabled={busy}
+														aria-label="Supprimer l'étape"
+														title="Supprimer"
+														onClick={() =>
+															applyEdit({ op: "delete", index: step.index })
+														}
+													>
+														🗑
+													</button>
+												</>
+											)}
+										</div>
+									)}
+								</li>
+							);
+						})}
+					</ol>
+				</div>
 
 				{/* Right panel */}
 				<div className="otl-report__right">
 					{/* Screenshot card */}
+					<div className="otl-shot-title">Capture au moment de l'échec</div>
 					<div className="otl-shot">
 						{failedStep?.screenshotPath ? (
 							<>
@@ -552,48 +595,52 @@ export default function Report(): JSX.Element {
 						)}
 					</div>
 
-					{/* AI repair block — disabled, reserved for Phase 3 */}
-					<section className="otl-ai" aria-disabled="true">
-						<div className="otl-ai__header">
-							<div className="otl-ai__icon-badge">
-								<SparkleIcon />
+					{/* AI repair block — VISUAL ONLY (no real AI logic). Shown only
+					    when there is a failed step. Buttons are inert. */}
+					{failedStep && (
+						<section className="otl-ai" aria-disabled="true">
+							<div className="otl-ai__header">
+								<div className="otl-ai__icon-badge">
+									<SparkleIcon />
+								</div>
+								<div className="otl-ai__title-row">
+									<span className="otl-ai__title">
+										Réparation suggérée par l'IA
+									</span>
+								</div>
 							</div>
-							<div className="otl-ai__title-row">
-								<span className="otl-ai__title">Réparation IA</span>
-								<span className="otl-ai__soon">bientôt</span>
+							<p className="otl-ai__desc">
+								Le libellé du bouton a changé. Remplacez le sélecteur pour
+								retrouver l'élément cible.
+							</p>
+							<div className="otl-diff">
+								<div className="otl-diff__line otl-diff__line--removed">
+									- getByRole("button", {"{"} name: "Connexion" {"}"})
+								</div>
+								<div className="otl-diff__line otl-diff__line--added">
+									+ getByRole("button", {"{"} name: "Se connecter" {"}"})
+								</div>
 							</div>
-						</div>
-						<p className="otl-ai__desc">
-							L'IA analysera l'erreur et le DOM pour proposer une correction du
-							scénario.
-						</p>
-						<div className="otl-diff">
-							<div className="otl-diff__line otl-diff__line--removed">
-								- getByText("Connexion")
+							<div className="otl-ai__footer">
+								<button
+									type="button"
+									className="otl-ai__btn-apply"
+									disabled
+									aria-disabled="true"
+								>
+									Appliquer la correction
+								</button>
+								<button
+									type="button"
+									className="otl-ai__btn-ignore"
+									disabled
+									aria-disabled="true"
+								>
+									Ignorer
+								</button>
 							</div>
-							<div className="otl-diff__line otl-diff__line--added">
-								+ getByText("Se connecter")
-							</div>
-						</div>
-						<div className="otl-ai__footer">
-							<button
-								type="button"
-								className="otl-ai__btn-apply"
-								disabled
-								aria-disabled="true"
-							>
-								Appliquer
-							</button>
-							<button
-								type="button"
-								className="otl-ai__btn-ignore"
-								disabled
-								aria-disabled="true"
-							>
-								Ignorer
-							</button>
-						</div>
-					</section>
+						</section>
+					)}
 				</div>
 			</div>
 		</div>
