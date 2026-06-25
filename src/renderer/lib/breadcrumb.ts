@@ -63,9 +63,9 @@ export function buildCrumbs(
 		];
 	}
 
-	// Historique
+	// Rapports / historique
 	if (path === "/reports") {
-		return [PROJETS, projectCrumb(ctx), { label: "Historique" }];
+		return [PROJETS, projectCrumb(ctx), { label: "Rapports" }];
 	}
 
 	// Écrans liés à un scénario (exécution / lot / rapport)
@@ -91,11 +91,16 @@ export function buildCrumbs(
 }
 
 /**
- * Cible du bouton « ‹ Retour » : le `to` de l'avant-dernier crumb.
- * `null` sur la racine `/projects` (pas de Retour).
+ * Cible du bouton « ‹ Retour » : le crumb ancêtre cliquable le plus proche
+ * (on saute les segments intermédiaires non cliquables, ex. le nom du scénario
+ * sur les écrans Exécution / Lot / Rapport). `null` sur la racine `/projects`.
  */
 export function parentPath(pathname: string): string | null {
 	const crumbs = buildCrumbs(pathname);
-	const parent = crumbs.at(-2);
-	return parent?.to ?? null;
+	// Le dernier crumb est la page courante ; on remonte jusqu'au 1er `to`.
+	for (let i = crumbs.length - 2; i >= 0; i--) {
+		const to = crumbs[i]?.to;
+		if (to) return to;
+	}
+	return null;
 }

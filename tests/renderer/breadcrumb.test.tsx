@@ -1,5 +1,3 @@
-import { render, screen } from "@testing-library/react";
-import { MemoryRouter } from "react-router-dom";
 import { describe, expect, it } from "vitest";
 import { buildCrumbs, parentPath } from "../../src/renderer/lib/breadcrumb";
 
@@ -19,8 +17,20 @@ describe("breadcrumb", () => {
 		expect(crumbs.at(-1)?.to).toBeUndefined(); // courant non cliquable
 	});
 
+	it("nomme le dernier segment « Rapports » sur /reports", () => {
+		const crumbs = buildCrumbs("/reports", { projectName: "Ouigo.com" });
+		expect(crumbs.at(-1)?.label).toBe("Rapports");
+	});
+
 	it("remonte d'un niveau pour le bouton Retour", () => {
 		expect(parentPath("/scenarios/new")).toBe("/scenarios");
 		expect(parentPath("/projects")).toBeNull(); // racine = pas de Retour
+	});
+
+	it("garde un Retour sur les écrans liés à un scénario (segment scénario non cliquable)", () => {
+		// Le crumb « scénario » n'a pas de `to` : Retour doit sauter jusqu'au hub.
+		expect(parentPath("/report/run-1")).toBe("/scenarios");
+		expect(parentPath("/batch/abc")).toBe("/scenarios");
+		expect(parentPath("/run/run-1")).toBe("/scenarios");
 	});
 });
