@@ -3,6 +3,7 @@ import {
 	mkdirSync,
 	readFileSync,
 	readdirSync,
+	rmSync,
 	writeFileSync,
 } from "node:fs";
 import { join } from "node:path";
@@ -60,4 +61,32 @@ export function listReports(scenarioId?: string): ReportSummary[] {
 	// Sort newest first
 	summaries.sort((a, b) => b.startedAt.localeCompare(a.startedAt));
 	return summaries;
+}
+
+// Cascade-delete every run belonging to a project: by report.projectId, plus a
+// legacy fallback for reports persisted before projectId existed (matched by
+// their scenarioId belonging to the deleted project). Returns the count removed.
+export function deleteReportsByProject(
+	projectId: string,
+	scenarioIds: string[] = [],
+): number {
+	const base = runsDir();
+	if (!existsSync(base)) return 0;
+	const scenarioSet = new Set(scenarioIds);
+	let removed = 0;
+	for (const entry of readdirSync(base, { withFileTypes: true })) {
+		if (!entry.isDirectory()) continue;
+		const dir = join(base, entry.name);
+		const rPath = join(dir, "report.json");
+		if (!existsSync(rPath)) continue;
+		const report = JSON.parse(readFileSync(rPath, "utf-8")) as Report;
+		const match =
+			report.projectId === projectId ||
+			(report.projectId === undefined && scenarioSet.has(report.scenarioId));
+		if (match) {
+			rmSync(dir, { recursive: true, force: true });
+			removed++;
+		}
+	}
+	return removed;
 }

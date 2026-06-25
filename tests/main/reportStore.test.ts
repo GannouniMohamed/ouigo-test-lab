@@ -2,7 +2,11 @@ import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
-import { listReports, saveReport } from "../../src/main/stores/reportStore";
+import {
+	deleteReportsByProject,
+	listReports,
+	saveReport,
+} from "../../src/main/stores/reportStore";
 import type { Report } from "../../src/shared/types";
 
 let dir: string;
@@ -66,5 +70,36 @@ describe("reportStore projectId/environmentId", () => {
 		const summary = listReports().find((s) => s.runId === "r4");
 		expect(summary?.projectId).toBeUndefined();
 		expect(summary?.environmentId).toBeUndefined();
+	});
+});
+
+describe("deleteReportsByProject", () => {
+	it("supprime les rapports du projet et conserve les autres", () => {
+		saveReport(makeReport("a", undefined, { projectId: "p1" }));
+		saveReport(makeReport("b", "lot", { projectId: "p1" }));
+		saveReport(makeReport("c", undefined, { projectId: "p2" }));
+
+		const removed = deleteReportsByProject("p1");
+
+		expect(removed).toBe(2);
+		const ids = listReports().map((s) => s.runId);
+		expect(ids).toEqual(["c"]);
+	});
+
+	it("supprime aussi les rapports legacy (sans projectId) par scénario", () => {
+		// Legacy report: no projectId, but its scenario belongs to the project.
+		saveReport(makeReport("legacy", undefined, { scenarioId: "login" }));
+		saveReport(makeReport("other", undefined, { scenarioId: "checkout" }));
+
+		const removed = deleteReportsByProject("p1", ["login"]);
+
+		expect(removed).toBe(1);
+		expect(listReports().map((s) => s.runId)).toEqual(["other"]);
+	});
+
+	it("renvoie 0 quand aucun rapport ne correspond", () => {
+		saveReport(makeReport("keep", undefined, { projectId: "p2" }));
+		expect(deleteReportsByProject("p1", ["login"])).toBe(0);
+		expect(listReports()).toHaveLength(1);
 	});
 });

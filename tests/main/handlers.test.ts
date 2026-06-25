@@ -5,6 +5,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
 	handleCreateProject,
 	handleCreateTunnel,
+	handleDeleteProject,
 	handleDeleteScenario,
 	handleGetReport,
 	handleListProjects,
@@ -177,6 +178,52 @@ describe("handlers", () => {
 		expect(p.environments.length).toBeGreaterThanOrEqual(2);
 		expect(handleListTunnels(p.id).map((t) => t.id)).toEqual(["general"]);
 		expect(handleListProjects().some((x) => x.id === p.id)).toBe(true);
+	});
+
+	describe("handleDeleteProject (cascade historique)", () => {
+		it("supprime le projet ET ses rapports, conserve les autres projets", () => {
+			// A second project with a scenario and two reports.
+			const victim = handleCreateProject({
+				name: "À supprimer",
+				description: "",
+			});
+			saveScenario(
+				{ ...sample, id: "vic-scn", projectId: victim.id },
+				'test("ok", () => {});',
+			);
+			const mkReport = (runId: string, projectId?: string): Report => ({
+				runId,
+				scenarioId: "vic-scn",
+				scenarioName: "Connexion",
+				environmentLabel: "Préprod",
+				status: "passed",
+				durationMs: 1000,
+				startedAt: "2026-06-23T01:00:00Z",
+				steps: [],
+				...(projectId ? { projectId } : {}),
+			});
+			saveReport(mkReport("vic-run", victim.id));
+			// Legacy report (no projectId) whose scenario belongs to the victim.
+			saveReport(mkReport("vic-legacy"));
+			// A report from the seeded default project must survive.
+			saveReport({
+				runId: "keep-run",
+				scenarioId: "login",
+				scenarioName: "Connexion",
+				environmentLabel: "Préprod",
+				status: "passed",
+				durationMs: 1000,
+				startedAt: "2026-06-23T01:00:00Z",
+				steps: [],
+				projectId: "default",
+			});
+
+			handleDeleteProject(victim.id);
+
+			expect(handleListProjects().some((p) => p.id === victim.id)).toBe(false);
+			const remaining = handleListReports().map((s) => s.runId);
+			expect(remaining).toEqual(["keep-run"]);
+		});
 	});
 
 	it("handleCreateTunnel ajoute un tunnel ordonné", () => {

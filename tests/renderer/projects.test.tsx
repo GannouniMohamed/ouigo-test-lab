@@ -70,6 +70,62 @@ describe("Projects landing", () => {
 		);
 		expect(navigateMock).toHaveBeenCalledWith("/scenarios");
 	});
+	it("la corbeille ouvre une confirmation et ne supprime pas tout de suite", async () => {
+		const two = [
+			projects[0],
+			{ ...projects[0], id: "decat", name: "Decathlon", environments: [] },
+		];
+		(
+			window.api.listProjects as unknown as ReturnType<typeof vi.fn>
+		).mockResolvedValue(two);
+		useAppStore.setState({ projects: two });
+		renderScreen();
+		await screen.findByText("Decathlon");
+
+		const trashButtons = screen.getAllByRole("button", {
+			name: /supprimer le projet/i,
+		});
+		fireEvent.click(trashButtons[1]);
+
+		// Modal asks for confirmation; nothing deleted yet.
+		expect(
+			screen.getByText(/supprimer le projet « Decathlon » \?/i),
+		).toBeInTheDocument();
+		expect(screen.getByText(/irréversible.*historique/i)).toBeInTheDocument();
+		expect(window.api.deleteProject).not.toHaveBeenCalled();
+
+		// Confirm.
+		fireEvent.click(
+			screen.getByRole("button", { name: /supprimer définitivement/i }),
+		);
+		await waitFor(() =>
+			expect(window.api.deleteProject).toHaveBeenCalledWith("decat"),
+		);
+	});
+
+	it("« Annuler » ferme la confirmation sans supprimer", async () => {
+		const two = [
+			projects[0],
+			{ ...projects[0], id: "decat", name: "Decathlon", environments: [] },
+		];
+		(
+			window.api.listProjects as unknown as ReturnType<typeof vi.fn>
+		).mockResolvedValue(two);
+		useAppStore.setState({ projects: two });
+		renderScreen();
+		await screen.findByText("Decathlon");
+
+		fireEvent.click(
+			screen.getAllByRole("button", { name: /supprimer le projet/i })[1],
+		);
+		fireEvent.click(screen.getByRole("button", { name: /annuler/i }));
+
+		expect(
+			screen.queryByText(/supprimer le projet « Decathlon » \?/i),
+		).not.toBeInTheDocument();
+		expect(window.api.deleteProject).not.toHaveBeenCalled();
+	});
+
 	it("affiche l'état vide quand aucun projet", async () => {
 		(
 			window.api.listProjects as unknown as ReturnType<typeof vi.fn>
