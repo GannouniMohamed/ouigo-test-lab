@@ -64,6 +64,17 @@ describe("TitleBar", () => {
 		).not.toBeInTheDocument();
 	});
 
+	it("affiche « Rapports » sur /reports (pas « Rapport d'exécution »)", () => {
+		setPlatform("darwin");
+		render(
+			<MemoryRouter initialEntries={["/reports"]}>
+				<TitleBar />
+			</MemoryRouter>,
+		);
+		expect(screen.getByText("Rapports")).toBeInTheDocument();
+		expect(screen.queryByText("Rapport d'exécution")).not.toBeInTheDocument();
+	});
+
 	it("affiche le titre Projets pour /projects", () => {
 		setPlatform("darwin");
 		render(
