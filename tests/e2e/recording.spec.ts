@@ -32,7 +32,7 @@ test("enregistrement → auto-run → Rapport Réussi", async () => {
 		await win.getByRole("button", { name: /arrêter/i }).click();
 		// Auto-run kicks in: Live Run opens in AUTO mode
 		await expect(
-			win.locator(".live-run__auto-badge", { hasText: "AUTO" }),
+			win.locator(".otl-auto-pill", { hasText: "AUTO" }),
 		).toBeVisible({ timeout: 15000 });
 		await expect(
 			win.getByText(/Première exécution — validation automatique/i),
