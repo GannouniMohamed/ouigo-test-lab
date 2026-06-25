@@ -2,6 +2,8 @@ export interface Crumb {
 	label: string;
 	/** Route cible ; absent sur le crumb courant (non cliquable). */
 	to?: string;
+	/** Type de crumb spécial ; « project » → rendu en sélecteur de projet. */
+	kind?: "project";
 }
 
 export interface BreadcrumbContext {
@@ -15,7 +17,11 @@ const SCENARIOS: Crumb = { label: "Scénarios", to: "/scenarios" };
 
 /** Crumb « [Projet] » : nom réel si connu, sinon libellé générique. */
 function projectCrumb(ctx: BreadcrumbContext): Crumb {
-	return { label: ctx.projectName ?? "Projet", to: "/scenarios" };
+	return {
+		label: ctx.projectName ?? "Projet",
+		to: "/scenarios",
+		kind: "project",
+	};
 }
 
 /**

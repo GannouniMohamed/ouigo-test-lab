@@ -15,6 +15,13 @@ const projects = [
 		],
 		createdAt: "2026-06-24T00:00:00Z",
 	},
+	{
+		id: "ouisncf",
+		name: "OUI.sncf",
+		description: "",
+		environments: [],
+		createdAt: "2026-06-24T00:00:00Z",
+	},
 ];
 
 beforeEach(() => {
@@ -22,11 +29,15 @@ beforeEach(() => {
 		projects,
 		activeProjectId: "ouigo",
 		activeEnvByProject: {},
+		scenarios: [],
 	});
 });
 afterEach(() => {
 	localStorage.clear();
-	useAppStore.setState({ activeEnvByProject: {} });
+	useAppStore.setState({
+		activeEnvByProject: {},
+		activeProjectId: "ouigo",
+	});
 });
 
 function renderAt(path: string) {
@@ -50,6 +61,24 @@ describe("ProjectContextBar", () => {
 		renderAt("/scenarios");
 		expect(screen.getByLabelText(/projet actif/i)).toBeTruthy();
 		expect(screen.getByLabelText(/environnement actif/i)).toBeTruthy();
+	});
+	it("n'expose qu'un seul contrôle « Projet actif » (intégré au fil d'Ariane)", () => {
+		renderAt("/scenarios");
+		// Le sélecteur de projet est désormais uniquement dans le fil d'Ariane.
+		expect(screen.getAllByLabelText(/projet actif/i)).toHaveLength(1);
+		// Plus de <select> natif redondant.
+		const { container } = render(
+			<MemoryRouter initialEntries={["/scenarios"]}>
+				<ProjectContextBar />
+			</MemoryRouter>,
+		);
+		expect(container.querySelector(".otl-ctxbar__project")).toBeNull();
+	});
+	it("le switcher de projet du fil d'Ariane change le projet actif", () => {
+		renderAt("/scenarios");
+		fireEvent.click(screen.getByLabelText(/projet actif/i));
+		fireEvent.click(screen.getByRole("option", { name: "OUI.sncf" }));
+		expect(useAppStore.getState().activeProjectId).toBe("ouisncf");
 	});
 	it("choisir un environnement met à jour activeEnvByProject", () => {
 		renderAt("/scenarios");
