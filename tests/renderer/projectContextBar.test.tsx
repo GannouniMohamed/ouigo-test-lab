@@ -87,10 +87,13 @@ describe("ProjectContextBar", () => {
 		expect(useAppStore.getState().activeEnvByProject.ouigo).toBe("recette");
 	});
 
-	it("affiche le placeholder « Environnement » quand aucun env n'est choisi", () => {
+	it("affiche le 1er env comme défaut (sans l'écrire) quand aucun n'est choisi", () => {
 		renderAt("/scenarios");
+		// Plus de placeholder vide : le picker montre le 1er env du projet…
 		expect(screen.getByLabelText(/environnement actif/i).textContent).toContain(
-			"Environnement",
+			"Préprod",
 		);
+		// …mais sans écrire dans le store (les runs gardent leur env hérité).
+		expect(useAppStore.getState().activeEnvByProject.ouigo).toBeUndefined();
 	});
 });

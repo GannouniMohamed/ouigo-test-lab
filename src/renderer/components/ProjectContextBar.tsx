@@ -14,6 +14,11 @@ export function ProjectContextBar(): JSX.Element | null {
 
 	const project = projects.find((p) => p.id === activeProjectId) ?? null;
 	const envId = activeEnvByProject[activeProjectId] ?? "";
+	// Show the project's first environment as the displayed default when none is
+	// explicitly chosen — avoids an empty "Environnement" placeholder WITHOUT
+	// writing into activeEnvByProject (runs keep inheriting the scenario default
+	// until the user actually picks one here).
+	const displayedEnvId = envId || project?.environments?.[0]?.id || "";
 
 	return (
 		<div className="otl-ctxbar">
@@ -24,7 +29,7 @@ export function ProjectContextBar(): JSX.Element | null {
 				<span className="otl-ctxbar__envlabel">Environnement</span>
 				<Select
 					ariaLabel="Environnement actif"
-					value={envId}
+					value={displayedEnvId}
 					onChange={(v) => setActiveEnv(activeProjectId, v)}
 					options={(project?.environments ?? []).map((e) => ({
 						value: e.id,
