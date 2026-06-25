@@ -15,11 +15,15 @@ beforeEach(() => {
 	dir = mkdtempSync(join(tmpdir(), "otl-run-"));
 	process.env.OTL_WORKSPACE = dir;
 	process.env.OTL_RUNNER_CONFIG = join(REPO, "playwright.runner.config.ts");
+	// The runner is headed by default (so Didomi & co render); force headless
+	// here so this integration test runs on display-less CI (e.g. Ubuntu).
+	process.env.OTL_FORCE_HEADLESS = "1";
 });
 afterEach(() => {
 	rmSync(dir, { recursive: true, force: true });
 	Reflect.deleteProperty(process.env, "OTL_WORKSPACE");
 	Reflect.deleteProperty(process.env, "OTL_RUNNER_CONFIG");
+	Reflect.deleteProperty(process.env, "OTL_FORCE_HEADLESS");
 });
 
 const scenario: Scenario = {
