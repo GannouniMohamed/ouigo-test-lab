@@ -2555,6 +2555,22 @@ body {
 	text-align: center;
 	font-family: var(--otl-mono);
 	font-size: 14px;
+	/* Hide the native number spinner — the − / + buttons already step it. */
+	appearance: textfield;
+	-moz-appearance: textfield;
+}
+.otl-modal__stepper-input::-webkit-inner-spin-button,
+.otl-modal__stepper-input::-webkit-outer-spin-button {
+	-webkit-appearance: none;
+	margin: 0;
+}
+/* Themed focus ring (cyan) instead of the browser's default orange outline. */
+.otl-modal__stepper-input:focus,
+.otl-modal__stepper-input:focus-visible {
+	outline: none;
+	border-left-color: var(--otl-cyan);
+	border-right-color: var(--otl-cyan);
+	box-shadow: inset 0 0 0 1px rgba(0, 201, 177, 0.35);
 }
 
 .otl-modal__repeat-hint {
