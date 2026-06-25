@@ -51,6 +51,7 @@ export function listReports(scenarioId?: string): ReportSummary[] {
 			status: report.status,
 			startedAt: report.startedAt,
 			durationMs: report.durationMs,
+			batchId: report.batchId,
 		});
 	}
 

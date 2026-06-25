@@ -8,6 +8,7 @@ import type {
 	BatchEvent,
 	BatchReport,
 	Environment,
+	RunOptions,
 	RunResult,
 	Scenario,
 } from "../../src/shared/types";
@@ -141,6 +142,37 @@ describe("orchestrateBatch", () => {
 		);
 		expect(stats().maxInFlight).toBeLessThanOrEqual(2);
 		expect(report.items.every((i) => i.status === "passed")).toBe(true);
+	});
+
+	it("propage le batchId du lot dans les options de chaque run", async () => {
+		const receivedOpts: Array<RunOptions | undefined> = [];
+		const runner: TestRunner = {
+			async run(_s, _e, onEvent, opts) {
+				receivedOpts.push(opts);
+				onEvent({ type: "run-started", runId: "run-x" });
+				return {
+					runId: "run-x",
+					status: "passed",
+					durationMs: 10,
+					report: { runId: "run-x" } as RunResult["report"],
+				};
+			},
+			async cancel() {},
+		};
+		const report = build(2, "sequential");
+		await orchestrateBatch(
+			report,
+			scenario,
+			env,
+			{ execution: "sequential", total: 2, headed: false },
+			() => {},
+			() => {},
+			runner,
+		);
+		expect(receivedOpts).toHaveLength(2);
+		for (const opts of receivedOpts) {
+			expect(opts?.batchId).toBe(report.batchId);
+		}
 	});
 
 	it("persists a snapshot after each transition", async () => {

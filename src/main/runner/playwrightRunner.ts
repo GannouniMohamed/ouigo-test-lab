@@ -284,6 +284,7 @@ export const playwrightRunner: TestRunner = {
 					durationMs,
 					error: "Impossible de démarrer Playwright (commande introuvable)",
 				});
+				report.batchId = opts?.batchId;
 				if (state.cancelled) report.status = "cancelled";
 				finishWith(report, false);
 			});
@@ -316,6 +317,7 @@ export const playwrightRunner: TestRunner = {
 						error: "Playwright exited without producing a JSON report",
 					});
 
+					report.batchId = opts?.batchId;
 					if (state.cancelled) report.status = "cancelled";
 					finishWith(report, false);
 					return;
@@ -332,6 +334,7 @@ export const playwrightRunner: TestRunner = {
 					environmentLabel: env.label,
 					startedAt,
 				});
+				report.batchId = opts?.batchId;
 
 				// Capture screenshot from JSON-mapped report before potentially overriding steps
 				const failedJsonStep = report.steps.find(

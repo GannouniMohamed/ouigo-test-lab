@@ -109,7 +109,7 @@ export async function orchestrateBatch(
 							persist(report);
 						}
 					},
-					{ headed: options.headed },
+					{ headed: options.headed, batchId: report.batchId },
 				)
 				.then((res) => {
 					item.runId = res.runId;
