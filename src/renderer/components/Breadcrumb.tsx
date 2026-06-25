@@ -22,6 +22,7 @@ export function Breadcrumb(): JSX.Element {
 	const activeProjectId = useAppStore((s) => s.activeProjectId);
 	const setActiveProjectId = useAppStore((s) => s.setActiveProjectId);
 	const scenarios = useAppStore((s) => s.scenarios);
+	const currentScenarioName = useAppStore((s) => s.currentScenarioName);
 
 	const projectName = projects.find((p) => p.id === activeProjectId)?.name;
 
@@ -32,6 +33,7 @@ export function Breadcrumb(): JSX.Element {
 
 	const ctx: BreadcrumbContext = {
 		projectName,
+		scenarioName: currentScenarioName ?? undefined,
 		groupName: groupScenario?.name,
 	};
 

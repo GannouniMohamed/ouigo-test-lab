@@ -6,6 +6,7 @@ import {
 	summarizeBatch,
 } from "../../shared/types";
 import { formatAt, formatDuration } from "../lib/time";
+import { useAppStore } from "../store";
 
 function statusLabel(status: BatchItem["status"]): string {
 	switch (status) {
@@ -87,6 +88,11 @@ export default function BatchRun(): JSX.Element {
 	const { batchId } = useParams<{ batchId: string }>();
 	const navigate = useNavigate();
 	const [batch, setBatch] = useState<BatchReport | null>(null);
+	const setCurrentScenarioName = useAppStore((s) => s.setCurrentScenarioName);
+
+	useEffect(() => {
+		if (batch?.scenarioName) setCurrentScenarioName(batch.scenarioName);
+	}, [batch?.scenarioName, setCurrentScenarioName]);
 
 	// Load the persisted snapshot up front (recovers any live events that fired
 	// before this screen subscribed), then refine it from live batch events.

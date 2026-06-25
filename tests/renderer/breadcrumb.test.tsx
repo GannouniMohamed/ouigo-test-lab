@@ -1,5 +1,9 @@
-import { describe, expect, it } from "vitest";
+import { render, screen } from "@testing-library/react";
+import { MemoryRouter } from "react-router-dom";
+import { afterEach, describe, expect, it } from "vitest";
+import { Breadcrumb } from "../../src/renderer/components/Breadcrumb";
 import { buildCrumbs, parentPath } from "../../src/renderer/lib/breadcrumb";
+import { useAppStore } from "../../src/renderer/store";
 
 describe("breadcrumb", () => {
 	it("résout la hiérarchie d'un écran de lot", () => {
@@ -41,5 +45,32 @@ describe("breadcrumb", () => {
 		expect(parentPath("/report/run-1")).toBe("/scenarios");
 		expect(parentPath("/batch/abc")).toBe("/scenarios");
 		expect(parentPath("/run/run-1")).toBe("/scenarios");
+	});
+});
+
+describe("Breadcrumb (composant)", () => {
+	afterEach(() => {
+		useAppStore.setState({
+			projects: [],
+			activeProjectId: "",
+			scenarios: [],
+			currentScenarioName: null,
+		});
+	});
+
+	it("affiche le vrai nom du scénario sur /report quand currentScenarioName est défini", () => {
+		useAppStore.setState({
+			projects: [],
+			activeProjectId: "",
+			scenarios: [],
+			currentScenarioName: "Parcours de connexion",
+		});
+		render(
+			<MemoryRouter initialEntries={["/report/r1"]}>
+				<Breadcrumb />
+			</MemoryRouter>,
+		);
+		expect(screen.getByText("Parcours de connexion")).toBeTruthy();
+		expect(screen.queryByText("Scénario")).toBeNull();
 	});
 });

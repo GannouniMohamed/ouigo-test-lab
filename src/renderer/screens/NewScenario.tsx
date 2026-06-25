@@ -9,6 +9,7 @@ export default function NewScenario(): JSX.Element {
 	const activeProjectId = useAppStore((s) => s.activeProjectId);
 	const activeEnvByProject = useAppStore((s) => s.activeEnvByProject);
 	const setFirstRunScenarioId = useAppStore((s) => s.setFirstRunScenarioId);
+	const setCurrentScenarioName = useAppStore((s) => s.setCurrentScenarioName);
 
 	const [name, setName] = useState("");
 	const [recordingId, setRecordingId] = useState<string | null>(null);
@@ -55,6 +56,7 @@ export default function NewScenario(): JSX.Element {
 				scenario.defaultEnvironmentId ||
 				"local";
 			setFirstRunScenarioId(scenario.id);
+			setCurrentScenarioName(scenario.name);
 			const { runId } = await window.api.runScenario(
 				scenario.projectId,
 				scenario.tunnelId,

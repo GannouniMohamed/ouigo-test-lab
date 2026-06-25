@@ -52,6 +52,8 @@ interface AppState {
 	setActiveEnv: (projectId: string, envId: string) => void;
 	firstRunScenarioId: string | null;
 	setFirstRunScenarioId: (id: string | null) => void;
+	currentScenarioName: string | null;
+	setCurrentScenarioName: (name: string | null) => void;
 }
 
 export const useAppStore = create<AppState>((set, get) => ({
@@ -80,4 +82,6 @@ export const useAppStore = create<AppState>((set, get) => ({
 	},
 	firstRunScenarioId: null,
 	setFirstRunScenarioId: (id) => set({ firstRunScenarioId: id }),
+	currentScenarioName: null,
+	setCurrentScenarioName: (name) => set({ currentScenarioName: name }),
 }));
