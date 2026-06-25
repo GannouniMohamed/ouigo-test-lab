@@ -6,7 +6,6 @@ import type {
 	Scenario,
 	Tunnel,
 } from "../../shared/types";
-import { EnvPicker } from "../components/EnvPicker";
 import { PlatformIcon } from "../components/PlatformIcon";
 import RunOptionsModal from "../components/RunOptionsModal";
 import type { RunLaunchOptions } from "../components/RunOptionsModal";
@@ -60,7 +59,6 @@ export default function HubLibrary(): JSX.Element {
 	const [tunnels, setTunnels] = useState<Tunnel[]>([]);
 	const [groupFilter, setGroupFilter] = useState<GroupFilter>("all");
 	const [query, setQuery] = useState("");
-	const [envId, setEnvId] = useState("");
 	const [runModal, setRunModal] = useState<{
 		scenario: Scenario;
 		environments: Environment[];
@@ -95,9 +93,7 @@ export default function HubLibrary(): JSX.Element {
 	async function openRunOptions(scenario: Scenario): Promise<void> {
 		const envs = await window.api.listEnvironments(scenario.projectId);
 		const defaultEnvId =
-			activeEnvByProject[scenario.projectId] ||
-			envId ||
-			scenario.defaultEnvironmentId;
+			activeEnvByProject[scenario.projectId] || scenario.defaultEnvironmentId;
 		setRunModal({ scenario, environments: envs, defaultEnvId });
 	}
 
@@ -190,7 +186,6 @@ export default function HubLibrary(): JSX.Element {
 					marginBottom: "1rem",
 				}}
 			>
-				<EnvPicker value={envId} onChange={setEnvId} />
 				<div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap" }}>
 					<button
 						type="button"

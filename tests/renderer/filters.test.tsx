@@ -100,7 +100,11 @@ beforeEach(() => {
 afterEach(() => {
 	// biome-ignore lint/suspicious/noExplicitAny: cleanup
 	Reflect.deleteProperty((globalThis as any).window, "api");
-	useAppStore.setState({ activeProjectId: "", scenarios: [] });
+	useAppStore.setState({
+		activeProjectId: "",
+		scenarios: [],
+		activeEnvByProject: {},
+	});
 });
 
 describe("HubLibrary filtres/recherche/env", () => {
@@ -145,20 +149,23 @@ describe("HubLibrary filtres/recherche/env", () => {
 		expect(screen.queryByText("Parcours de connexion")).not.toBeInTheDocument();
 		expect(screen.getByText("Connexion mobile")).toBeInTheDocument();
 	});
-	it("l'environnement choisi est utilisé au lancement", async () => {
+	it("l'environnement hérité (actif du projet) est utilisé au lancement", async () => {
+		// Env is now inherited globally, not picked in the Hub.
+		useAppStore.setState({ activeEnvByProject: { default: "recette" } });
 		render(
 			<MemoryRouter>
 				<HubLibrary />
 			</MemoryRouter>,
 		);
 		await screen.findByText("Parcours de connexion");
-		await userEvent.selectOptions(screen.getByRole("combobox"), "recette");
+		// No env picker/combobox in the Hub anymore.
+		expect(screen.queryByRole("combobox")).toBeNull();
 		await userEvent.click(
 			screen.getAllByRole("button", { name: /lancer/i })[0],
 		);
-		// Confirm the run-options dialog; the chosen env carries through.
+		// Confirm the run-options dialog; the inherited env carries through.
 		await userEvent.click(
-			await screen.findByRole("button", { name: "Démarrer" }),
+			await screen.findByRole("button", { name: /Démarrer/ }),
 		);
 		expect(
 			window.api.runScenario as unknown as ReturnType<typeof vi.fn>,
