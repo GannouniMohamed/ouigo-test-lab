@@ -19,7 +19,12 @@ export default function NewScenario(): JSX.Element {
 	const [environments, setEnvironments] = useState<Environment[]>([]);
 
 	// Env is inherited from the active project — no per-scenario selection.
-	const inheritedEnvId = activeEnvByProject[activeProjectId] ?? "";
+	// Resolve it exactly like the context bar: the actively-selected env, else the
+	// project's first env. Only fall back to the literal "Local" when the project
+	// genuinely has no environments (so a fresh project shows its real 1st env,
+	// e.g. "Préprod", instead of a non-existent "local").
+	const inheritedEnvId =
+		activeEnvByProject[activeProjectId] || environments[0]?.id || "";
 	const inheritedEnvLabel =
 		environments.find((e) => e.id === inheritedEnvId)?.label ?? "Local";
 
@@ -54,6 +59,7 @@ export default function NewScenario(): JSX.Element {
 			const env =
 				activeEnvByProject[scenario.projectId] ||
 				scenario.defaultEnvironmentId ||
+				environments[0]?.id ||
 				"local";
 			setFirstRunScenarioId(scenario.id);
 			setCurrentScenarioName(scenario.name);
