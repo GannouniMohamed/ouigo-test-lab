@@ -16,6 +16,7 @@ test("enregistrement → auto-run → Rapport Réussi", async () => {
 			OTL_RUNNER_CONFIG: join(REPO, "playwright.runner.config.ts"),
 			OTL_CODEGEN: "node",
 			OTL_CODEGEN_ARGS: join(REPO, "tests/fixtures/fake-codegen.mjs"),
+			OTL_FORCE_HEADLESS: "1",
 		},
 	});
 	try {

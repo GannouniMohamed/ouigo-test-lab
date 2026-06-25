@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { useLocation, useNavigate, useParams } from "react-router-dom";
 import type { RunEvent } from "../../shared/types";
 
-type StepStatus = "running" | "passed" | "failed";
+type StepStatus = "running" | "passed" | "failed" | "skipped";
 
 interface LiveStep {
 	index: number;
@@ -155,7 +155,11 @@ export default function LiveRun(): JSX.Element {
 					...prev,
 					steps: [
 						...prev.steps.filter((s) => s.index !== event.index),
-						{ index: event.index, title: event.title, status: "running" },
+						{
+							index: event.index,
+							title: event.title,
+							status: "running" as const,
+						},
 					].sort((a, b) => a.index - b.index),
 				}));
 			} else if (event.type === "step-passed") {
@@ -175,6 +179,18 @@ export default function LiveRun(): JSX.Element {
 							? { ...s, status: "failed", error: event.error }
 							: s,
 					),
+				}));
+			} else if (event.type === "step-skipped") {
+				setState((prev) => ({
+					...prev,
+					steps: [
+						...prev.steps.filter((s) => s.index !== event.index),
+						{
+							index: event.index,
+							title: event.title,
+							status: "skipped" as const,
+						},
+					].sort((a, b) => a.index - b.index),
 				}));
 			} else if (event.type === "log") {
 				setState((prev) => ({
@@ -283,15 +299,21 @@ export default function LiveRun(): JSX.Element {
 								? "otl-step--running"
 								: step.status === "passed"
 									? "otl-step--done"
-									: "otl-step--done otl-step--failed";
+									: step.status === "skipped"
+										? "otl-step--skipped"
+										: "otl-step--done otl-step--failed";
 						return (
 							<div key={step.index} className={`otl-step ${modClass}`}>
 								<span className="otl-step__icon">
 									{step.status === "running" && <SpinRing />}
 									{step.status === "passed" && <CheckIcon />}
 									{step.status === "failed" && <CrossIcon />}
+									{step.status === "skipped" && <span aria-hidden>○</span>}
 								</span>
 								<span className="otl-step__title">{step.title}</span>
+								{step.status === "skipped" && (
+									<span className="otl-step__skipped-label">non atteint</span>
+								)}
 								{step.durationMs !== undefined && (
 									<span className="otl-step__duration">
 										{step.durationMs}ms

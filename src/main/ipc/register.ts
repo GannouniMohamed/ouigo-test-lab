@@ -1,5 +1,10 @@
 import { BrowserWindow, ipcMain } from "electron";
-import type { Environment, Project, Tunnel } from "../../shared/types";
+import type {
+	Environment,
+	Project,
+	RunOptions,
+	Tunnel,
+} from "../../shared/types";
 import { installBrowser } from "../runner/ensureBrowsers";
 import { playwrightRunner } from "../runner/playwrightRunner";
 import {
@@ -12,6 +17,7 @@ import {
 	handleDeleteTunnel,
 	handleGetProject,
 	handleGetReport,
+	handleGetScenarioSpec,
 	handleListEnvironments,
 	handleListProjects,
 	handleListReports,
@@ -19,6 +25,7 @@ import {
 	handleListTunnels,
 	handleRunScenario,
 	handleSaveEnvironment,
+	handleSaveScenarioSpec,
 	handleUpdateProject,
 	handleUpdateTunnel,
 } from "./handlers";
@@ -118,6 +125,7 @@ export function registerIpc(): void {
 			tunnelId: string,
 			scenarioId: string,
 			envId: string,
+			opts?: RunOptions,
 		) =>
 			handleRunScenario(
 				projectId,
@@ -125,11 +133,29 @@ export function registerIpc(): void {
 				scenarioId,
 				envId,
 				(channel, payload) => event.sender.send(channel, payload),
+				opts,
 			),
 	);
 
 	ipcMain.handle("run:cancel", (_e, runId: string) =>
 		playwrightRunner.cancel(runId),
+	);
+
+	ipcMain.handle(
+		"scenario:getSpec",
+		(_e, projectId: string, tunnelId: string, scenarioId: string) =>
+			handleGetScenarioSpec(projectId, tunnelId, scenarioId),
+	);
+
+	ipcMain.handle(
+		"scenario:saveSpec",
+		(
+			_e,
+			projectId: string,
+			tunnelId: string,
+			scenarioId: string,
+			spec: string,
+		) => handleSaveScenarioSpec(projectId, tunnelId, scenarioId, spec),
 	);
 
 	ipcMain.handle("recording:start", (_e, opts) => handleStartRecording(opts));

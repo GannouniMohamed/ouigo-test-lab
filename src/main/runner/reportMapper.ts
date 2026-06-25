@@ -1,6 +1,7 @@
 import type {
 	Report,
 	ReportStep,
+	RunMode,
 	RunStatus,
 	StepStatus,
 } from "../../shared/types";
@@ -9,6 +10,10 @@ export interface ReportContext {
 	runId: string;
 	scenarioId: string;
 	scenarioName: string;
+	projectId?: string;
+	tunnelId?: string;
+	environmentId?: string;
+	mode?: RunMode;
 	environmentLabel: string;
 	startedAt?: string;
 }
@@ -87,6 +92,26 @@ function isPwReport(raw: unknown): raw is PwReport {
 
 const FAILING_STATUSES = new Set(["failed", "timedOut", "interrupted"]);
 
+// Pull the failure screenshot straight from the result-level attachments.
+// Playwright attaches the "only-on-failure" screenshot to the RESULT, not to a
+// step. mapPlaywrightReport only surfaces it when the JSON report has steps to
+// hang it on — but flat recorded specs (page.*/expect) produce no JSON steps,
+// so the screenshot would be lost. This reads it independently of steps.
+export function extractFailureScreenshot(raw: unknown): string | undefined {
+	if (!isPwReport(raw)) return undefined;
+	const specs: PwSpec[] = [];
+	for (const suite of raw.suites) specs.push(...collectSpecs(suite));
+	for (const spec of specs) {
+		const result = getLastResult(spec);
+		if (!result || !FAILING_STATUSES.has(result.status)) continue;
+		const shot = result.attachments?.find(
+			(a) => a.name === "screenshot" && a.path,
+		);
+		if (shot?.path) return shot.path;
+	}
+	return undefined;
+}
+
 // ---------------------------------------------------------------------------
 // Public API
 // ---------------------------------------------------------------------------
@@ -156,6 +181,10 @@ export function mapPlaywrightReport(raw: unknown, ctx: ReportContext): Report {
 		runId: ctx.runId,
 		scenarioId: ctx.scenarioId,
 		scenarioName: ctx.scenarioName,
+		projectId: ctx.projectId,
+		tunnelId: ctx.tunnelId,
+		environmentId: ctx.environmentId,
+		mode: ctx.mode,
 		environmentLabel: ctx.environmentLabel,
 		status: overallStatus,
 		durationMs,

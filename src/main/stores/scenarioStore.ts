@@ -7,8 +7,25 @@ import {
 	writeFileSync,
 } from "node:fs";
 import { join } from "node:path";
+import { parseRecordedSteps } from "../../shared/spec";
 import type { LastRun, Scenario } from "../../shared/types";
 import { getWorkspaceDir } from "../workspace";
+
+// Backfill recordedStepCount for scenarios recorded before the field existed,
+// by parsing their spec on read. Keeps older scenarios from showing "0 étapes".
+function hydrateRecordedStepCount(s: Scenario, dir: string): Scenario {
+	if (typeof s.recordedStepCount === "number") return s;
+	const specPath = join(dir, s.specFile);
+	if (!existsSync(specPath)) return s;
+	try {
+		s.recordedStepCount = parseRecordedSteps(
+			readFileSync(specPath, "utf-8"),
+		).length;
+	} catch {
+		/* leave undefined — UI falls back gracefully */
+	}
+	return s;
+}
 
 function tunnelScenariosDir(projectId: string, tunnelId: string): string {
 	return join(
@@ -41,7 +58,8 @@ export function listScenarios(projectId: string, tunnelId: string): Scenario[] {
 		if (!entry.isDirectory()) continue;
 		const meta = join(base, entry.name, "scenario.meta.json");
 		if (!existsSync(meta)) continue;
-		results.push(JSON.parse(readFileSync(meta, "utf-8")) as Scenario);
+		const scenario = JSON.parse(readFileSync(meta, "utf-8")) as Scenario;
+		results.push(hydrateRecordedStepCount(scenario, join(base, entry.name)));
 	}
 	return results;
 }
@@ -64,7 +82,24 @@ export function getScenario(
 ): Scenario {
 	const meta = metaPath(projectId, tunnelId, id);
 	if (!existsSync(meta)) throw new Error(`Scenario not found: ${id}`);
-	return JSON.parse(readFileSync(meta, "utf-8")) as Scenario;
+	const scenario = JSON.parse(readFileSync(meta, "utf-8")) as Scenario;
+	return hydrateRecordedStepCount(
+		scenario,
+		scenarioDir(projectId, tunnelId, id),
+	);
+}
+
+export function readScenarioSpec(
+	projectId: string,
+	tunnelId: string,
+	id: string,
+): string {
+	const scenario = getScenario(projectId, tunnelId, id);
+	const specPath = join(
+		scenarioDir(projectId, tunnelId, id),
+		scenario.specFile,
+	);
+	return readFileSync(specPath, "utf-8");
 }
 
 export function saveScenario(s: Scenario, specContent: string): void {

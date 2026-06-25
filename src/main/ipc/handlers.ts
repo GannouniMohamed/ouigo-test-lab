@@ -1,10 +1,13 @@
 import { DEFAULT_TUNNEL_COLOR } from "../../shared/groups";
+import { parseRecordedSteps } from "../../shared/spec";
 import type {
 	Environment,
 	Project,
+	RecordedStep,
 	Report,
 	ReportSummary,
 	RunEvent,
+	RunOptions,
 	Scenario,
 	Tunnel,
 } from "../../shared/types";
@@ -27,6 +30,8 @@ import {
 	deleteScenario,
 	getScenario,
 	listScenariosByProject,
+	readScenarioSpec,
+	saveScenario,
 } from "../stores/scenarioStore";
 import {
 	deleteTunnel,
@@ -185,6 +190,29 @@ export function handleDeleteScenario(
 	deleteScenario(projectId, tunnelId, id);
 }
 
+export function handleGetScenarioSpec(
+	projectId: string,
+	tunnelId: string,
+	scenarioId: string,
+): string {
+	return readScenarioSpec(projectId, tunnelId, scenarioId);
+}
+
+// Persist a draft spec (step-management commit). Recomputes the recorded step
+// count and returns the parsed steps for the UI.
+export function handleSaveScenarioSpec(
+	projectId: string,
+	tunnelId: string,
+	scenarioId: string,
+	spec: string,
+): RecordedStep[] {
+	const scenario = getScenario(projectId, tunnelId, scenarioId);
+	const steps = parseRecordedSteps(spec);
+	scenario.recordedStepCount = steps.length;
+	saveScenario(scenario, spec);
+	return steps;
+}
+
 export function handleListReports(scenarioId?: string): ReportSummary[] {
 	return listReports(scenarioId);
 }
@@ -203,18 +231,24 @@ export async function handleRunScenario(
 	scenarioId: string,
 	envId: string,
 	sendEvent: (channel: string, payload: RunEvent) => void,
+	opts?: RunOptions,
 ): Promise<{ runId: string }> {
 	const scenario = getScenario(projectId, tunnelId, scenarioId);
 	const env = getEnvironment(projectId, envId);
 	let runId = "";
 	const ready = new Promise<string>((resolve) => {
-		void playwrightRunner.run(scenario, env, (ev) => {
-			if (ev.type === "run-started") {
-				runId = ev.runId;
-				resolve(runId);
-			}
-			if (runId) sendEvent(`run-event:${runId}`, ev);
-		});
+		void playwrightRunner.run(
+			scenario,
+			env,
+			(ev) => {
+				if (ev.type === "run-started") {
+					runId = ev.runId;
+					resolve(runId);
+				}
+				if (runId) sendEvent(`run-event:${runId}`, ev);
+			},
+			opts,
+		);
 	});
 	return { runId: await ready };
 }

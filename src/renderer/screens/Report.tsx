@@ -1,6 +1,31 @@
 import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
-import type { Report as ReportData } from "../../shared/types";
+import { applyStepEdit, parseRecordedSteps } from "../../shared/spec";
+import type {
+	Report as ReportData,
+	RunMode,
+	StepEditOp,
+	StepScope,
+	StepStatus,
+} from "../../shared/types";
+import { stepActiveInMode } from "../../shared/types";
+
+interface StepRow {
+	index: number;
+	title: string;
+	status?: StepStatus;
+	scope?: StepScope;
+	error?: string;
+	durationMs?: number;
+	screenshotPath?: string;
+}
+
+function scopeChipLabel(scope: StepScope | undefined): string | null {
+	if (scope === "skip") return "ignorée";
+	if (scope === "visible") return "visible seulement";
+	if (scope === "invisible") return "invisible seulement";
+	return null;
+}
 
 function statusLabel(status: ReportData["status"]): string {
 	if (status === "passed") return "Réussi";
@@ -130,6 +155,16 @@ function CameraIcon(): JSX.Element {
 export default function Report(): JSX.Element {
 	const { runId } = useParams<{ runId: string }>();
 	const [report, setReport] = useState<ReportData | null>(null);
+	// Draft step-management: edits build an in-memory draft spec (disk untouched
+	// until "Enregistrer"). "Relancer" runs the draft in place. Leaving the page
+	// discards the draft — the scenario stays unchanged.
+	const [draft, setDraft] = useState<string | null>(null);
+	const [dirty, setDirty] = useState(false);
+	const [running, setRunning] = useState(false);
+	const [editingIndex, setEditingIndex] = useState<number | null>(null);
+	const [editValue, setEditValue] = useState("");
+	const [scopeMenuIndex, setScopeMenuIndex] = useState<number | null>(null);
+	const [busy, setBusy] = useState(false);
 
 	useEffect(() => {
 		if (!runId) return;
@@ -139,6 +174,84 @@ export default function Report(): JSX.Element {
 	if (!report) {
 		return <div className="otl-report otl-report--loading">Chargement…</div>;
 	}
+
+	const mode: RunMode = report.mode ?? "visible";
+	const canEdit = Boolean(report.projectId && report.tunnelId);
+	const canRelancer = canEdit && Boolean(report.environmentId);
+
+	async function applyEdit(op: StepEditOp): Promise<void> {
+		if (!report?.projectId || !report?.tunnelId) return;
+		setBusy(true);
+		try {
+			const base =
+				draft ??
+				(await window.api.getScenarioSpec(
+					report.projectId,
+					report.tunnelId,
+					report.scenarioId,
+				));
+			setDraft(applyStepEdit(base, op));
+			setDirty(true);
+			setEditingIndex(null);
+			setScopeMenuIndex(null);
+		} finally {
+			setBusy(false);
+		}
+	}
+
+	async function relancer(): Promise<void> {
+		if (!report?.projectId || !report?.tunnelId || !report.environmentId)
+			return;
+		if (!draft) return;
+		setRunning(true);
+		const { runId: newRunId } = await window.api.runScenario(
+			report.projectId,
+			report.tunnelId,
+			report.scenarioId,
+			report.environmentId,
+			{ headed: mode === "visible", specDraft: draft },
+		);
+		const unsub = window.api.onRunEvent(newRunId, (ev) => {
+			if (ev.type === "run-finished") {
+				unsub();
+				window.api.getReport(newRunId).then((r) => {
+					setReport(r);
+					setDirty(false);
+					setRunning(false);
+				});
+			}
+		});
+	}
+
+	async function enregistrer(): Promise<void> {
+		if (!report?.projectId || !report?.tunnelId || !draft) return;
+		await window.api.saveScenarioSpec(
+			report.projectId,
+			report.tunnelId,
+			report.scenarioId,
+			draft,
+		);
+		setDraft(null);
+		setDirty(false);
+	}
+
+	function annuler(): void {
+		setDraft(null);
+		setDirty(false);
+		setEditingIndex(null);
+		setScopeMenuIndex(null);
+	}
+
+	// In draft (dirty) mode show the edited steps (no run results yet); otherwise
+	// the run's aligned steps.
+	const rows: StepRow[] =
+		dirty && draft
+			? parseRecordedSteps(draft).map((s) => ({
+					index: s.index,
+					title: s.title,
+					scope: s.scope,
+				}))
+			: report.steps.map((s) => ({ ...s }));
 
 	const totalSteps = report.steps.length;
 	const completedSteps = report.steps.filter(
@@ -165,6 +278,9 @@ export default function Report(): JSX.Element {
 				</div>
 				<div className="otl-report__meta">
 					<span className="otl-report__env">{report.environmentLabel}</span>
+					<span className="otl-report__mode">
+						{mode === "visible" ? "Visible" : "Invisible"}
+					</span>
 					<span className="otl-report__steps-count">
 						{completedSteps}/{totalSteps} étapes
 					</span>
@@ -177,33 +293,235 @@ export default function Report(): JSX.Element {
 				</div>
 			</header>
 
+			{dirty && (
+				<div className="otl-report__dirty">
+					<span>Scénario modifié (brouillon non enregistré).</span>
+					<div className="otl-report__dirty-actions">
+						<button
+							type="button"
+							className="otl-btn-primary"
+							disabled={running || !canRelancer}
+							title={
+								canRelancer
+									? "Relancer avec les modifications"
+									: "Relance indisponible pour ce rapport — relancez depuis la bibliothèque"
+							}
+							onClick={relancer}
+						>
+							{running ? "Relance en cours…" : "Relancer"}
+						</button>
+						<button
+							type="button"
+							className="otl-tab"
+							disabled={running}
+							onClick={enregistrer}
+						>
+							Enregistrer
+						</button>
+						<button
+							type="button"
+							className="otl-tab"
+							disabled={running}
+							onClick={annuler}
+						>
+							Annuler
+						</button>
+					</div>
+				</div>
+			)}
+
 			{/* Body: left step list + right panel */}
 			<div className="otl-report__body">
 				{/* Step list */}
 				<ol className="otl-report__steps">
-					{report.steps.map((step) => (
-						<li
-							key={step.index}
-							className={`otl-rstep${step.status === "failed" ? " otl-rstep--failed" : ""}`}
-						>
-							<span
-								className={`otl-rstep__icon otl-rstep__icon--${step.status}`}
+					{rows.map((step) => {
+						const neutralised = !stepActiveInMode(step.scope, mode);
+						const chip = scopeChipLabel(step.scope);
+						return (
+							<li
+								key={step.index}
+								className={`otl-rstep${step.status === "failed" ? " otl-rstep--failed" : ""}${neutralised ? " otl-rstep--ignored" : ""}`}
 							>
-								{step.status === "passed" && <CheckIcon />}
-								{step.status === "failed" && <XIcon size={12} />}
-								{step.status === "skipped" && <DashIcon />}
-							</span>
-							<div className="otl-rstep__content">
-								<span className="otl-rstep__title">{step.title}</span>
-								{step.status === "failed" && step.error && (
-									<pre className="otl-rstep__err">{step.error}</pre>
+								<span
+									className={`otl-rstep__icon otl-rstep__icon--${neutralised ? "skipped" : (step.status ?? "edited")}`}
+								>
+									{!neutralised && step.status === "passed" && <CheckIcon />}
+									{!neutralised && step.status === "failed" && (
+										<XIcon size={12} />
+									)}
+									{!neutralised && step.status === "skipped" && <DashIcon />}
+									{neutralised && <DashIcon />}
+								</span>
+								<div className="otl-rstep__content">
+									{editingIndex === step.index ? (
+										<div className="otl-rstep__edit">
+											<input
+												className="otl-input otl-rstep__edit-input"
+												value={editValue}
+												// biome-ignore lint/a11y/noAutofocus: focus the field the user just opened
+												autoFocus
+												onChange={(e) => setEditValue(e.target.value)}
+												onKeyDown={(e) => {
+													if (e.key === "Enter")
+														applyEdit({
+															op: "edit",
+															index: step.index,
+															code: editValue,
+														});
+													if (e.key === "Escape") setEditingIndex(null);
+												}}
+											/>
+											<button
+												type="button"
+												className="otl-btn-primary otl-rstep__edit-save"
+												disabled={busy}
+												onClick={() =>
+													applyEdit({
+														op: "edit",
+														index: step.index,
+														code: editValue,
+													})
+												}
+											>
+												OK
+											</button>
+											<button
+												type="button"
+												className="otl-tab"
+												onClick={() => setEditingIndex(null)}
+											>
+												Annuler
+											</button>
+										</div>
+									) : (
+										<span className="otl-rstep__title">{step.title}</span>
+									)}
+									{step.status === "failed" && step.error && (
+										<pre className="otl-rstep__err">{step.error}</pre>
+									)}
+								</div>
+								{chip ? (
+									<span className="otl-rstep__skipped-label">{chip}</span>
+								) : step.status === "skipped" ? (
+									<span className="otl-rstep__skipped-label">non atteint</span>
+								) : (
+									typeof step.durationMs === "number" && (
+										<code className="otl-rstep__duration">
+											{formatMs(step.durationMs)}
+										</code>
+									)
 								)}
-							</div>
-							<code className="otl-rstep__duration">
-								{formatMs(step.durationMs)}
-							</code>
-						</li>
-					))}
+								{canEdit && editingIndex !== step.index && (
+									<div className="otl-rstep__actions">
+										{scopeMenuIndex === step.index ? (
+											<>
+												<button
+													type="button"
+													className="otl-rstep__action"
+													disabled={busy}
+													onClick={() =>
+														// Ignored in invisible ⇒ runs only in visible.
+														applyEdit({
+															op: "scope",
+															index: step.index,
+															scope: "visible",
+														})
+													}
+												>
+													Ignorer en invisible
+												</button>
+												<button
+													type="button"
+													className="otl-rstep__action"
+													disabled={busy}
+													onClick={() =>
+														// Ignored in visible ⇒ runs only in invisible.
+														applyEdit({
+															op: "scope",
+															index: step.index,
+															scope: "invisible",
+														})
+													}
+												>
+													Ignorer en visible
+												</button>
+												<button
+													type="button"
+													className="otl-rstep__action"
+													disabled={busy}
+													onClick={() =>
+														applyEdit({
+															op: "scope",
+															index: step.index,
+															scope: "skip",
+														})
+													}
+												>
+													Partout
+												</button>
+												<button
+													type="button"
+													className="otl-rstep__action"
+													onClick={() => setScopeMenuIndex(null)}
+												>
+													×
+												</button>
+											</>
+										) : (
+											<>
+												{step.scope && step.scope !== "both" ? (
+													<button
+														type="button"
+														className="otl-rstep__action"
+														disabled={busy}
+														onClick={() =>
+															applyEdit({
+																op: "scope",
+																index: step.index,
+																scope: "both",
+															})
+														}
+													>
+														Réactiver
+													</button>
+												) : (
+													<button
+														type="button"
+														className="otl-rstep__action"
+														disabled={busy}
+														onClick={() => setScopeMenuIndex(step.index)}
+													>
+														Ignorer…
+													</button>
+												)}
+												<button
+													type="button"
+													className="otl-rstep__action"
+													disabled={busy}
+													onClick={() => {
+														setEditingIndex(step.index);
+														setEditValue(step.title);
+													}}
+												>
+													Modifier
+												</button>
+												<button
+													type="button"
+													className="otl-rstep__action otl-rstep__action--danger"
+													disabled={busy}
+													onClick={() =>
+														applyEdit({ op: "delete", index: step.index })
+													}
+												>
+													Supprimer
+												</button>
+											</>
+										)}
+									</div>
+								)}
+							</li>
+						);
+					})}
 				</ol>
 
 				{/* Right panel */}

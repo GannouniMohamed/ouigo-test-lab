@@ -1,5 +1,17 @@
 import { defineConfig } from "@playwright/test";
 
+// Fail fast: cap how long a single action / navigation may hang. Without these,
+// a recorded selector that no longer matches on replay (dynamic dates, prices,
+// cookie banners…) blocks until the 30s TEST timeout, which kills the test
+// mid-step — so the step reporter never sees it and the report comes back
+// empty. With a per-action cap the stuck action throws at its own limit, the
+// reporter captures it as a failed step, and the user sees exactly where the
+// replay blocked. Overridable via env for slower environments.
+const num = (v: string | undefined, fallback: number): number => {
+	const n = v ? Number(v) : Number.NaN;
+	return Number.isFinite(n) && n > 0 ? n : fallback;
+};
+
 export default defineConfig({
 	testDir: process.env.OTL_TEST_DIR || ".",
 	reporter: [
@@ -8,9 +20,19 @@ export default defineConfig({
 		["./playwright.step-reporter.cjs"],
 	],
 	outputDir: process.env.OTL_ARTIFACTS || "pw-artifacts",
+	timeout: num(process.env.OTL_TEST_TIMEOUT, 90000),
 	use: {
 		baseURL: process.env.PLAYWRIGHT_BASE_URL,
 		screenshot: "only-on-failure",
-		headless: true,
+		// Match the locale scenarios are recorded in (French) so language-aware
+		// UIs — e.g. the Didomi consent banner — render the same text the
+		// recorded selectors expect. Default-FR; override via OTL_LOCALE.
+		locale: process.env.OTL_LOCALE || "fr-FR",
+		// Headless unless the runner explicitly asks for headed (OTL_HEADLESS="0").
+		// Default-safe: anything running this config directly (tests, CI) stays
+		// headless unless it opts in.
+		headless: process.env.OTL_HEADLESS !== "0",
+		actionTimeout: num(process.env.OTL_ACTION_TIMEOUT, 15000),
+		navigationTimeout: num(process.env.OTL_NAV_TIMEOUT, 30000),
 	},
 });

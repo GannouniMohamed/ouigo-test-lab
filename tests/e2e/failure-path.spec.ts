@@ -14,6 +14,7 @@ test("failure path: scénario en échec → Échec + capture", async () => {
 			OTL_WORKSPACE: workspace,
 			OTL_FIXTURES: join(REPO, "fixtures"),
 			OTL_RUNNER_CONFIG: join(REPO, "playwright.runner.config.ts"),
+			OTL_FORCE_HEADLESS: "1",
 		},
 	});
 	try {
@@ -28,6 +29,7 @@ test("failure path: scénario en échec → Échec + capture", async () => {
 			.getByTestId("scenario-card-failing")
 			.getByRole("button", { name: /lancer/i })
 			.click();
+		await win.getByRole("button", { name: "Démarrer" }).click();
 		await expect(win.getByText("Échec", { exact: true })).toBeVisible({
 			timeout: 120000,
 		});

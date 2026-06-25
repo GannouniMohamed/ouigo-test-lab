@@ -91,6 +91,7 @@ contextBridge.exposeInMainWorld("api", {
 		tunnelId: string,
 		scenarioId: string,
 		envId: string,
+		opts?: { headed?: boolean; specDraft?: string },
 	) {
 		return ipcRenderer.invoke(
 			"scenario:run",
@@ -98,6 +99,29 @@ contextBridge.exposeInMainWorld("api", {
 			tunnelId,
 			scenarioId,
 			envId,
+			opts,
+		);
+	},
+	getScenarioSpec(projectId: string, tunnelId: string, scenarioId: string) {
+		return ipcRenderer.invoke(
+			"scenario:getSpec",
+			projectId,
+			tunnelId,
+			scenarioId,
+		);
+	},
+	saveScenarioSpec(
+		projectId: string,
+		tunnelId: string,
+		scenarioId: string,
+		spec: string,
+	) {
+		return ipcRenderer.invoke(
+			"scenario:saveSpec",
+			projectId,
+			tunnelId,
+			scenarioId,
+			spec,
 		);
 	},
 	cancelRun(runId: string) {
