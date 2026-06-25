@@ -9,6 +9,7 @@ import type {
 	StepStatus,
 } from "../../shared/types";
 import { stepActiveInMode } from "../../shared/types";
+import { humanizeStep } from "../lib/humanizeStep";
 import { formatDuration } from "../lib/time";
 import { useAppStore } from "../store";
 
@@ -423,7 +424,9 @@ export default function Report(): JSX.Element {
 												</button>
 											</div>
 										) : (
-											<span className="otl-rstep__title">{step.title}</span>
+											<span className="otl-rstep__title">
+												{humanizeStep(step.title)}
+											</span>
 										)}
 										{step.status === "failed" && step.error && (
 											<pre className="otl-rstep__err">{step.error}</pre>

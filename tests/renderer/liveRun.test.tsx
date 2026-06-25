@@ -48,6 +48,16 @@ describe("LiveRun", () => {
 		emit({ type: "step-passed", index: 0, durationMs: 1200 });
 		expect(await screen.findByText("Ouvrir la page")).toBeInTheDocument();
 	});
+	it("humanise un titre d'étape en code Playwright brut", async () => {
+		renderAt();
+		emit({ type: "run-started", runId: "run-1" });
+		emit({ type: "step-started", index: 0, title: "page.goto('https://x')" });
+		emit({ type: "step-passed", index: 0, durationMs: 100 });
+		expect(await screen.findByText("Ouvrir la page")).toBeInTheDocument();
+		expect(
+			screen.queryByText("page.goto('https://x')"),
+		).not.toBeInTheDocument();
+	});
 	it("navigue vers le rapport à la fin", async () => {
 		renderAt();
 		emit({ type: "run-started", runId: "run-1" });

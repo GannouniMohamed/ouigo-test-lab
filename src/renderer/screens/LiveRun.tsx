@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useLocation, useNavigate, useParams } from "react-router-dom";
 import type { RunEvent } from "../../shared/types";
+import { humanizeStep } from "../lib/humanizeStep";
 
 type StepStatus = "pending" | "running" | "passed" | "failed" | "skipped";
 
@@ -285,7 +286,7 @@ export default function LiveRun(): JSX.Element {
 				<div className="live-run__progress-line">
 					<span>
 						Étape <strong>{startedOrDone}</strong> sur {totalSteps}
-						{currentTitle && ` · ${currentTitle}`}
+						{currentTitle && ` · ${humanizeStep(currentTitle)}`}
 					</span>
 					<span className="live-run__progress-pct">{progress} %</span>
 				</div>
@@ -339,7 +340,9 @@ export default function LiveRun(): JSX.Element {
 										{(step.status === "skipped" ||
 											step.status === "pending") && <span aria-hidden>○</span>}
 									</span>
-									<span className="otl-step__title">{step.title}</span>
+									<span className="otl-step__title">
+										{humanizeStep(step.title)}
+									</span>
 									{step.status === "running" && (
 										<span className="otl-step__running-label">en cours…</span>
 									)}
