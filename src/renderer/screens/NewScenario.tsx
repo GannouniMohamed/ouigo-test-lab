@@ -1,7 +1,6 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import type { Platform, Tunnel } from "../../shared/types";
-import { EnvPicker } from "../components/EnvPicker";
+import type { Environment, Platform, Tunnel } from "../../shared/types";
 import { useAppStore } from "../store";
 
 export default function NewScenario(): JSX.Element {
@@ -11,11 +10,16 @@ export default function NewScenario(): JSX.Element {
 	const setFirstRunScenarioId = useAppStore((s) => s.setFirstRunScenarioId);
 
 	const [name, setName] = useState("");
-	const [envId, setEnvId] = useState("");
 	const [recordingId, setRecordingId] = useState<string | null>(null);
 	const [platform, setPlatform] = useState<Platform>("web");
 	const [tunnels, setTunnels] = useState<Tunnel[]>([]);
 	const [tunnelId, setTunnelId] = useState("");
+	const [environments, setEnvironments] = useState<Environment[]>([]);
+
+	// Env is inherited from the active project — no per-scenario selection.
+	const inheritedEnvId = activeEnvByProject[activeProjectId] ?? "";
+	const inheritedEnvLabel =
+		environments.find((e) => e.id === inheritedEnvId)?.label ?? "Local";
 
 	useEffect(() => {
 		if (!activeProjectId) return;
@@ -23,13 +27,17 @@ export default function NewScenario(): JSX.Element {
 			setTunnels(t);
 			setTunnelId((current) => current || t[0]?.id || "");
 		});
+		window.api
+			.listEnvironments(activeProjectId)
+			.then((envs) => setEnvironments(envs ?? []))
+			.catch(() => setEnvironments([]));
 	}, [activeProjectId]);
 
 	async function handleStart() {
 		const { recordingId: id } = await window.api.startRecording({
 			name,
 			browser: "chromium",
-			environmentId: envId || "local",
+			environmentId: inheritedEnvId || "local",
 			projectId: activeProjectId,
 			tunnelId: tunnelId || "general",
 			platform,
@@ -43,7 +51,6 @@ export default function NewScenario(): JSX.Element {
 			const scenario = await window.api.stopRecording(recordingId);
 			const env =
 				activeEnvByProject[scenario.projectId] ||
-				envId ||
 				scenario.defaultEnvironmentId ||
 				"local";
 			setFirstRunScenarioId(scenario.id);
@@ -235,10 +242,18 @@ export default function NewScenario(): JSX.Element {
 					/>
 				</div>
 
-				{/* Environment */}
+				{/* Environment — inherited from the project, read-only */}
 				<div>
 					<div className="otl-field-label">Environnement</div>
-					<EnvPicker value={envId} onChange={setEnvId} />
+					<div className="otl-envbanner" role="note">
+						<span className="otl-envbanner__lock" aria-hidden="true">
+							🔒
+						</span>
+						<span>
+							Environnement <strong>{inheritedEnvLabel}</strong> · hérité du
+							projet
+						</span>
+					</div>
 				</div>
 
 				{/* Recording method block */}
