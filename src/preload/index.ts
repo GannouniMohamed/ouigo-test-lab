@@ -1,5 +1,7 @@
 import { contextBridge, ipcRenderer } from "electron";
 import type {
+	BatchEvent,
+	BatchOptions,
 	Environment,
 	Platform,
 	Project,
@@ -124,12 +126,38 @@ contextBridge.exposeInMainWorld("api", {
 			spec,
 		);
 	},
+	runBatch(
+		projectId: string,
+		tunnelId: string,
+		scenarioId: string,
+		envId: string,
+		options: BatchOptions,
+	) {
+		return ipcRenderer.invoke(
+			"scenario:runBatch",
+			projectId,
+			tunnelId,
+			scenarioId,
+			envId,
+			options,
+		);
+	},
+	getBatch(batchId: string) {
+		return ipcRenderer.invoke("batch:get", batchId);
+	},
 	cancelRun(runId: string) {
 		return ipcRenderer.invoke("run:cancel", runId);
 	},
 	onRunEvent(runId: string, cb: (e: RunEvent) => void) {
 		const channel = `run-event:${runId}`;
 		const listener = (_e: Electron.IpcRendererEvent, payload: RunEvent) =>
+			cb(payload);
+		ipcRenderer.on(channel, listener);
+		return () => ipcRenderer.removeListener(channel, listener);
+	},
+	onBatchEvent(batchId: string, cb: (e: BatchEvent) => void) {
+		const channel = `batch-event:${batchId}`;
+		const listener = (_e: Electron.IpcRendererEvent, payload: BatchEvent) =>
 			cb(payload);
 		ipcRenderer.on(channel, listener);
 		return () => ipcRenderer.removeListener(channel, listener);

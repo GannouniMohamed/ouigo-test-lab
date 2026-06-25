@@ -4,6 +4,7 @@ import { AppGate } from "./components/AppGate";
 import { ProjectContextBar } from "./components/ProjectContextBar";
 import { Sidebar } from "./components/Sidebar";
 import { TitleBar } from "./components/TitleBar";
+import BatchRun from "./screens/BatchRun";
 import EditGroupe from "./screens/EditGroupe";
 import History from "./screens/History";
 import HubLibrary from "./screens/HubLibrary";
@@ -41,6 +42,7 @@ function App(): JSX.Element {
 									element={<EditGroupe />}
 								/>
 								<Route path="/run/:runId" element={<LiveRun />} />
+								<Route path="/batch/:batchId" element={<BatchRun />} />
 								<Route path="/report/:runId" element={<Report />} />
 								<Route path="/reports" element={<History />} />
 								<Route path="/projects" element={<Projects />} />
