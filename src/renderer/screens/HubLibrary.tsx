@@ -55,6 +55,7 @@ export default function HubLibrary(): JSX.Element {
 	const activeEnvByProject = useAppStore((s) => s.activeEnvByProject);
 	const firstRunScenarioId = useAppStore((s) => s.firstRunScenarioId);
 	const setFirstRunScenarioId = useAppStore((s) => s.setFirstRunScenarioId);
+	const setCurrentScenarioName = useAppStore((s) => s.setCurrentScenarioName);
 
 	const [tunnels, setTunnels] = useState<Tunnel[]>([]);
 	const [groupFilter, setGroupFilter] = useState<GroupFilter>("all");
@@ -103,6 +104,7 @@ export default function HubLibrary(): JSX.Element {
 		opts: RunLaunchOptions,
 	): Promise<void> {
 		setRunModal(null);
+		setCurrentScenarioName(scenario.name);
 		// N>1 → batch flow (live grid + KPI summary). N=1 keeps the existing
 		// single-run path (Live Run → Report) untouched.
 		if (opts.repeat > 1) {

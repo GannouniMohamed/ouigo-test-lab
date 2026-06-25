@@ -27,33 +27,38 @@ function App(): JSX.Element {
 		<HashRouter>
 			<div className="otl-root">
 				<TitleBar />
-				<ProjectContextBar />
 				<div className="otl-app">
 					<Sidebar />
-					<main className="otl-main">
-						<AppGate>
-							<Routes>
-								<Route path="/" element={<Navigate to="/projects" replace />} />
-								<Route path="/scenarios" element={<HubLibrary />} />
-								<Route path="/scenarios/new" element={<NewScenario />} />
-								<Route path="/scenarios/groups/new" element={<NewGroupe />} />
-								<Route
-									path="/scenarios/groups/:tunnelId/edit"
-									element={<EditGroupe />}
-								/>
-								<Route path="/run/:runId" element={<LiveRun />} />
-								<Route path="/batch/:batchId" element={<BatchRun />} />
-								<Route path="/report/:runId" element={<Report />} />
-								<Route path="/reports" element={<History />} />
-								<Route path="/projects" element={<Projects />} />
-								<Route path="/projects/new" element={<NewProject />} />
-								<Route
-									path="/projects/:id/environments"
-									element={<ProjectEnvironments />}
-								/>
-							</Routes>
-						</AppGate>
-					</main>
+					<div className="otl-content">
+						<ProjectContextBar />
+						<main className="otl-main">
+							<AppGate>
+								<Routes>
+									<Route
+										path="/"
+										element={<Navigate to="/projects" replace />}
+									/>
+									<Route path="/scenarios" element={<HubLibrary />} />
+									<Route path="/scenarios/new" element={<NewScenario />} />
+									<Route path="/scenarios/groups/new" element={<NewGroupe />} />
+									<Route
+										path="/scenarios/groups/:tunnelId/edit"
+										element={<EditGroupe />}
+									/>
+									<Route path="/run/:runId" element={<LiveRun />} />
+									<Route path="/batch/:batchId" element={<BatchRun />} />
+									<Route path="/report/:runId" element={<Report />} />
+									<Route path="/reports" element={<History />} />
+									<Route path="/projects" element={<Projects />} />
+									<Route path="/projects/new" element={<NewProject />} />
+									<Route
+										path="/projects/:id/environments"
+										element={<ProjectEnvironments />}
+									/>
+								</Routes>
+							</AppGate>
+						</main>
+					</div>
 				</div>
 			</div>
 		</HashRouter>

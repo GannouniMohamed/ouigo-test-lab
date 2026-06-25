@@ -9,6 +9,7 @@ import type {
 	StepStatus,
 } from "../../shared/types";
 import { stepActiveInMode } from "../../shared/types";
+import { useAppStore } from "../store";
 
 interface StepRow {
 	index: number;
@@ -169,11 +170,16 @@ export default function Report(): JSX.Element {
 	// attente"). It tracks how many step edits were applied since the last
 	// reset; it never gates the draft logic.
 	const [pendingEdits, setPendingEdits] = useState(0);
+	const setCurrentScenarioName = useAppStore((s) => s.setCurrentScenarioName);
 
 	useEffect(() => {
 		if (!runId) return;
 		window.api.getReport(runId).then(setReport);
 	}, [runId]);
+
+	useEffect(() => {
+		if (report?.scenarioName) setCurrentScenarioName(report.scenarioName);
+	}, [report?.scenarioName, setCurrentScenarioName]);
 
 	if (!report) {
 		return <div className="otl-report otl-report--loading">Chargement…</div>;
