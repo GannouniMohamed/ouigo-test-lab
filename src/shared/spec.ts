@@ -152,6 +152,23 @@ export function applyStepEdit(spec: string, op: StepEditOp): string {
 // Produce the spec that actually runs in `mode`: action lines applicable to the
 // mode are activated; the rest are emitted as plain comments (Playwright skips
 // them). Non-action lines pass through unchanged.
+// Recorded specs hardcode the absolute URL captured at record time (codegen
+// emits e.g. `page.goto("https://acc-a.example/x")`), so they ignore the env's
+// baseURL and always navigate to the recording environment — switching env in
+// the UI then has no effect on where the test actually goes. Rebase those
+// absolute URLs from the recorded baseURL to the run's active baseURL. Trailing
+// slashes are normalised so the prefix matches however the URL was stored.
+export function rebaseSpecUrls(
+	spec: string,
+	fromBaseURL: string,
+	toBaseURL: string,
+): string {
+	const from = (fromBaseURL ?? "").replace(/\/+$/, "");
+	const to = (toBaseURL ?? "").replace(/\/+$/, "");
+	if (!from || from === to) return spec;
+	return spec.split(from).join(to);
+}
+
 export function compileSpecForMode(spec: string, mode: RunMode): string {
 	return spec
 		.split("\n")
