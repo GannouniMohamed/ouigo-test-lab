@@ -1,7 +1,8 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import type { ReportSummary, Scenario } from "../../shared/types";
+import type { BatchReport, ReportSummary, Scenario } from "../../shared/types";
 import { StatusBadge } from "../components/StatusBadge";
+import { type HistoryGroup, groupReports } from "../lib/groupReports";
 import { useAppStore } from "../store";
 
 type BadgeStatus = "passed" | "failed" | "never";
@@ -23,6 +24,169 @@ function formatAt(at: string): string {
 
 function formatDuration(ms: number): string {
 	return `${(ms / 1000).toFixed(1)}s`;
+}
+
+function scenarioLabel(map: Map<string, string>, scenarioId: string): string {
+	return map.get(scenarioId) ?? scenarioId;
+}
+
+function Sparkline({ runs }: { runs: ReportSummary[] }): JSX.Element {
+	const max = Math.max(1, ...runs.map((r) => r.durationMs));
+	return (
+		<span className="otl-spark" aria-hidden="true">
+			{runs.map((r) => {
+				const pct = Math.max(8, Math.round((r.durationMs / max) * 100));
+				return (
+					<span
+						key={r.runId}
+						className={`otl-spark__bar ${
+							r.status === "passed"
+								? "otl-spark__bar--ok"
+								: "otl-spark__bar--fail"
+						}`}
+						style={{ height: `${pct}%` }}
+					/>
+				);
+			})}
+		</span>
+	);
+}
+
+function SingleRow({
+	report,
+	scenarioMap,
+	onOpen,
+}: {
+	report: ReportSummary;
+	scenarioMap: Map<string, string>;
+	onOpen: (runId: string) => void;
+}): JSX.Element {
+	return (
+		<button
+			type="button"
+			className="otl-histrow"
+			onClick={() => onOpen(report.runId)}
+		>
+			<span className="otl-histrow__name">
+				{scenarioLabel(scenarioMap, report.scenarioId)}
+			</span>
+			<span className="otl-histrow__tag">Exécution simple</span>
+			<StatusBadge status={mapStatus(report.status)} />
+			<span className="otl-histrow__date">{formatAt(report.startedAt)}</span>
+			<span className="otl-histrow__dur">
+				{formatDuration(report.durationMs)}
+			</span>
+		</button>
+	);
+}
+
+function BatchBlock({
+	group,
+	scenarioMap,
+	onOpen,
+}: {
+	group: Extract<HistoryGroup, { kind: "batch" }>;
+	scenarioMap: Map<string, string>;
+	onOpen: (runId: string) => void;
+}): JSX.Element {
+	const [open, setOpen] = useState(false);
+	const [meta, setMeta] = useState<BatchReport | null>(null);
+	const first = group.runs[0];
+	const name = first
+		? scenarioLabel(scenarioMap, first.scenarioId)
+		: group.batchId;
+
+	useEffect(() => {
+		let cancelled = false;
+		// Optional enrichment — never block rendering, degrade gracefully on error.
+		window.api
+			?.getBatch?.(group.batchId)
+			.then((b) => {
+				if (!cancelled) setMeta(b);
+			})
+			.catch(() => {
+				/* ignore: chips are best-effort */
+			});
+		return () => {
+			cancelled = true;
+		};
+	}, [group.batchId]);
+
+	const chips: string[] = [];
+	if (meta) {
+		chips.push(meta.execution === "parallel" ? "Parallèle" : "Séquentiel");
+		chips.push(meta.mode === "invisible" ? "Invisible" : "Visible");
+		if (meta.environmentLabel) chips.push(meta.environmentLabel);
+	}
+
+	return (
+		<div className="otl-histgroup">
+			<button
+				type="button"
+				className="otl-histgroup__header"
+				aria-expanded={open}
+				onClick={() => setOpen((v) => !v)}
+			>
+				<span
+					className={`otl-histgroup__chevron ${
+						open ? "otl-histgroup__chevron--open" : ""
+					}`}
+					aria-hidden="true"
+				>
+					›
+				</span>
+				<span className="otl-histgroup__name">{name}</span>
+				<span className="otl-histgroup__lot">
+					LOT · {group.stats.total} runs
+				</span>
+				{chips.map((c) => (
+					<span key={c} className="otl-histgroup__chip">
+						{c}
+					</span>
+				))}
+				<span className="otl-histgroup__date">
+					{first ? formatAt(first.startedAt) : ""}
+				</span>
+				<Sparkline runs={group.runs} />
+				<span className="otl-histgroup__ratio">
+					{group.stats.passed}/{group.stats.total}
+				</span>
+				<span className="otl-histgroup__stats">
+					{formatDuration(group.stats.min)} · {formatDuration(group.stats.avg)}{" "}
+					· {formatDuration(group.stats.max)}
+				</span>
+			</button>
+
+			{open && (
+				<div className="otl-histgroup__runs">
+					{group.runs.map((run, i) => (
+						<div key={run.runId} className="otl-histgroup__run">
+							<span className="otl-histgroup__run-label">Run #{i + 1}</span>
+							<span
+								className={`otl-histgroup__run-status ${
+									run.status === "passed"
+										? "otl-histgroup__run-status--ok"
+										: "otl-histgroup__run-status--fail"
+								}`}
+							>
+								{run.status === "passed" ? "Réussi" : "Échec"}
+							</span>
+							<span className="otl-histgroup__run-dur">
+								{formatDuration(run.durationMs)}
+							</span>
+							<button
+								type="button"
+								className="otl-histgroup__detail"
+								onClick={() => onOpen(run.runId)}
+							>
+								Voir le détail
+							</button>
+						</div>
+					))}
+				</div>
+			)}
+		</div>
+	);
 }
 
 export default function History(): JSX.Element {
@@ -47,68 +211,45 @@ export default function History(): JSX.Element {
 		});
 	}, [activeProjectId]);
 
+	const groups = useMemo(() => groupReports(reports), [reports]);
+	const open = (runId: string) => navigate(`/report/${runId}`);
+
 	return (
-		<div style={{ padding: "2rem" }}>
-			<h1
-				style={{
-					fontFamily: "var(--otl-font)",
-					color: "var(--otl-text)",
-					marginBottom: "1.5rem",
-					fontSize: "1.5rem",
-					fontWeight: 700,
-				}}
-			>
-				Rapports
-			</h1>
+		<div className="otl-hist">
+			<div className="otl-hist__head">
+				<div>
+					<h1 className="otl-hist__title">Historique des exécutions</h1>
+					<p className="otl-hist__subtitle">
+						Les lots sont regroupés ; les exécutions simples apparaissent en
+						ligne.
+					</p>
+				</div>
+				<button type="button" className="otl-hist__filter">
+					Filtrer
+				</button>
+			</div>
 
 			{reports.length === 0 ? (
-				<p style={{ color: "var(--otl-text-2)" }}>Aucune exécution</p>
+				<p className="otl-hist__empty">Aucune exécution</p>
 			) : (
-				<div
-					style={{
-						display: "flex",
-						flexDirection: "column",
-						gap: "0.5rem",
-					}}
-				>
-					{reports.map((r) => (
-						<button
-							key={r.runId}
-							type="button"
-							className="otl-surface"
-							onClick={() => navigate(`/report/${r.runId}`)}
-							style={{
-								padding: "1rem 1.25rem",
-								display: "flex",
-								alignItems: "center",
-								gap: "1rem",
-								cursor: "pointer",
-								width: "100%",
-								background: "none",
-								border: "none",
-								textAlign: "left",
-							}}
-						>
-							<span
-								style={{ flex: 1, fontWeight: 500, color: "var(--otl-text)" }}
-							>
-								{scenarioMap.get(r.scenarioId) ?? r.scenarioId}
-							</span>
-							<StatusBadge status={mapStatus(r.status)} />
-							<span style={{ fontSize: "0.8rem", color: "var(--otl-text-2)" }}>
-								{formatAt(r.startedAt)}
-							</span>
-							<span
-								style={{
-									fontFamily: "var(--otl-mono)",
-									fontSize: "0.8rem",
-									color: "var(--otl-text-2)",
-								}}
-							>
-								{formatDuration(r.durationMs)}
-							</span>
-						</button>
-					))}
+				<div className="otl-hist__list">
+					{groups.map((g) =>
+						g.kind === "single" ? (
+							<SingleRow
+								key={g.report.runId}
+								report={g.report}
+								scenarioMap={scenarioMap}
+								onOpen={open}
+							/>
+						) : (
+							<BatchBlock
+								key={g.batchId}
+								group={g}
+								scenarioMap={scenarioMap}
+								onOpen={open}
+							/>
+						),
+					)}
 				</div>
 			)}
 		</div>

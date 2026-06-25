@@ -48,7 +48,7 @@ afterEach(() => {
 });
 
 describe("History", () => {
-	it("liste les exécutions avec le nom du scénario", async () => {
+	it("liste les exécutions simples avec le nom du scénario", async () => {
 		render(
 			<MemoryRouter>
 				<History />
@@ -56,7 +56,7 @@ describe("History", () => {
 		);
 		expect(await screen.findAllByText("Parcours de connexion")).toHaveLength(2);
 	});
-	it("clic sur une ligne ouvre le rapport", async () => {
+	it("clic sur une exécution simple ouvre le rapport", async () => {
 		render(
 			<MemoryRouter>
 				<History />
@@ -65,5 +65,86 @@ describe("History", () => {
 		const rows = await screen.findAllByText("Parcours de connexion");
 		await userEvent.click(rows[0]);
 		expect(navigateMock).toHaveBeenCalledWith("/report/r2");
+	});
+
+	it("regroupe un lot en un bloc repliable expansible vers ses runs", async () => {
+		// biome-ignore lint/suspicious/noExplicitAny: test stub
+		(globalThis as any).window.api.listReports = vi.fn().mockResolvedValue([
+			{
+				runId: "b1",
+				scenarioId: "login",
+				status: "passed",
+				startedAt: "2026-06-23T14:00:00Z",
+				durationMs: 2000,
+				batchId: "lot1",
+			},
+			{
+				runId: "b2",
+				scenarioId: "login",
+				status: "failed",
+				startedAt: "2026-06-23T14:01:00Z",
+				durationMs: 4000,
+				batchId: "lot1",
+			},
+			{
+				runId: "s1",
+				scenarioId: "login",
+				status: "passed",
+				startedAt: "2026-06-23T10:00:00Z",
+				durationMs: 1000,
+			},
+		]);
+
+		render(
+			<MemoryRouter>
+				<History />
+			</MemoryRouter>,
+		);
+
+		// One lot header with "LOT · 2 runs"
+		expect(await screen.findByText(/LOT · 2 runs/i)).toBeInTheDocument();
+		// Collapsed by default: run detail not visible
+		expect(screen.queryByText("Run #1")).not.toBeInTheDocument();
+
+		// Expand the lot
+		await userEvent.click(screen.getByText(/LOT · 2 runs/i));
+		expect(await screen.findByText("Run #1")).toBeInTheDocument();
+		expect(screen.getByText("Run #2")).toBeInTheDocument();
+
+		// A simple run still renders inline
+		expect(screen.getByText(/Exécution simple/i)).toBeInTheDocument();
+	});
+
+	it("clic sur Voir le détail d'un run de lot navigue vers son rapport", async () => {
+		// biome-ignore lint/suspicious/noExplicitAny: test stub
+		(globalThis as any).window.api.listReports = vi.fn().mockResolvedValue([
+			{
+				runId: "b1",
+				scenarioId: "login",
+				status: "passed",
+				startedAt: "2026-06-23T14:00:00Z",
+				durationMs: 2000,
+				batchId: "lot1",
+			},
+			{
+				runId: "b2",
+				scenarioId: "login",
+				status: "failed",
+				startedAt: "2026-06-23T14:01:00Z",
+				durationMs: 4000,
+				batchId: "lot1",
+			},
+		]);
+
+		render(
+			<MemoryRouter>
+				<History />
+			</MemoryRouter>,
+		);
+
+		await userEvent.click(await screen.findByText(/LOT · 2 runs/i));
+		const links = await screen.findAllByText(/Voir le détail/i);
+		await userEvent.click(links[0]);
+		expect(navigateMock).toHaveBeenCalledWith("/report/b1");
 	});
 });

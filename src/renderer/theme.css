@@ -2475,3 +2475,267 @@ body {
 .otl-batch__actions {
 	margin-top: 1.5rem;
 }
+
+/* ── History (T7): grouped runs by lot ──────────────────────────────────── */
+.otl-hist {
+	padding: 2rem;
+}
+
+.otl-hist__head {
+	display: flex;
+	align-items: flex-start;
+	justify-content: space-between;
+	gap: 1rem;
+	margin-bottom: 1.5rem;
+}
+
+.otl-hist__title {
+	font-family: var(--otl-font);
+	color: var(--otl-text);
+	font-size: 1.5rem;
+	font-weight: 700;
+	margin: 0 0 0.35rem;
+}
+
+.otl-hist__subtitle {
+	font-family: var(--otl-font);
+	color: var(--otl-text-2);
+	font-size: 0.85rem;
+	margin: 0;
+}
+
+.otl-hist__filter {
+	font-family: var(--otl-font);
+	color: var(--otl-text);
+	background: var(--otl-surface);
+	border: 1px solid var(--otl-border);
+	border-radius: var(--otl-radius);
+	padding: 0.5rem 1rem;
+	font-size: 0.85rem;
+	cursor: pointer;
+}
+
+.otl-hist__filter:hover {
+	background: var(--otl-hover);
+}
+
+.otl-hist__empty {
+	color: var(--otl-text-2);
+}
+
+.otl-hist__list {
+	display: flex;
+	flex-direction: column;
+	gap: 0.5rem;
+}
+
+/* Simple (single) run row */
+.otl-histrow {
+	display: flex;
+	align-items: center;
+	gap: 1rem;
+	width: 100%;
+	padding: 1rem 1.25rem;
+	background: var(--otl-surface);
+	border: 1px solid var(--otl-border);
+	border-radius: var(--otl-radius);
+	text-align: left;
+	cursor: pointer;
+}
+
+.otl-histrow:hover {
+	background: var(--otl-hover);
+}
+
+.otl-histrow__name {
+	flex: 1;
+	font-family: var(--otl-font);
+	font-weight: 500;
+	color: var(--otl-text);
+}
+
+.otl-histrow__tag {
+	font-family: var(--otl-font);
+	font-size: 0.7rem;
+	color: var(--otl-text-3);
+	border: 1px solid var(--otl-border);
+	border-radius: 999px;
+	padding: 0.1rem 0.5rem;
+}
+
+.otl-histrow__date {
+	font-family: var(--otl-font);
+	font-size: 0.8rem;
+	color: var(--otl-text-2);
+}
+
+.otl-histrow__dur {
+	font-family: var(--otl-mono);
+	font-size: 0.8rem;
+	color: var(--otl-text-2);
+}
+
+/* Lot (batch) collapsible group */
+.otl-histgroup {
+	background: var(--otl-surface);
+	border: 1px solid var(--otl-border);
+	border-radius: var(--otl-radius);
+	overflow: hidden;
+}
+
+.otl-histgroup__header {
+	display: flex;
+	align-items: center;
+	gap: 1rem;
+	width: 100%;
+	padding: 1rem 1.25rem;
+	background: none;
+	border: none;
+	text-align: left;
+	cursor: pointer;
+	color: var(--otl-text);
+}
+
+.otl-histgroup__header:hover {
+	background: var(--otl-hover);
+}
+
+.otl-histgroup__chevron {
+	display: inline-block;
+	font-size: 1.1rem;
+	color: var(--otl-text-2);
+	transition: transform 0.15s ease;
+}
+
+.otl-histgroup__chevron--open {
+	transform: rotate(90deg);
+}
+
+.otl-histgroup__name {
+	flex: 1;
+	font-family: var(--otl-font);
+	font-weight: 600;
+	color: var(--otl-text);
+}
+
+.otl-histgroup__lot {
+	font-family: var(--otl-mono);
+	font-size: 0.7rem;
+	letter-spacing: 0.04em;
+	color: #061018;
+	background: var(--otl-grad);
+	border-radius: 999px;
+	padding: 0.15rem 0.6rem;
+	font-weight: 700;
+}
+
+.otl-histgroup__chip {
+	font-family: var(--otl-font);
+	font-size: 0.7rem;
+	color: var(--otl-text-2);
+	border: 1px solid var(--otl-border);
+	border-radius: 999px;
+	padding: 0.1rem 0.55rem;
+}
+
+.otl-histgroup__date {
+	font-family: var(--otl-font);
+	font-size: 0.8rem;
+	color: var(--otl-text-2);
+}
+
+.otl-histgroup__ratio {
+	font-family: var(--otl-mono);
+	font-size: 0.85rem;
+	color: var(--otl-text);
+	font-weight: 600;
+}
+
+.otl-histgroup__stats {
+	font-family: var(--otl-mono);
+	font-size: 0.8rem;
+	color: var(--otl-text-2);
+}
+
+/* Sparkline */
+.otl-spark {
+	display: inline-flex;
+	align-items: flex-end;
+	gap: 2px;
+	height: 24px;
+	width: 64px;
+}
+
+.otl-spark__bar {
+	flex: 1;
+	min-width: 3px;
+	border-radius: 2px 2px 0 0;
+	background: var(--otl-cyan);
+}
+
+.otl-spark__bar--ok {
+	background: var(--otl-cyan);
+}
+
+.otl-spark__bar--fail {
+	background: var(--otl-danger);
+}
+
+/* Expanded run rows */
+.otl-histgroup__runs {
+	border-top: 1px solid var(--otl-border);
+	display: flex;
+	flex-direction: column;
+}
+
+.otl-histgroup__run {
+	display: flex;
+	align-items: center;
+	gap: 1rem;
+	padding: 0.75rem 1.25rem 0.75rem 2.5rem;
+	border-top: 1px solid var(--otl-border);
+}
+
+.otl-histgroup__run:first-child {
+	border-top: none;
+}
+
+.otl-histgroup__run-label {
+	flex: 1;
+	font-family: var(--otl-mono);
+	font-size: 0.85rem;
+	color: var(--otl-text);
+}
+
+.otl-histgroup__run-status {
+	font-family: var(--otl-font);
+	font-size: 0.8rem;
+}
+
+.otl-histgroup__run-status--ok {
+	color: var(--otl-ok);
+}
+
+.otl-histgroup__run-status--fail {
+	color: #ff3366;
+}
+
+.otl-histgroup__run-dur {
+	font-family: var(--otl-mono);
+	font-size: 0.8rem;
+	color: var(--otl-text-2);
+}
+
+.otl-histgroup__detail {
+	font-family: var(--otl-font);
+	font-size: 0.8rem;
+	color: var(--otl-cyan);
+	background: none;
+	border: none;
+	cursor: pointer;
+	padding: 0;
+}
+
+.otl-histgroup__detail:hover {
+	text-decoration: underline;
+}
