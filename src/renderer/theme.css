@@ -2230,12 +2230,50 @@ body {
 	color: var(--otl-text-2);
 }
 
-/* ── Batch run screen ──────────────────────────────────────────────────── */
+/* ── Batch run screen (synthèse de lot) ────────────────────────────────── */
 .otl-batch__header {
 	display: flex;
 	align-items: flex-start;
 	justify-content: space-between;
-	margin-bottom: 1rem;
+	gap: 1rem;
+	margin-bottom: 1.75rem;
+}
+
+.otl-batch__heading {
+	display: flex;
+	align-items: center;
+	flex-wrap: wrap;
+	gap: 12px;
+}
+
+.otl-batch__title {
+	font-size: 22px;
+	font-weight: 700;
+	margin: 0;
+	color: var(--otl-text);
+}
+
+.otl-batch__chips {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 6px;
+}
+
+.otl-chip {
+	font-size: 11px;
+	font-weight: 600;
+	padding: 3px 9px;
+	border-radius: 7px;
+	background: rgba(255, 255, 255, 0.06);
+	border: 1px solid var(--otl-border);
+	color: var(--otl-text-2);
+}
+
+.otl-batch__meta {
+	font-size: 12px;
+	color: var(--otl-text-3);
+	white-space: nowrap;
+	font-family: var(--otl-mono);
 }
 
 .otl-run-status--done {
@@ -2249,44 +2287,83 @@ body {
 	box-shadow: 0 0 8px var(--otl-cyan);
 }
 
-.otl-batch__summary {
-	display: flex;
-	flex-wrap: wrap;
+/* ── KPI band ───────────────────────────────────────────────────────────── */
+.otl-kpi {
+	display: grid;
+	grid-template-columns: repeat(5, 1fr);
 	gap: 14px;
-	padding: 16px 18px;
-	margin-bottom: 1.5rem;
+	margin-bottom: 2rem;
+}
+
+.otl-kpi__tile {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	justify-content: center;
+	gap: 8px;
+	padding: 18px 14px;
 	border: 1px solid var(--otl-border);
 	border-radius: 14px;
 	background: rgba(255, 255, 255, 0.03);
 }
 
-.otl-batch__kpi {
-	display: flex;
-	flex-direction: column;
-	gap: 2px;
-	min-width: 92px;
-}
-
-.otl-batch__kpi-value {
-	font-size: 22px;
+.otl-kpi__value {
+	font-size: 28px;
 	font-weight: 700;
-	color: var(--otl-text-1);
+	line-height: 1;
+	color: var(--otl-text);
 }
 
-.otl-batch__kpi-value--bad {
+.otl-kpi__value--bad {
 	color: var(--otl-danger);
 }
 
-.otl-batch__kpi-label {
-	font-size: 11.5px;
+.otl-kpi__label {
+	font-size: 11px;
 	color: var(--otl-text-2);
 	text-transform: uppercase;
-	letter-spacing: 0.03em;
+	letter-spacing: 0.05em;
+	font-weight: 600;
+}
+
+/* ── Donut ring (pass ratio) ────────────────────────────────────────────── */
+.otl-donut {
+	width: 84px;
+	height: 84px;
+}
+
+.otl-donut__track {
+	stroke: rgba(255, 255, 255, 0.08);
+}
+
+.otl-donut__arc {
+	stroke: var(--otl-cyan);
+	filter: drop-shadow(0 0 6px rgba(0, 201, 177, 0.6));
+	transition: stroke-dasharray 0.4s ease;
+}
+
+.otl-donut__value {
+	fill: var(--otl-text);
+	font-family: var(--otl-mono);
+	font-size: 17px;
+	font-weight: 700;
+	text-anchor: middle;
+	dominant-baseline: central;
+}
+
+/* ── Run cards ──────────────────────────────────────────────────────────── */
+.otl-batch__section-title {
+	font-size: 12px;
+	font-weight: 700;
+	letter-spacing: 0.08em;
+	color: var(--otl-text-3);
+	text-transform: uppercase;
+	margin: 0 0 0.9rem;
 }
 
 .otl-batch__grid {
 	display: grid;
-	grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+	grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
 	gap: 12px;
 }
 
@@ -2303,6 +2380,7 @@ body {
 
 .otl-batch__item--running {
 	border-color: rgba(0, 201, 177, 0.45);
+	background: rgba(0, 201, 177, 0.05);
 }
 
 .otl-batch__item--passed {
@@ -2311,6 +2389,7 @@ body {
 
 .otl-batch__item--failed {
 	border-color: rgba(255, 51, 102, 0.4);
+	background: rgba(255, 51, 102, 0.05);
 }
 
 .otl-batch__item-head {
@@ -2320,8 +2399,28 @@ body {
 }
 
 .otl-batch__item-no {
+	display: inline-flex;
+	align-items: center;
+	gap: 7px;
 	font-weight: 600;
 	font-size: 13px;
+}
+
+.otl-batch__item-icon {
+	font-size: 12px;
+	color: var(--otl-text-3);
+}
+
+.otl-batch__item-icon--passed {
+	color: var(--otl-cyan);
+}
+
+.otl-batch__item-icon--failed {
+	color: var(--otl-danger);
+}
+
+.otl-batch__item-icon--running {
+	color: var(--otl-ok);
 }
 
 .otl-batch__item-badge {

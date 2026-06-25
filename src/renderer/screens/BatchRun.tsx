@@ -5,7 +5,7 @@ import {
 	type BatchReport,
 	summarizeBatch,
 } from "../../shared/types";
-import { formatDuration } from "../lib/time";
+import { formatAt, formatDuration } from "../lib/time";
 
 function statusLabel(status: BatchItem["status"]): string {
 	switch (status) {
@@ -20,6 +20,67 @@ function statusLabel(status: BatchItem["status"]): string {
 		default:
 			return "En attente";
 	}
+}
+
+function statusIcon(status: BatchItem["status"]): string {
+	switch (status) {
+		case "passed":
+			return "✓";
+		case "failed":
+			return "✕";
+		case "running":
+			return "●";
+		case "cancelled":
+			return "⊘";
+		default:
+			return "○";
+	}
+}
+
+// SVG ring whose cyan arc length encodes passed/total. Falls back to a flat
+// (empty) ring when there is nothing finished yet — never produces NaN.
+function Donut({
+	passed,
+	total,
+}: {
+	passed: number;
+	total: number;
+}): JSX.Element {
+	const radius = 34;
+	const circumference = 2 * Math.PI * radius;
+	const ratio = total > 0 ? Math.min(Math.max(passed / total, 0), 1) : 0;
+	const dash = ratio * circumference;
+	return (
+		<svg
+			className="otl-donut"
+			viewBox="0 0 80 80"
+			role="img"
+			aria-label={`${passed} sur ${total} réussis`}
+		>
+			<circle
+				className="otl-donut__track"
+				cx="40"
+				cy="40"
+				r={radius}
+				fill="none"
+				strokeWidth="8"
+			/>
+			<circle
+				className="otl-donut__arc"
+				cx="40"
+				cy="40"
+				r={radius}
+				fill="none"
+				strokeWidth="8"
+				strokeLinecap="round"
+				strokeDasharray={`${dash} ${circumference - dash}`}
+				transform="rotate(-90 40 40)"
+			/>
+			<text className="otl-donut__value" x="40" y="40">
+				{passed}/{total}
+			</text>
+		</svg>
+	);
 }
 
 export default function BatchRun(): JSX.Element {
@@ -87,95 +148,103 @@ export default function BatchRun(): JSX.Element {
 
 	const stats = summarizeBatch(batch.items);
 	const finished = batch.finishedAt != null || stats.done === stats.total;
-	const progress =
-		stats.total > 0 ? Math.round((stats.done / stats.total) * 100) : 0;
 
 	return (
 		<div className="otl-batch" style={{ padding: "2rem" }}>
+			{/* ── Header: status, scenario name, chips, lot meta ────────────── */}
 			<div className="otl-batch__header">
-				<div>
-					<h1 className="otl-hub-title">{batch.scenarioName}</h1>
-					<p className="otl-hub-subtitle">
-						Lot de {batch.total} lancements ·{" "}
-						{batch.execution === "parallel"
-							? "Parallèle (2 max)"
-							: "Séquentiel"}{" "}
-						· {batch.mode === "visible" ? "Visible" : "Invisible"} ·{" "}
-						{batch.environmentLabel}
-					</p>
+				<div className="otl-batch__heading">
+					<span
+						className={`otl-run-status${finished ? " otl-run-status--done" : ""}`}
+					>
+						<span className="otl-run-status__dot" />
+						{finished ? "Terminé" : "En cours"}
+					</span>
+					<h1 className="otl-batch__title">{batch.scenarioName}</h1>
+					<div className="otl-batch__chips">
+						<span className="otl-chip">
+							{batch.mode === "visible" ? "Visible" : "Invisible"}
+						</span>
+						<span className="otl-chip">
+							{batch.execution === "parallel" ? "Parallèle" : "Séquentiel"}
+						</span>
+						<span className="otl-chip">{batch.environmentLabel}</span>
+					</div>
 				</div>
-				<span
-					className={`otl-run-status${finished ? " otl-run-status--done" : ""}`}
-				>
-					<span className="otl-run-status__dot" />
-					{finished ? "Terminé" : "En cours"}
+				<span className="otl-batch__meta">
+					lot · {formatAt(batch.startedAt)}
 				</span>
 			</div>
 
-			<div className="otl-progress" style={{ marginBottom: "1.25rem" }}>
-				<div className="otl-progress__fill" style={{ width: `${progress}%` }} />
-			</div>
-
-			{/* KPI summary band */}
-			<div className="otl-batch__summary">
-				<div className="otl-batch__kpi">
-					<span className="otl-batch__kpi-value">
-						{stats.passed}/{stats.total}
-					</span>
-					<span className="otl-batch__kpi-label">réussis</span>
+			{/* ── KPI band ───────────────────────────────────────────────────── */}
+			<div className="otl-kpi">
+				<div className="otl-kpi__tile otl-kpi__tile--donut">
+					<Donut passed={stats.passed} total={stats.total} />
+					<span className="otl-kpi__label">runs réussis</span>
 				</div>
-				<div className="otl-batch__kpi">
+				<div className="otl-kpi__tile">
 					<span
-						className={`otl-batch__kpi-value${stats.failed > 0 ? " otl-batch__kpi-value--bad" : ""}`}
+						className={`otl-kpi__value${stats.failed > 0 ? " otl-kpi__value--bad" : ""}`}
 					>
 						{stats.failed}
 					</span>
-					<span className="otl-batch__kpi-label">échecs</span>
+					<span className="otl-kpi__label">échecs</span>
 				</div>
-				<div className="otl-batch__kpi">
-					<span className="otl-batch__kpi-value otl-mono">
+				<div className="otl-kpi__tile">
+					<span className="otl-kpi__value otl-mono">
 						{formatDuration(stats.minMs)}
 					</span>
-					<span className="otl-batch__kpi-label">durée min</span>
+					<span className="otl-kpi__label">MIN</span>
 				</div>
-				<div className="otl-batch__kpi">
-					<span className="otl-batch__kpi-value otl-mono">
+				<div className="otl-kpi__tile">
+					<span className="otl-kpi__value otl-mono">
 						{formatDuration(stats.avgMs)}
 					</span>
-					<span className="otl-batch__kpi-label">durée moyenne</span>
+					<span className="otl-kpi__label">MOYENNE</span>
 				</div>
-				<div className="otl-batch__kpi">
-					<span className="otl-batch__kpi-value otl-mono">
+				<div className="otl-kpi__tile">
+					<span className="otl-kpi__value otl-mono">
 						{formatDuration(stats.maxMs)}
 					</span>
-					<span className="otl-batch__kpi-label">durée max</span>
+					<span className="otl-kpi__label">MAX</span>
 				</div>
 			</div>
 
-			{/* Per-iteration cards */}
+			{/* ── Run cards ──────────────────────────────────────────────────── */}
+			<h2 className="otl-batch__section-title">EXÉCUTIONS DU LOT</h2>
 			<div className="otl-batch__grid">
-				{batch.items.map((item) => (
-					<div
-						key={item.index}
-						className={`otl-batch__item otl-batch__item--${item.status}`}
-						data-testid={`batch-item-${item.index}`}
-					>
-						<div className="otl-batch__item-head">
-							<span className="otl-batch__item-no">Run #{item.index}</span>
-							<span
-								className={`otl-batch__item-badge otl-batch__item-badge--${item.status}`}
-							>
-								{statusLabel(item.status)}
-							</span>
-						</div>
-						<div className="otl-batch__item-foot">
-							<span className="otl-batch__item-dur otl-mono">
-								{formatDuration(item.durationMs)}
-							</span>
-							{item.runId &&
-								(item.status === "passed" ||
-									item.status === "failed" ||
-									item.status === "cancelled") && (
+				{batch.items.map((item) => {
+					const drillable =
+						item.runId != null &&
+						(item.status === "passed" ||
+							item.status === "failed" ||
+							item.status === "cancelled");
+					return (
+						<div
+							key={item.index}
+							className={`otl-batch__item otl-batch__item--${item.status}`}
+							data-testid={`batch-item-${item.index}`}
+						>
+							<div className="otl-batch__item-head">
+								<span className="otl-batch__item-no">
+									<span
+										className={`otl-batch__item-icon otl-batch__item-icon--${item.status}`}
+									>
+										{statusIcon(item.status)}
+									</span>
+									Run #{item.index}
+								</span>
+								<span
+									className={`otl-batch__item-badge otl-batch__item-badge--${item.status}`}
+								>
+									{statusLabel(item.status)}
+								</span>
+							</div>
+							<div className="otl-batch__item-foot">
+								<span className="otl-batch__item-dur otl-mono">
+									{formatDuration(item.durationMs)}
+								</span>
+								{drillable && (
 									<button
 										type="button"
 										className="otl-batch__item-link"
@@ -184,9 +253,10 @@ export default function BatchRun(): JSX.Element {
 										Voir le détail
 									</button>
 								)}
+							</div>
 						</div>
-					</div>
-				))}
+					);
+				})}
 			</div>
 
 			<div className="otl-batch__actions">
