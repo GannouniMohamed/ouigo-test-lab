@@ -85,6 +85,30 @@ describe("Report", () => {
 		expect(await screen.findByText("Échec")).toBeInTheDocument();
 		expect(screen.getByText(/Élément introuvable/)).toBeInTheDocument();
 	});
+	it("humanise un titre d'étape en code Playwright brut", async () => {
+		(
+			window.api.getReport as unknown as ReturnType<typeof vi.fn>
+		).mockResolvedValue({
+			...passed,
+			steps: [
+				{
+					index: 0,
+					title: "page.getByRole('button', { name: 'Connexion' }).click()",
+					status: "passed",
+					durationMs: 100,
+				},
+			],
+		});
+		renderAt();
+		expect(
+			await screen.findByText("Cliquer sur le bouton « Connexion »"),
+		).toBeInTheDocument();
+		expect(
+			screen.queryByText(
+				"page.getByRole('button', { name: 'Connexion' }).click()",
+			),
+		).not.toBeInTheDocument();
+	});
 	it("affiche la capture d'échec", async () => {
 		renderAt();
 		const img = await screen.findByTestId("failure-screenshot");
