@@ -125,7 +125,7 @@ describe("HubLibrary", () => {
 		await screen.findByText("Connexion");
 		// "Lancer" opens the run-options dialog; "Démarrer" actually runs.
 		fireEvent.click(screen.getAllByRole("button", { name: /lancer/i })[0]);
-		fireEvent.click(await screen.findByRole("button", { name: "Démarrer" }));
+		fireEvent.click(await screen.findByRole("button", { name: /Démarrer/ }));
 		await waitFor(() =>
 			expect(
 				window.api.runScenario as unknown as ReturnType<typeof vi.fn>,
@@ -146,7 +146,7 @@ describe("HubLibrary", () => {
 		await screen.findByText("Connexion");
 		const launchButtons = screen.getAllByRole("button", { name: /lancer/i });
 		fireEvent.click(launchButtons[0]);
-		fireEvent.click(await screen.findByRole("button", { name: "Démarrer" }));
+		fireEvent.click(await screen.findByRole("button", { name: /Démarrer/ }));
 		await waitFor(() =>
 			expect(
 				window.api.runScenario as unknown as ReturnType<typeof vi.fn>,
@@ -169,7 +169,7 @@ describe("HubLibrary", () => {
 		await screen.findByText("Connexion");
 		fireEvent.click(screen.getAllByRole("button", { name: /lancer/i })[0]);
 		fireEvent.click(await screen.findByRole("button", { name: /Invisible/ }));
-		fireEvent.click(screen.getByRole("button", { name: "Démarrer" }));
+		fireEvent.click(screen.getByRole("button", { name: /Démarrer/ }));
 		await waitFor(() =>
 			expect(
 				window.api.runScenario as unknown as ReturnType<typeof vi.fn>,

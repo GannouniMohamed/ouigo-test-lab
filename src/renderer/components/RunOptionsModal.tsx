@@ -24,17 +24,21 @@ export default function RunOptionsModal({
 	onCancel,
 	onConfirm,
 }: RunOptionsModalProps): JSX.Element {
-	const initialEnv =
-		environments.find((e) => e.id === defaultEnvId)?.id ??
-		environments[0]?.id ??
-		defaultEnvId;
-	const [envId, setEnvId] = useState(initialEnv);
 	const [headed, setHeaded] = useState(true);
 	const [repeat, setRepeat] = useState(1);
 	const [execution, setExecution] = useState<BatchExecutionMode>("sequential");
 
+	// Env is inherited from the project — read-only, no user selection.
+	const envLabel =
+		environments.find((e) => e.id === defaultEnvId)?.label ?? "Local";
+
 	const clampRepeat = (n: number): number =>
 		Math.max(1, Math.min(MAX_REPEAT, Math.round(Number.isNaN(n) ? 1 : n)));
+
+	const recap =
+		execution === "parallel"
+			? `${repeat} exécutions, 2 en parallèle`
+			: `${repeat} exécutions, en séquentiel`;
 
 	return (
 		<div className="otl-modal-overlay">
@@ -43,26 +47,20 @@ export default function RunOptionsModal({
 				className="otl-modal"
 				aria-label={`Options d'exécution — ${scenarioName}`}
 			>
-				<h2 className="otl-modal__title">Lancer « {scenarioName} »</h2>
+				<h2 className="otl-modal__title">Lancer un scénario</h2>
+				<p className="otl-modal__subtitle">{scenarioName}</p>
 
-				<label className="otl-field-label" htmlFor="run-env">
-					Environnement
-				</label>
-				<select
-					id="run-env"
-					className="otl-select"
-					value={envId}
-					onChange={(e) => setEnvId(e.target.value)}
-				>
-					{environments.map((env) => (
-						<option key={env.id} value={env.id}>
-							{env.label}
-						</option>
-					))}
-				</select>
+				<div className="otl-envbanner" role="note">
+					<span className="otl-envbanner__lock" aria-hidden="true">
+						🔒
+					</span>
+					<span>
+						Environnement <strong>{envLabel}</strong> · hérité du projet
+					</span>
+				</div>
 
 				<span className="otl-field-label otl-modal__group-label">
-					Affichage
+					AFFICHAGE
 				</span>
 				<div className="otl-modal__toggle">
 					<button
@@ -72,9 +70,7 @@ export default function RunOptionsModal({
 						onClick={() => setHeaded(true)}
 					>
 						Visible
-						<span className="otl-modal__toggle-hint">
-							le navigateur s'affiche (recommandé)
-						</span>
+						<span className="otl-modal__toggle-hint">on voit l'appareil</span>
 					</button>
 					<button
 						type="button"
@@ -83,15 +79,11 @@ export default function RunOptionsModal({
 						onClick={() => setHeaded(false)}
 					>
 						Invisible
-						<span className="otl-modal__toggle-hint">
-							plus rapide, sans fenêtre
-						</span>
+						<span className="otl-modal__toggle-hint">arrière-plan</span>
 					</button>
 				</div>
 
-				<span className="otl-field-label otl-modal__group-label">
-					Répéter le lancement
-				</span>
+				<span className="otl-field-label otl-modal__group-label">Répéter</span>
 				<div className="otl-modal__repeat">
 					<div className="otl-modal__stepper">
 						<button
@@ -122,17 +114,13 @@ export default function RunOptionsModal({
 							+
 						</button>
 					</div>
-					<span className="otl-modal__repeat-hint">
-						{repeat <= 1
-							? "un seul lancement"
-							: `${repeat} lancements — pour vérifier KPI & trackings`}
-					</span>
+					<span className="otl-modal__repeat-hint">jusqu'à 20 exécutions</span>
 				</div>
 
 				{repeat > 1 && (
 					<>
 						<span className="otl-field-label otl-modal__group-label">
-							Exécution
+							MODE D'EXÉCUTION
 						</span>
 						<div className="otl-modal__toggle">
 							<button
@@ -143,7 +131,7 @@ export default function RunOptionsModal({
 							>
 								Séquentiel
 								<span className="otl-modal__toggle-hint">
-									l'un après l'autre (recommandé)
+									Recommandé · un run à la fois
 								</span>
 							</button>
 							<button
@@ -153,30 +141,29 @@ export default function RunOptionsModal({
 								onClick={() => setExecution("parallel")}
 							>
 								Parallèle
-								<span className="otl-modal__toggle-hint">
-									2 en même temps, plus rapide
-								</span>
+								<span className="otl-modal__toggle-hint">2 appareils max</span>
 							</button>
 						</div>
+						<p className="otl-modal__recap">{recap}</p>
 					</>
 				)}
 
 				<div className="otl-modal__actions">
+					<button type="button" className="otl-tab" onClick={onCancel}>
+						Annuler
+					</button>
 					<button
 						type="button"
 						className="otl-btn-primary"
 						onClick={() =>
-							onConfirm(envId, {
+							onConfirm(defaultEnvId, {
 								headed,
 								repeat: clampRepeat(repeat),
 								execution,
 							})
 						}
 					>
-						Démarrer
-					</button>
-					<button type="button" className="otl-tab" onClick={onCancel}>
-						Annuler
+						▶ Démarrer
 					</button>
 				</div>
 			</dialog>
