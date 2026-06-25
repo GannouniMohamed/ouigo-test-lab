@@ -241,6 +241,110 @@ body {
 	cursor: pointer;
 }
 
+/* Themed Select (custom dropdown replacing native <select>) */
+.otl-select__wrap {
+	position: relative;
+	display: inline-block;
+}
+
+.otl-select__trigger {
+	display: inline-flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 8px;
+	min-width: 140px;
+	padding: 7px 12px;
+	text-align: left;
+	transition: border-color 0.15s ease, background 0.15s ease;
+}
+
+.otl-select__trigger:hover {
+	border-color: rgba(0, 201, 177, 0.4);
+}
+
+.otl-select__trigger[aria-expanded="true"] {
+	border-color: rgba(0, 201, 177, 0.55);
+}
+
+.otl-select__trigger:focus-visible {
+	outline: none;
+	border-color: rgba(0, 201, 177, 0.6);
+}
+
+.otl-select__value {
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+.otl-select__chevron {
+	flex: 0 0 auto;
+	color: var(--otl-text-3);
+	transition: transform 0.15s ease;
+}
+
+.otl-select__trigger[aria-expanded="true"] .otl-select__chevron {
+	transform: rotate(180deg);
+	color: var(--otl-text-2);
+}
+
+.otl-select__panel {
+	position: absolute;
+	z-index: 1000;
+	top: calc(100% + 6px);
+	left: 0;
+	right: 0;
+	min-width: 100%;
+	margin: 0;
+	padding: 5px;
+	list-style: none;
+	max-height: 280px;
+	overflow-y: auto;
+	background: rgba(15, 23, 42, 0.92);
+	backdrop-filter: blur(18px);
+	-webkit-backdrop-filter: blur(18px);
+	border: 1px solid rgba(255, 255, 255, 0.1);
+	border-radius: 11px;
+	box-shadow: 0 12px 32px rgba(0, 0, 0, 0.45);
+}
+
+.otl-select__option {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	padding: 7px 9px;
+	border-radius: 7px;
+	color: var(--otl-text);
+	font-size: 12.5px;
+	font-family: var(--otl-font);
+	cursor: pointer;
+	transition: background 0.12s ease;
+}
+
+.otl-select__option--active {
+	background: rgba(0, 201, 177, 0.14);
+}
+
+.otl-select__option[aria-selected="true"] {
+	color: var(--otl-cyan, #00c9b1);
+}
+
+.otl-select__check {
+	flex: 0 0 auto;
+	width: 14px;
+	height: 14px;
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	color: var(--otl-cyan, #00c9b1);
+}
+
+.otl-select__option-label {
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
 /* Scenario card list */
 .otl-card-list {
 	display: flex;

@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import type { Environment, Platform, Tunnel } from "../../shared/types";
+import { Select } from "../components/Select";
 import { useAppStore } from "../store";
 
 export default function NewScenario(): JSX.Element {
@@ -216,18 +217,12 @@ export default function NewScenario(): JSX.Element {
 				{/* Tunnel */}
 				<div>
 					<div className="otl-field-label">Groupe</div>
-					<select
-						className="otl-select"
-						aria-label="Groupe"
+					<Select
+						ariaLabel="Groupe"
 						value={tunnelId}
-						onChange={(e) => setTunnelId(e.target.value)}
-					>
-						{tunnels.map((t) => (
-							<option key={t.id} value={t.id}>
-								{t.name}
-							</option>
-						))}
-					</select>
+						onChange={setTunnelId}
+						options={tunnels.map((t) => ({ value: t.id, label: t.name }))}
+					/>
 				</div>
 
 				{/* Scenario name */}
