@@ -15,7 +15,11 @@ afterEach(() => {
 	Reflect.deleteProperty(process.env, "OTL_WORKSPACE");
 });
 
-function makeReport(runId: string, batchId?: string): Report {
+function makeReport(
+	runId: string,
+	batchId?: string,
+	extra?: Partial<Report>,
+): Report {
 	return {
 		runId,
 		scenarioId: "login",
@@ -26,6 +30,7 @@ function makeReport(runId: string, batchId?: string): Report {
 		startedAt: "2026-06-25T10:00:00Z",
 		steps: [],
 		...(batchId !== undefined ? { batchId } : {}),
+		...extra,
 	};
 }
 
@@ -40,5 +45,26 @@ describe("reportStore batchId", () => {
 		saveReport(makeReport("r2"));
 		const summary = listReports().find((s) => s.runId === "r2");
 		expect(summary?.batchId).toBeUndefined();
+	});
+});
+
+describe("reportStore projectId/environmentId", () => {
+	it("expose projectId et environmentId dans le ReportSummary", () => {
+		saveReport(
+			makeReport("r3", undefined, {
+				projectId: "p1",
+				environmentId: "env-preprod",
+			}),
+		);
+		const summary = listReports().find((s) => s.runId === "r3");
+		expect(summary?.projectId).toBe("p1");
+		expect(summary?.environmentId).toBe("env-preprod");
+	});
+
+	it("laisse projectId/environmentId indéfinis pour un rapport hérité", () => {
+		saveReport(makeReport("r4"));
+		const summary = listReports().find((s) => s.runId === "r4");
+		expect(summary?.projectId).toBeUndefined();
+		expect(summary?.environmentId).toBeUndefined();
 	});
 });

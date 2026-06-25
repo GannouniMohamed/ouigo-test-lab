@@ -126,6 +126,10 @@ export interface ReportSummary {
 	// Mirrors Report.batchId so the history can group runs by lot without
 	// loading every full report.
 	batchId?: string;
+	// Mirror Report.projectId/environmentId so the history can filter by the
+	// active project (and env) without loading every full report.
+	projectId?: string;
+	environmentId?: string;
 }
 
 export type RunEvent =

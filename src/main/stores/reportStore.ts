@@ -52,6 +52,8 @@ export function listReports(scenarioId?: string): ReportSummary[] {
 			startedAt: report.startedAt,
 			durationMs: report.durationMs,
 			batchId: report.batchId,
+			projectId: report.projectId,
+			environmentId: report.environmentId,
 		});
 	}
 
