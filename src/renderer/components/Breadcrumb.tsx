@@ -5,6 +5,7 @@ import {
 	parentPath,
 } from "../lib/breadcrumb";
 import { useAppStore } from "../store";
+import { Select } from "./Select";
 
 const MAX_LABEL = 28;
 
@@ -19,6 +20,7 @@ export function Breadcrumb(): JSX.Element {
 	const params = useParams();
 	const projects = useAppStore((s) => s.projects);
 	const activeProjectId = useAppStore((s) => s.activeProjectId);
+	const setActiveProjectId = useAppStore((s) => s.setActiveProjectId);
 	const scenarios = useAppStore((s) => s.scenarios);
 
 	const projectName = projects.find((p) => p.id === activeProjectId)?.name;
@@ -58,7 +60,18 @@ export function Breadcrumb(): JSX.Element {
 									›
 								</span>
 							)}
-							{crumb.to && !isLast ? (
+							{crumb.kind === "project" ? (
+								<Select
+									ariaLabel="Projet actif"
+									value={activeProjectId}
+									onChange={(id) => setActiveProjectId(id)}
+									options={projects.map((p) => ({
+										value: p.id,
+										label: p.name,
+									}))}
+									className="otl-breadcrumb__project"
+								/>
+							) : crumb.to && !isLast ? (
 								<button
 									type="button"
 									className="otl-breadcrumb__link"

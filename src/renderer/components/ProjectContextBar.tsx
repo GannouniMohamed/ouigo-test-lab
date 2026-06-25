@@ -7,7 +7,6 @@ export function ProjectContextBar(): JSX.Element | null {
 	const { pathname } = useLocation();
 	const projects = useAppStore((s) => s.projects);
 	const activeProjectId = useAppStore((s) => s.activeProjectId);
-	const setActiveProjectId = useAppStore((s) => s.setActiveProjectId);
 	const activeEnvByProject = useAppStore((s) => s.activeEnvByProject);
 	const setActiveEnv = useAppStore((s) => s.setActiveEnv);
 
@@ -20,18 +19,6 @@ export function ProjectContextBar(): JSX.Element | null {
 		<div className="otl-ctxbar">
 			<div className="otl-ctxbar__crumb">
 				<Breadcrumb />
-				<select
-					className="otl-select otl-ctxbar__project"
-					aria-label="Projet actif"
-					value={activeProjectId}
-					onChange={(e) => setActiveProjectId(e.target.value)}
-				>
-					{projects.map((p) => (
-						<option key={p.id} value={p.id}>
-							{p.name}
-						</option>
-					))}
-				</select>
 			</div>
 			<div className="otl-ctxbar__env">
 				<span className="otl-ctxbar__envlabel">Environnement</span>

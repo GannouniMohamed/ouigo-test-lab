@@ -22,6 +22,15 @@ describe("breadcrumb", () => {
 		expect(crumbs.at(-1)?.label).toBe("Rapports");
 	});
 
+	it("marque le crumb projet avec kind « project » et garde son `to`", () => {
+		const crumbs = buildCrumbs("/scenarios", { projectName: "Ouigo.com" });
+		const projectCrumb = crumbs.find((c) => c.label === "Ouigo.com");
+		expect(projectCrumb?.kind).toBe("project");
+		expect(projectCrumb?.to).toBe("/scenarios");
+		// Les autres crumbs ne portent pas ce kind.
+		expect(crumbs.find((c) => c.label === "Projets")?.kind).toBeUndefined();
+	});
+
 	it("remonte d'un niveau pour le bouton Retour", () => {
 		expect(parentPath("/scenarios/new")).toBe("/scenarios");
 		expect(parentPath("/projects")).toBeNull(); // racine = pas de Retour
