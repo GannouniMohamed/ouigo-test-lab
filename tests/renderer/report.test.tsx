@@ -77,17 +77,19 @@ describe("Report", () => {
 		const img = await screen.findByTestId("failure-screenshot");
 		expect(img).toHaveAttribute("src", "file:///tmp/run-1/artifacts/fail.png");
 	});
-	it("le bloc réparation IA est désactivé", async () => {
+	it("le bloc réparation IA est présent (visuel)", async () => {
 		renderAt();
 		await screen.findByText("Échec");
-		const ai = screen.getByText("Réparation IA").closest("[aria-disabled]");
+		const ai = screen
+			.getByText("Réparation suggérée par l'IA")
+			.closest("[aria-disabled]");
 		expect(ai).toHaveAttribute("aria-disabled", "true");
 	});
 
 	it("ne montre pas les actions d'étape sans projectId/tunnelId", async () => {
 		renderAt();
 		await screen.findByText("Échec");
-		expect(screen.queryByRole("button", { name: "Supprimer" })).toBeNull();
+		expect(screen.queryByRole("button", { name: /Supprimer/ })).toBeNull();
 	});
 
 	it("Supprimer une étape crée un brouillon (disque intact) et affiche le bandeau", async () => {
@@ -97,7 +99,7 @@ describe("Report", () => {
 		const { fireEvent } = await import("@testing-library/react");
 		renderAt();
 		await screen.findByText("Échec");
-		fireEvent.click(screen.getAllByRole("button", { name: "Supprimer" })[1]);
+		fireEvent.click(screen.getAllByRole("button", { name: /Supprimer/ })[1]);
 		// Reads the spec to build the draft; does NOT persist (no saveScenarioSpec).
 		expect(window.api.getScenarioSpec).toHaveBeenCalledWith(
 			"distribution",
@@ -106,27 +108,74 @@ describe("Report", () => {
 		);
 		expect(window.api.saveScenarioSpec).not.toHaveBeenCalled();
 		expect(
-			await screen.findByText(/brouillon non enregistré/),
+			await screen.findByText(/brouillon non enregistré/i),
 		).toBeInTheDocument();
+		// Pending-edit counter shows 1 modification.
+		expect(screen.getByText(/1 modification/)).toBeInTheDocument();
 	});
 
-	it("Ignorer en invisible passe l'étape en 'visible seulement'", async () => {
+	it("le bandeau brouillon disparaît après Annuler", async () => {
 		(
 			window.api.getReport as unknown as ReturnType<typeof vi.fn>
 		).mockResolvedValue(editable);
 		const { fireEvent } = await import("@testing-library/react");
 		renderAt();
 		await screen.findByText("Échec");
-		// Open the ignore submenu on the 2nd step, choose "en invisible".
+		fireEvent.click(screen.getAllByRole("button", { name: /Supprimer/ })[1]);
+		expect(
+			await screen.findByText(/brouillon non enregistré/i),
+		).toBeInTheDocument();
+		fireEvent.click(await screen.findByRole("button", { name: /Annuler/ }));
+		expect(screen.queryByText(/brouillon non enregistré/i)).toBeNull();
+	});
+
+	it("Ignorer en invisible passe l'étape en 'visible seulement' (mapping scope préservé)", async () => {
+		(
+			window.api.getReport as unknown as ReturnType<typeof vi.fn>
+		).mockResolvedValue(editable);
+		const { fireEvent } = await import("@testing-library/react");
+		renderAt();
+		await screen.findByText("Échec");
+		// Open the ignore submenu on the 2nd step, choose "En mode invisible".
 		fireEvent.click(screen.getAllByRole("button", { name: "Ignorer…" })[1]);
 		fireEvent.click(
-			await screen.findByRole("button", { name: "Ignorer en invisible" }),
+			await screen.findByRole("button", { name: "En mode invisible" }),
 		);
 		// Ignored in invisible ⇒ runs only in visible ⇒ chip "visible seulement".
 		expect(await screen.findByText("visible seulement")).toBeInTheDocument();
 		expect(
-			await screen.findByText(/brouillon non enregistré/),
+			await screen.findByText(/brouillon non enregistré/i),
 		).toBeInTheDocument();
+	});
+
+	it("En mode visible → scope invisible ('invisible seulement')", async () => {
+		(
+			window.api.getReport as unknown as ReturnType<typeof vi.fn>
+		).mockResolvedValue(editable);
+		const { fireEvent } = await import("@testing-library/react");
+		renderAt();
+		await screen.findByText("Échec");
+		fireEvent.click(screen.getAllByRole("button", { name: "Ignorer…" })[1]);
+		fireEvent.click(
+			await screen.findByRole("button", { name: "En mode visible" }),
+		);
+		expect(await screen.findByText("invisible seulement")).toBeInTheDocument();
+	});
+
+	it("Partout → scope skip ('ignorée') et étape grisée", async () => {
+		(
+			window.api.getReport as unknown as ReturnType<typeof vi.fn>
+		).mockResolvedValue(editable);
+		const { fireEvent } = await import("@testing-library/react");
+		renderAt();
+		await screen.findByText("Échec");
+		fireEvent.click(screen.getAllByRole("button", { name: "Ignorer…" })[1]);
+		fireEvent.click(await screen.findByRole("button", { name: "Partout" }));
+		const chip = await screen.findByText("ignorée");
+		expect(chip).toBeInTheDocument();
+		// The step row is rendered greyed (neutralised in current mode).
+		const row = chip.closest("li");
+		expect(row?.className).toMatch(/otl-rstep--ignored/);
 	});
 
 	it("Ignorer en invisible rend l'étape réellement ignorée en invisible (et gardée en visible)", async () => {
@@ -139,7 +188,7 @@ describe("Report", () => {
 		await screen.findByText("Échec");
 		fireEvent.click(screen.getAllByRole("button", { name: "Ignorer…" })[1]);
 		fireEvent.click(
-			await screen.findByRole("button", { name: "Ignorer en invisible" }),
+			await screen.findByRole("button", { name: "En mode invisible" }),
 		);
 		fireEvent.click(await screen.findByRole("button", { name: "Enregistrer" }));
 		const savedSpec = (
@@ -160,7 +209,7 @@ describe("Report", () => {
 		const { fireEvent } = await import("@testing-library/react");
 		renderAt();
 		await screen.findByText("Échec");
-		fireEvent.click(screen.getAllByRole("button", { name: "Supprimer" })[1]);
+		fireEvent.click(screen.getAllByRole("button", { name: /Supprimer/ })[1]);
 		fireEvent.click(await screen.findByRole("button", { name: "Enregistrer" }));
 		expect(window.api.saveScenarioSpec).toHaveBeenCalledWith(
 			"distribution",

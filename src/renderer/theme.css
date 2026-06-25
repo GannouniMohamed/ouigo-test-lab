@@ -1437,8 +1437,6 @@ body {
 	border: 1px solid rgba(47, 107, 255, 0.28);
 	border-radius: 12px;
 	padding: 15px;
-	opacity: 0.75;
-	cursor: not-allowed;
 }
 
 .otl-ai__header {
@@ -2168,6 +2166,201 @@ body {
 
 .otl-rstep__edit-save {
 	flex-shrink: 0;
+}
+
+/* ── Report: draft banner ──────────────────────────────────────────────── */
+.otl-draftbar {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 16px;
+	padding: 11px 16px;
+	border-radius: 11px;
+	background: rgba(255, 159, 67, 0.1);
+	border: 1px solid rgba(255, 159, 67, 0.35);
+}
+
+.otl-draftbar__info {
+	display: flex;
+	flex-direction: column;
+	gap: 2px;
+	min-width: 0;
+}
+
+.otl-draftbar__title {
+	display: inline-flex;
+	align-items: center;
+	gap: 7px;
+	font-size: 13px;
+	font-weight: 600;
+	color: #ffb066;
+}
+
+.otl-draftbar__dot {
+	font-size: 10px;
+	line-height: 1;
+}
+
+.otl-draftbar__count {
+	font-size: 11.5px;
+	color: var(--otl-text-3);
+}
+
+.otl-draftbar__actions {
+	display: flex;
+	gap: 8px;
+	flex-shrink: 0;
+}
+
+.otl-draftbar__btn {
+	padding: 7px 14px;
+	border-radius: 8px;
+	font-size: 12.5px;
+	font-weight: 600;
+	font-family: var(--otl-font);
+	cursor: pointer;
+	border: 1px solid rgba(255, 255, 255, 0.14);
+	background: rgba(255, 255, 255, 0.04);
+	color: var(--otl-text);
+	transition: background 0.12s, border-color 0.12s, opacity 0.12s;
+}
+
+.otl-draftbar__btn:hover:not(:disabled) {
+	background: var(--otl-hover);
+}
+
+.otl-draftbar__btn--primary {
+	background: var(--otl-grad);
+	border: none;
+	color: #fff;
+}
+
+.otl-draftbar__btn--ghost {
+	background: transparent;
+	color: var(--otl-text-3);
+}
+
+.otl-draftbar__btn:disabled {
+	opacity: 0.5;
+	cursor: default;
+}
+
+/* ── Report: steps column header ───────────────────────────────────────── */
+.otl-report__steps-col {
+	flex: 1;
+	display: flex;
+	flex-direction: column;
+	gap: 10px;
+	min-width: 0;
+}
+
+.otl-report__steps-head {
+	display: flex;
+	align-items: baseline;
+	gap: 10px;
+}
+
+.otl-report__steps-title {
+	font-size: 11px;
+	font-weight: 700;
+	letter-spacing: 0.08em;
+	text-transform: uppercase;
+	color: var(--otl-text-2);
+}
+
+.otl-report__steps-hint {
+	font-size: 11px;
+	color: var(--otl-text-3);
+	font-style: italic;
+}
+
+.otl-report__steps-col .otl-report__steps {
+	flex: 1;
+}
+
+/* ── Report: action icon buttons ───────────────────────────────────────── */
+.otl-rstep__action--icon {
+	padding: 4px 8px;
+	font-size: 12.5px;
+	line-height: 1;
+}
+
+/* ── Report: ignore (scope) menu ───────────────────────────────────────── */
+.otl-scopemenu {
+	position: relative;
+	display: flex;
+	flex-direction: column;
+	gap: 2px;
+	min-width: 168px;
+	padding: 6px;
+	border-radius: 10px;
+	background: rgba(10, 16, 30, 0.96);
+	border: 1px solid rgba(255, 255, 255, 0.12);
+	box-shadow: 0 10px 30px rgba(0, 0, 0, 0.45);
+}
+
+.otl-scopemenu__title {
+	font-size: 10px;
+	font-weight: 700;
+	letter-spacing: 0.07em;
+	text-transform: uppercase;
+	color: var(--otl-text-3);
+	padding: 4px 8px 6px;
+}
+
+.otl-scopemenu__item {
+	text-align: left;
+	padding: 7px 9px;
+	border-radius: 7px;
+	font-size: 12.5px;
+	font-weight: 500;
+	background: transparent;
+	border: none;
+	color: var(--otl-text);
+	cursor: pointer;
+	font-family: var(--otl-font);
+	transition: background 0.12s;
+}
+
+.otl-scopemenu__item:hover:not(:disabled) {
+	background: var(--otl-hover);
+}
+
+.otl-scopemenu__item:disabled {
+	opacity: 0.5;
+	cursor: default;
+}
+
+.otl-scopemenu__close {
+	position: absolute;
+	top: 5px;
+	right: 6px;
+	width: 18px;
+	height: 18px;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	border-radius: 5px;
+	border: none;
+	background: transparent;
+	color: var(--otl-text-3);
+	cursor: pointer;
+	font-size: 14px;
+	line-height: 1;
+}
+
+.otl-scopemenu__close:hover {
+	background: var(--otl-hover);
+	color: var(--otl-text);
+}
+
+/* ── Report: right panel section title ─────────────────────────────────── */
+.otl-shot-title {
+	font-size: 11px;
+	font-weight: 700;
+	letter-spacing: 0.08em;
+	text-transform: uppercase;
+	color: var(--otl-text-2);
 }
 
 /* Monospace utility (durations, counts) */
