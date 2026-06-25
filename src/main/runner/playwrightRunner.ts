@@ -15,6 +15,7 @@ import type {
 	Scenario,
 	StepStatus,
 } from "../../shared/types";
+import { stepActiveInMode } from "../../shared/types";
 import { saveReport } from "../stores/reportStore";
 import { updateLastRun } from "../stores/scenarioStore";
 import { getWorkspaceDir } from "../workspace";
@@ -150,6 +151,12 @@ export const playwrightRunner: TestRunner = {
 			opts?.specDraft ??
 			readFileSync(join(scenarioDir, scenario.specFile), "utf-8");
 		const recordedSteps = parseRecordedSteps(source);
+		// The planned steps that will ACTUALLY execute in this mode, in order.
+		// This length matches what the reporter emits (kept steps), so LiveRun can
+		// render the complete parcours from the start and align live markers to it.
+		const planTitles = recordedSteps
+			.filter((s) => stepActiveInMode(s.scope, mode))
+			.map((s) => s.title);
 		writeFileSync(
 			join(runDir, scenario.specFile),
 			compileSpecForMode(source, mode),
@@ -171,7 +178,12 @@ export const playwrightRunner: TestRunner = {
 		// Injectable, platform-correct npx command (OTL_NPX allows test overrides)
 		const npxCmd = process.env.OTL_NPX ?? (isWindows ? "npx.cmd" : "npx");
 
-		onEvent({ type: "run-started", runId });
+		onEvent({
+			type: "run-started",
+			runId,
+			totalSteps: planTitles.length,
+			steps: planTitles,
+		});
 
 		const runBeginMs = Date.now();
 
@@ -194,9 +206,64 @@ export const playwrightRunner: TestRunner = {
 		const partialStdout = { value: "" };
 		const partialStderr = { value: "" };
 
+		// Live step streaming: the reporter prints `__OTL_STEP__{json}` markers on
+		// onStepBegin/onStepEnd for each kept step. We translate them to live
+		// step events so LiveRun lights up the parcours in real time. `liveIndex`
+		// is incremented on each "begin" so begin/end pair to the same row.
+		const STEP_MARKER = "__OTL_STEP__";
+		let liveIndex = -1;
+		let liveStreamed = false;
+
+		function handleStepMarker(payload: string): void {
+			let parsed: {
+				phase?: string;
+				title?: string;
+				status?: string;
+				durationMs?: number;
+				error?: string;
+			};
+			try {
+				parsed = JSON.parse(payload);
+			} catch {
+				return;
+			}
+			if (parsed.phase === "begin") {
+				liveStreamed = true;
+				liveIndex += 1;
+				onEvent({
+					type: "step-started",
+					index: liveIndex,
+					title: typeof parsed.title === "string" ? parsed.title : "",
+				});
+			} else if (parsed.phase === "end") {
+				if (liveIndex < 0) return;
+				if (parsed.status === "failed") {
+					onEvent({
+						type: "step-failed",
+						index: liveIndex,
+						error:
+							typeof parsed.error === "string" && parsed.error
+								? parsed.error
+								: "Échec de l'étape",
+					});
+				} else {
+					onEvent({
+						type: "step-passed",
+						index: liveIndex,
+						durationMs:
+							typeof parsed.durationMs === "number" ? parsed.durationMs : 0,
+					});
+				}
+			}
+		}
+
 		child.stdout?.on("data", (data: Buffer) => {
 			const lines = splitLines(data.toString(), partialStdout);
 			for (const line of lines) {
+				if (line.startsWith(STEP_MARKER)) {
+					handleStepMarker(line.slice(STEP_MARKER.length));
+					continue;
+				}
 				if (line.trim()) onEvent({ type: "log", line });
 			}
 		});
@@ -293,7 +360,9 @@ export const playwrightRunner: TestRunner = {
 				const durationMs = Date.now() - runBeginMs;
 
 				// Flush any remaining partial lines
-				if (partialStdout.value.trim()) {
+				if (partialStdout.value.startsWith(STEP_MARKER)) {
+					handleStepMarker(partialStdout.value.slice(STEP_MARKER.length));
+				} else if (partialStdout.value.trim()) {
 					onEvent({ type: "log", line: partialStdout.value });
 				}
 				if (partialStderr.value.trim()) {
@@ -373,7 +442,10 @@ export const playwrightRunner: TestRunner = {
 
 				if (state.cancelled) report.status = "cancelled";
 
-				finishWith(report, true);
+				// When live markers streamed the per-step events already, don't
+				// re-emit them (would double the rows). The report is still built and
+				// persisted as today. Fallback path (no markers) keeps the burst.
+				finishWith(report, !liveStreamed);
 			});
 		});
 	},

@@ -11,31 +11,59 @@ const fs = require("node:fs");
 //      is teardown, not a user action.
 //   2. Stop collecting after the first failed step — a recorded test halts at its
 //      first failure, so anything after it is teardown and would shift alignment.
+// Whether a step is one of the user-meaningful steps we keep (and stream).
+function isKeptStep(step) {
+	const cat = step.category;
+	const title = String(step.title);
+	return (
+		cat === "expect" ||
+		(cat === "pw:api" &&
+			!title.startsWith("browser") &&
+			!title.startsWith("page.screenshot"))
+	);
+}
+
 class StepReporter {
 	constructor() {
 		this._steps = [];
 		this._stopped = false;
 	}
+	onStepBegin(_test, _result, step) {
+		// Stream a "begin" marker on stdout for each kept step so the runner can
+		// light up the parcours live. Honour the same stop-after-first-failure
+		// guard as onStepEnd so the live index stays aligned with the file output.
+		if (this._stopped) return;
+		if (!isKeptStep(step)) return;
+		console.log(
+			`__OTL_STEP__${JSON.stringify({ phase: "begin", title: String(step.title) })}`,
+		);
+	}
 	onStepEnd(_test, _result, step) {
 		if (this._stopped) return;
-		const cat = step.category;
 		const title = String(step.title);
-		const keep =
-			cat === "expect" ||
-			(cat === "pw:api" &&
-				!title.startsWith("browser") &&
-				!title.startsWith("page.screenshot"));
-		if (!keep) return;
+		if (!isKeptStep(step)) return;
 		const failed = Boolean(step.error);
+		const durationMs = typeof step.duration === "number" ? step.duration : 0;
+		const error = failed
+			? step.error && (step.error.message || step.error.stack)
+				? step.error.message || step.error.stack
+				: "Échec de l'étape"
+			: undefined;
+		// Live "end" marker, matched by order to the "begin" emitted above.
+		console.log(
+			`__OTL_STEP__${JSON.stringify({
+				phase: "end",
+				title,
+				status: failed ? "failed" : "passed",
+				durationMs,
+				error,
+			})}`,
+		);
 		this._steps.push({
 			title: step.title,
-			durationMs: typeof step.duration === "number" ? step.duration : 0,
+			durationMs,
 			status: failed ? "failed" : "passed",
-			error: failed
-				? step.error && (step.error.message || step.error.stack)
-					? step.error.message || step.error.stack
-					: "Échec de l'étape"
-				: undefined,
+			error,
 		});
 		// First failure ends the meaningful step sequence.
 		if (failed) this._stopped = true;

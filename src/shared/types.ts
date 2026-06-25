@@ -129,7 +129,12 @@ export interface ReportSummary {
 }
 
 export type RunEvent =
-	| { type: "run-started"; runId: string; totalSteps?: number }
+	| {
+			type: "run-started";
+			runId: string;
+			totalSteps?: number;
+			steps?: string[];
+	  }
 	| { type: "step-started"; index: number; title: string }
 	| { type: "step-passed"; index: number; durationMs: number }
 	| { type: "step-failed"; index: number; error: string; screenshot?: string }

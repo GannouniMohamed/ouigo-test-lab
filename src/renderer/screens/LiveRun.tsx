@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { useLocation, useNavigate, useParams } from "react-router-dom";
 import type { RunEvent } from "../../shared/types";
 
-type StepStatus = "running" | "passed" | "failed" | "skipped";
+type StepStatus = "pending" | "running" | "passed" | "failed" | "skipped";
 
 interface LiveStep {
 	index: number;
@@ -129,7 +129,22 @@ export default function LiveRun(): JSX.Element {
 
 		const handle = (event: RunEvent) => {
 			if (event.type === "run-started") {
-				setState((prev) => ({ ...prev, runId: event.runId }));
+				// Seed the full parcours from the plan (each row "non atteint")
+				// so the complete journey is visible from the start. When the plan
+				// is absent (fallback), keep behaving as before.
+				const plan = event.steps;
+				setState((prev) => ({
+					...prev,
+					runId: event.runId,
+					steps:
+						plan && plan.length > 0
+							? plan.map((title, index) => ({
+									index,
+									title,
+									status: "pending" as const,
+								}))
+							: prev.steps,
+				}));
 			} else if (event.type === "step-started") {
 				setState((prev) => ({
 					...prev,
@@ -190,9 +205,12 @@ export default function LiveRun(): JSX.Element {
 		};
 	}, [runId, navigate]);
 
-	// X = steps started-or-finished, Y = total steps known.
-	const startedOrDone = state.steps.length;
+	// Y = plan length (total steps), X = steps started-or-finished.
 	const totalSteps = state.steps.length;
+	const startedOrDone = state.steps.filter(
+		(s) =>
+			s.status === "running" || s.status === "passed" || s.status === "failed",
+	).length;
 	const doneSteps = state.steps.filter(
 		(s) => s.status === "passed" || s.status === "failed",
 	).length;
@@ -200,8 +218,12 @@ export default function LiveRun(): JSX.Element {
 		totalSteps > 0 ? Math.round((doneSteps / totalSteps) * 100) : 0;
 
 	const runningStep = state.steps.find((s) => s.status === "running");
-	// Current step title: the running step, else the last known step.
-	const currentTitle = runningStep?.title ?? state.steps.at(-1)?.title ?? "";
+	// Current step title: the running step, else the last step that ran (passed
+	// or failed). A still-pending plan row is not "current".
+	const lastRan = state.steps
+		.filter((s) => s.status === "passed" || s.status === "failed")
+		.at(-1);
+	const currentTitle = runningStep?.title ?? lastRan?.title ?? "";
 
 	const title = auto
 		? "Première exécution — validation automatique"
@@ -294,7 +316,7 @@ export default function LiveRun(): JSX.Element {
 									? "otl-step--running"
 									: step.status === "passed"
 										? "otl-step--done"
-										: step.status === "skipped"
+										: step.status === "skipped" || step.status === "pending"
 											? "otl-step--skipped"
 											: "otl-step--done otl-step--failed";
 							return (
@@ -303,13 +325,14 @@ export default function LiveRun(): JSX.Element {
 										{step.status === "running" && <SpinRing />}
 										{step.status === "passed" && <CheckIcon />}
 										{step.status === "failed" && <CrossIcon />}
-										{step.status === "skipped" && <span aria-hidden>○</span>}
+										{(step.status === "skipped" ||
+											step.status === "pending") && <span aria-hidden>○</span>}
 									</span>
 									<span className="otl-step__title">{step.title}</span>
 									{step.status === "running" && (
 										<span className="otl-step__running-label">en cours…</span>
 									)}
-									{step.status === "skipped" && (
+									{(step.status === "skipped" || step.status === "pending") && (
 										<span className="otl-step__skipped-label">non atteint</span>
 									)}
 									{(step.status === "passed" || step.status === "failed") &&
