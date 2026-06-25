@@ -192,6 +192,9 @@ function BatchBlock({
 export default function History(): JSX.Element {
 	const navigate = useNavigate();
 	const activeProjectId = useAppStore((s) => s.activeProjectId);
+	const activeEnv = useAppStore(
+		(s) => s.activeEnvByProject[s.activeProjectId] ?? "",
+	);
 	const [reports, setReports] = useState<ReportSummary[]>([]);
 	const [scenarioMap, setScenarioMap] = useState<Map<string, string>>(
 		new Map(),
@@ -211,7 +214,23 @@ export default function History(): JSX.Element {
 		});
 	}, [activeProjectId]);
 
-	const groups = useMemo(() => groupReports(reports), [reports]);
+	// Filter to the active project (and, when an env is actively selected, that
+	// env) before grouping so batches and singles stay consistent. Reports
+	// persisted before projectId existed fall back to scenario membership: the
+	// scenarioMap only holds the active project's scenarios.
+	const visibleReports = useMemo(() => {
+		return reports.filter((r) => {
+			const belongsToProject =
+				r.projectId !== undefined
+					? r.projectId === activeProjectId
+					: scenarioMap.has(r.scenarioId);
+			if (!belongsToProject) return false;
+			if (activeEnv && r.environmentId !== activeEnv) return false;
+			return true;
+		});
+	}, [reports, scenarioMap, activeProjectId, activeEnv]);
+
+	const groups = useMemo(() => groupReports(visibleReports), [visibleReports]);
 	const open = (runId: string) => navigate(`/report/${runId}`);
 
 	return (
@@ -229,7 +248,7 @@ export default function History(): JSX.Element {
 				</button>
 			</div>
 
-			{reports.length === 0 ? (
+			{visibleReports.length === 0 ? (
 				<p className="otl-hist__empty">Aucune exécution</p>
 			) : (
 				<div className="otl-hist__list">
