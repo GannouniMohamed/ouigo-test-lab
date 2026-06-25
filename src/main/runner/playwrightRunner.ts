@@ -3,6 +3,7 @@ import type { ChildProcess } from "node:child_process";
 import { randomUUID } from "node:crypto";
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { delimiter, dirname, join, resolve } from "node:path";
+import { deviceEnvFor } from "../../shared/devices";
 import {
 	compileSpecForMode,
 	parseRecordedSteps,
@@ -191,6 +192,9 @@ export const playwrightRunner: TestRunner = {
 			OTL_ARTIFACTS: artifactsDir,
 			OTL_HEADLESS: headless ? "1" : "0",
 			NODE_PATH: nodePath,
+			// "responsive" scenarios replay in a mobile (iPhone) viewport; the
+			// runner config reads OTL_DEVICE and emulates it on Chromium.
+			...deviceEnvFor(scenario.platform),
 			...env.variables,
 		};
 

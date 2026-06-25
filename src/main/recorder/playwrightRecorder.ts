@@ -3,6 +3,7 @@ import type { ChildProcess } from "node:child_process";
 import { randomUUID } from "node:crypto";
 import { existsSync, mkdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
+import { RESPONSIVE_DEVICE, viewportForDevice } from "../../shared/devices";
 import { parseRecordedSteps } from "../../shared/spec";
 import type { Platform, Scenario } from "../../shared/types";
 import { getEnvironment } from "../stores/projectStore";
@@ -89,6 +90,17 @@ export const playwrightRecorder = {
 
 		const cmd = process.env.OTL_CODEGEN ?? (isWindows ? "npx.cmd" : "npx");
 
+		// "responsive" records in a mobile (iPhone) viewport on Chromium so the
+		// recorded site renders its responsive layout. We pass --viewport-size
+		// (not --device, which forces the device's default WebKit) to keep the
+		// recording engine identical to replay's Chromium emulation.
+		const platform = opts.platform ?? "web";
+		const vp = viewportForDevice(RESPONSIVE_DEVICE);
+		const viewportArgs =
+			platform === "responsive" && vp
+				? ["--viewport-size", `${vp.width},${vp.height}`]
+				: [];
+
 		let args: string[];
 		if (process.env.OTL_CODEGEN) {
 			args = [
@@ -103,6 +115,7 @@ export const playwrightRecorder = {
 			args = [
 				"playwright",
 				"codegen",
+				...viewportArgs,
 				env.baseURL,
 				"--target",
 				"playwright-test",

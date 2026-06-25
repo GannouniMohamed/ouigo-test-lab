@@ -7,3 +7,7 @@ out/
 release/
 test-results/
 playwright-report/
+
+# Stray Playwright output when running the runner config directly (dev only)
+pw.json
+pw-artifacts/
