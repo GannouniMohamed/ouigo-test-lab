@@ -713,6 +713,23 @@ body {
 	background: rgba(255, 51, 102, 0.16);
 }
 
+.otl-btn-danger {
+	padding: 9px 16px;
+	border-radius: 9px;
+	background: var(--otl-danger);
+	border: 1px solid var(--otl-danger);
+	color: #fff;
+	font-weight: 600;
+	font-size: 12.5px;
+	font-family: var(--otl-font);
+	cursor: pointer;
+	transition: filter 0.15s ease;
+}
+
+.otl-btn-danger:hover {
+	filter: brightness(1.08);
+}
+
 /* Progress bar */
 .otl-progress {
 	height: 4px;

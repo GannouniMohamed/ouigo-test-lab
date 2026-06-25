@@ -9,6 +9,7 @@ export default function Projects(): JSX.Element {
 	const loadProjects = useAppStore((s) => s.loadProjects);
 	const setActiveProjectId = useAppStore((s) => s.setActiveProjectId);
 	const [counts, setCounts] = useState<Record<string, number>>({});
+	const [pendingDelete, setPendingDelete] = useState<Project | null>(null);
 
 	useEffect(() => {
 		loadProjects();
@@ -33,8 +34,10 @@ export default function Projects(): JSX.Element {
 		setActiveProjectId(p.id);
 		navigate("/scenarios");
 	}
-	async function remove(id: string): Promise<void> {
-		await window.api.deleteProject(id);
+	async function confirmDelete(): Promise<void> {
+		if (!pendingDelete) return;
+		await window.api.deleteProject(pendingDelete.id);
+		setPendingDelete(null);
 		await loadProjects();
 	}
 
@@ -115,7 +118,7 @@ export default function Projects(): JSX.Element {
 									className="otl-project-card__del"
 									aria-label="Supprimer le projet"
 									disabled={projects.length <= 1}
-									onClick={() => remove(p.id)}
+									onClick={() => setPendingDelete(p)}
 								>
 									<svg
 										aria-hidden="true"
@@ -157,6 +160,40 @@ export default function Projects(): JSX.Element {
 							</div>
 						</div>
 					))}
+				</div>
+			)}
+
+			{pendingDelete && (
+				<div className="otl-modal-overlay">
+					<dialog
+						open
+						className="otl-modal"
+						aria-label={`Supprimer le projet ${pendingDelete.name}`}
+					>
+						<h2 className="otl-modal__title">
+							Supprimer le projet « {pendingDelete.name} » ?
+						</h2>
+						<p className="otl-modal__subtitle">
+							Cette action est irréversible et supprime aussi tout l'historique
+							d'exécutions de ce projet.
+						</p>
+						<div className="otl-modal__actions">
+							<button
+								type="button"
+								className="otl-tab"
+								onClick={() => setPendingDelete(null)}
+							>
+								Annuler
+							</button>
+							<button
+								type="button"
+								className="otl-btn-danger"
+								onClick={confirmDelete}
+							>
+								Supprimer définitivement
+							</button>
+						</div>
+					</dialog>
 				</div>
 			)}
 		</div>

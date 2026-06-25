@@ -31,7 +31,11 @@ import {
 	saveEnvironment,
 	saveProject,
 } from "../stores/projectStore";
-import { getReport, listReports } from "../stores/reportStore";
+import {
+	deleteReportsByProject,
+	getReport,
+	listReports,
+} from "../stores/reportStore";
 import {
 	deleteScenario,
 	getScenario,
@@ -122,7 +126,12 @@ export function handleUpdateProject(p: Project): void {
 }
 
 export function handleDeleteProject(id: string): void {
+	// Collect the project's scenario ids BEFORE removing it (deleteProject wipes
+	// the project dir that holds them), then cascade-delete its run history so the
+	// reports in runs/ don't outlive the project.
+	const scenarioIds = listScenariosByProject(id).map((s) => s.id);
 	deleteProject(id);
+	deleteReportsByProject(id, scenarioIds);
 }
 
 export function handleListEnvironments(projectId: string): Environment[] {
