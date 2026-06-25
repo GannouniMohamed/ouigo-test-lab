@@ -1,4 +1,11 @@
 import { defineConfig } from "@playwright/test";
+import { viewportForDevice } from "./src/shared/devices";
+
+// "responsive" scenarios set OTL_DEVICE (e.g. "iPhone 13"); replay them in that
+// device's viewport on Chromium. We apply only the viewport (not isMobile/UA or
+// the device's default WebKit) so the run stays on the same Chromium engine the
+// scenario was recorded in — matching layout and keeping CI (Chromium-only) green.
+const deviceViewport = viewportForDevice(process.env.OTL_DEVICE) ?? undefined;
 
 // Fail fast: cap how long a single action / navigation may hang. Without these,
 // a recorded selector that no longer matches on replay (dynamic dates, prices,
@@ -23,6 +30,8 @@ export default defineConfig({
 	timeout: num(process.env.OTL_TEST_TIMEOUT, 90000),
 	use: {
 		baseURL: process.env.PLAYWRIGHT_BASE_URL,
+		// Mobile viewport for "responsive" runs (undefined → Playwright default).
+		...(deviceViewport ? { viewport: deviceViewport } : {}),
 		screenshot: "only-on-failure",
 		// Match the locale scenarios are recorded in (French) so language-aware
 		// UIs — e.g. the Didomi consent banner — render the same text the
