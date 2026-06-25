@@ -1,8 +1,8 @@
-import { useLocation, useNavigate } from "react-router-dom";
+import { useLocation } from "react-router-dom";
 import { useAppStore } from "../store";
+import { Breadcrumb } from "./Breadcrumb";
 
 export function ProjectContextBar(): JSX.Element | null {
-	const navigate = useNavigate();
 	const { pathname } = useLocation();
 	const projects = useAppStore((s) => s.projects);
 	const activeProjectId = useAppStore((s) => s.activeProjectId);
@@ -18,14 +18,7 @@ export function ProjectContextBar(): JSX.Element | null {
 	return (
 		<div className="otl-ctxbar">
 			<div className="otl-ctxbar__crumb">
-				<button
-					type="button"
-					className="otl-breadcrumb__link"
-					onClick={() => navigate("/projects")}
-				>
-					Projets
-				</button>
-				<span className="otl-breadcrumb__sep">/</span>
+				<Breadcrumb />
 				<select
 					className="otl-select otl-ctxbar__project"
 					aria-label="Projet actif"

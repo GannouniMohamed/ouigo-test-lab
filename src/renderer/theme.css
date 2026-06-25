@@ -1559,6 +1559,48 @@ body {
 .otl-breadcrumb__sep {
 	opacity: 0.5;
 }
+.otl-breadcrumb__list {
+	display: flex;
+	align-items: center;
+	gap: .4rem;
+	list-style: none;
+	margin: 0;
+	padding: 0;
+	min-width: 0;
+}
+.otl-breadcrumb__item {
+	display: flex;
+	align-items: center;
+	gap: .4rem;
+	min-width: 0;
+}
+.otl-breadcrumb__current {
+	color: var(--otl-text);
+	font-weight: 600;
+	max-width: 28ch;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+.otl-backbtn {
+	display: inline-flex;
+	align-items: center;
+	gap: .25rem;
+	margin-right: .35rem;
+	padding: 3px 10px;
+	border-radius: 8px;
+	border: 1px solid rgba(255, 255, 255, 0.08);
+	background: rgba(15, 23, 42, 0.4);
+	color: var(--otl-text-2);
+	cursor: pointer;
+	font-size: 12px;
+	font-weight: 600;
+	transition: border-color .15s ease, color .15s ease;
+}
+.otl-backbtn:hover {
+	color: var(--otl-text);
+	border-color: rgba(0, 201, 177, 0.5);
+}
 .otl-create {
 	display: flex;
 	flex-direction: column;
