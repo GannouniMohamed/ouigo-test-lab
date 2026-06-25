@@ -14,6 +14,7 @@ test("création d'un projet avec environnements puis retour à la liste", async 
 			OTL_WORKSPACE: workspace,
 			OTL_FIXTURES: join(REPO, "fixtures"),
 			OTL_RUNNER_CONFIG: join(REPO, "playwright.runner.config.ts"),
+			OTL_FORCE_HEADLESS: "1",
 		},
 	});
 	try {

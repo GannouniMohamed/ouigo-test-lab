@@ -71,6 +71,10 @@ describe("graceful codegen stop", () => {
 		expect(scenario.name).toBe("Graceful Stop Test");
 		expect(scenario.specFile).toMatch(/\.spec\.ts$/);
 
+		// Recorded step count is computed from the spec at save time, independent
+		// of any run: goto + getByRole('button').click() = 2 actions.
+		expect(scenario.recordedStepCount).toBe(2);
+
 		// Verify the saved spec contains the recognisable delayed action.
 		// saveScenario writes to: projects/<projectId>/tunnels/<tunnelId>/scenarios/<id>/<specFile>
 		const savedSpec = readFileSync(

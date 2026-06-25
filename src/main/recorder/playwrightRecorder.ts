@@ -3,6 +3,7 @@ import type { ChildProcess } from "node:child_process";
 import { randomUUID } from "node:crypto";
 import { existsSync, mkdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
+import { parseRecordedSteps } from "../../shared/spec";
 import type { Platform, Scenario } from "../../shared/types";
 import { getEnvironment } from "../stores/projectStore";
 import { getScenario, saveScenario } from "../stores/scenarioStore";
@@ -190,6 +191,7 @@ export const playwrightRecorder = {
 			tags: [],
 			specFile: `${id}.spec.ts`,
 			createdAt: new Date().toISOString(),
+			recordedStepCount: parseRecordedSteps(specContent).length,
 			lastRun: { status: "never" },
 		};
 

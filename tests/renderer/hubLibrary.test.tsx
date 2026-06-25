@@ -17,6 +17,7 @@ const scenarios = [
 		tags: [],
 		specFile: "login.spec.ts",
 		createdAt: "2026-06-24T00:00:00Z",
+		recordedStepCount: 12,
 		lastRun: { status: "never" },
 	},
 	{
@@ -90,6 +91,17 @@ describe("HubLibrary", () => {
 		expect(screen.getByText("Recherche train")).toBeTruthy();
 	});
 
+	it("affiche le nombre d'étapes enregistrées, même sans exécution", async () => {
+		render(
+			<MemoryRouter>
+				<HubLibrary />
+			</MemoryRouter>,
+		);
+		// "Connexion" was never run but has 12 recorded steps → they must show.
+		await screen.findByText("Connexion");
+		expect(screen.getByText(/12 étapes/)).toBeInTheDocument();
+	});
+
 	it("affiche les stats de groupe dans l'en-tête", async () => {
 		render(
 			<MemoryRouter>
@@ -103,7 +115,7 @@ describe("HubLibrary", () => {
 		expect(screen.getByText("1 réussi")).toBeInTheDocument();
 	});
 
-	it("lance avec l'environnement actif du projet", async () => {
+	it("lance avec l'environnement actif du projet (via le dialogue d'options)", async () => {
 		useAppStore.setState({ activeEnvByProject: { default: "recette" } });
 		render(
 			<MemoryRouter>
@@ -111,7 +123,9 @@ describe("HubLibrary", () => {
 			</MemoryRouter>,
 		);
 		await screen.findByText("Connexion");
+		// "Lancer" opens the run-options dialog; "Démarrer" actually runs.
 		fireEvent.click(screen.getAllByRole("button", { name: /lancer/i })[0]);
+		fireEvent.click(await screen.findByRole("button", { name: "Démarrer" }));
 		await waitFor(() =>
 			expect(
 				window.api.runScenario as unknown as ReturnType<typeof vi.fn>,
@@ -120,9 +134,10 @@ describe("HubLibrary", () => {
 		const call = (window.api.runScenario as unknown as ReturnType<typeof vi.fn>)
 			.mock.calls[0];
 		expect(call[3]).toBe("recette"); // envId
+		expect(call[4]).toEqual({ headed: true }); // default display mode
 	});
 
-	it("Lancer appelle runScenario avec projectId et tunnelId", async () => {
+	it("Lancer → Démarrer appelle runScenario avec projectId et tunnelId", async () => {
 		render(
 			<MemoryRouter>
 				<HubLibrary />
@@ -131,6 +146,7 @@ describe("HubLibrary", () => {
 		await screen.findByText("Connexion");
 		const launchButtons = screen.getAllByRole("button", { name: /lancer/i });
 		fireEvent.click(launchButtons[0]);
+		fireEvent.click(await screen.findByRole("button", { name: "Démarrer" }));
 		await waitFor(() =>
 			expect(
 				window.api.runScenario as unknown as ReturnType<typeof vi.fn>,
@@ -142,6 +158,26 @@ describe("HubLibrary", () => {
 		expect(call[0]).toBe("default");
 		expect(call[1]).toBe("general");
 		expect(call[2]).toBe("login");
+	});
+
+	it("permet de choisir le mode Invisible (headless) dans le dialogue", async () => {
+		render(
+			<MemoryRouter>
+				<HubLibrary />
+			</MemoryRouter>,
+		);
+		await screen.findByText("Connexion");
+		fireEvent.click(screen.getAllByRole("button", { name: /lancer/i })[0]);
+		fireEvent.click(await screen.findByRole("button", { name: /Invisible/ }));
+		fireEvent.click(screen.getByRole("button", { name: "Démarrer" }));
+		await waitFor(() =>
+			expect(
+				window.api.runScenario as unknown as ReturnType<typeof vi.fn>,
+			).toHaveBeenCalled(),
+		);
+		const call = (window.api.runScenario as unknown as ReturnType<typeof vi.fn>)
+			.mock.calls[0];
+		expect(call[4]).toEqual({ headed: false });
 	});
 
 	it("affiche '1ʳᵉ exécution…' et cache Lancer pour le scénario en first-run", async () => {

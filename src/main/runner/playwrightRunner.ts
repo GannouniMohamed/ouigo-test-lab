@@ -1,13 +1,16 @@
 import { spawn } from "node:child_process";
 import type { ChildProcess } from "node:child_process";
 import { randomUUID } from "node:crypto";
-import { existsSync, mkdirSync, readFileSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { delimiter, dirname, join, resolve } from "node:path";
+import { compileSpecForMode, parseRecordedSteps } from "../../shared/spec";
 import type {
 	Environment,
 	Report,
 	ReportStep,
 	RunEvent,
+	RunMode,
+	RunOptions,
 	RunResult,
 	Scenario,
 	StepStatus,
@@ -15,7 +18,8 @@ import type {
 import { saveReport } from "../stores/reportStore";
 import { updateLastRun } from "../stores/scenarioStore";
 import { getWorkspaceDir } from "../workspace";
-import { mapPlaywrightReport } from "./reportMapper";
+import { extractFailureScreenshot, mapPlaywrightReport } from "./reportMapper";
+import { alignStepsToRecorded } from "./stepAlign";
 import type { TestRunner } from "./types";
 
 interface RunState {
@@ -54,6 +58,8 @@ function buildMinimalFailedReport(ctx: {
 	runId: string;
 	scenarioId: string;
 	scenarioName: string;
+	projectId?: string;
+	tunnelId?: string;
 	environmentLabel: string;
 	startedAt: string;
 	durationMs: number;
@@ -63,6 +69,8 @@ function buildMinimalFailedReport(ctx: {
 		runId: ctx.runId,
 		scenarioId: ctx.scenarioId,
 		scenarioName: ctx.scenarioName,
+		projectId: ctx.projectId,
+		tunnelId: ctx.tunnelId,
 		environmentLabel: ctx.environmentLabel,
 		status: "failed",
 		durationMs: ctx.durationMs,
@@ -93,6 +101,7 @@ export const playwrightRunner: TestRunner = {
 		scenario: Scenario,
 		env: Environment,
 		onEvent: (e: RunEvent) => void,
+		opts?: RunOptions,
 	): Promise<RunResult> {
 		const runId = randomUUID();
 		const startedAt = new Date().toISOString();
@@ -126,13 +135,35 @@ export const playwrightRunner: TestRunner = {
 			? `${configNodeModules}${delimiter}${existingNodePath}`
 			: configNodeModules;
 
+		// Headed by default (matches recording, so consent banners render); the
+		// run-options dialog can request headless. OTL_FORCE_HEADLESS=1 always
+		// wins — CI/e2e set it so runs never try to open a window on a display-
+		// less machine. The config reads OTL_HEADLESS ("0" = headed).
+		const headless =
+			process.env.OTL_FORCE_HEADLESS === "1" || opts?.headed === false;
+		const mode: RunMode = headless ? "invisible" : "visible";
+
+		// Source spec: a draft (step-management "Relancer") or the stored spec.
+		// Compile it for the mode (activate applicable steps, comment the rest)
+		// and run THAT — written into the isolated run dir.
+		const source =
+			opts?.specDraft ??
+			readFileSync(join(scenarioDir, scenario.specFile), "utf-8");
+		const recordedSteps = parseRecordedSteps(source);
+		writeFileSync(
+			join(runDir, scenario.specFile),
+			compileSpecForMode(source, mode),
+			"utf-8",
+		);
+
 		const childEnv: NodeJS.ProcessEnv = {
 			...process.env,
 			PLAYWRIGHT_BASE_URL: env.baseURL,
-			OTL_TEST_DIR: scenarioDir,
+			OTL_TEST_DIR: runDir,
 			OTL_JSON_OUT: jsonOut,
 			OTL_STEPS_OUT: stepsOut,
 			OTL_ARTIFACTS: artifactsDir,
+			OTL_HEADLESS: headless ? "1" : "0",
 			NODE_PATH: nodePath,
 			...env.variables,
 		};
@@ -188,6 +219,16 @@ export const playwrightRunner: TestRunner = {
 				if (emitSteps) {
 					// Emit per-step events
 					for (const step of report.steps) {
+						if (step.status === "skipped") {
+							// Recorded action the run never reached — surface it as
+							// "non atteint" rather than a stuck or falsely-passed step.
+							onEvent({
+								type: "step-skipped",
+								index: step.index,
+								title: step.title,
+							});
+							continue;
+						}
 						onEvent({
 							type: "step-started",
 							index: step.index,
@@ -236,6 +277,8 @@ export const playwrightRunner: TestRunner = {
 					runId,
 					scenarioId: scenario.id,
 					scenarioName: scenario.name,
+					projectId: scenario.projectId,
+					tunnelId: scenario.tunnelId,
 					environmentLabel: env.label,
 					startedAt,
 					durationMs,
@@ -265,6 +308,8 @@ export const playwrightRunner: TestRunner = {
 						runId,
 						scenarioId: scenario.id,
 						scenarioName: scenario.name,
+						projectId: scenario.projectId,
+						tunnelId: scenario.tunnelId,
 						environmentLabel: env.label,
 						startedAt,
 						durationMs,
@@ -280,6 +325,10 @@ export const playwrightRunner: TestRunner = {
 					runId,
 					scenarioId: scenario.id,
 					scenarioName: scenario.name,
+					projectId: scenario.projectId,
+					tunnelId: scenario.tunnelId,
+					environmentId: env.id,
+					mode,
 					environmentLabel: env.label,
 					startedAt,
 				});
@@ -288,21 +337,35 @@ export const playwrightRunner: TestRunner = {
 				const failedJsonStep = report.steps.find(
 					(s) => s.status === "failed" && s.screenshotPath !== undefined,
 				);
-				const preservedScreenshot = failedJsonStep?.screenshotPath;
+				// Prefer the screenshot already mapped onto a JSON step; otherwise
+				// read it from the result-level attachment (flat specs have no JSON
+				// steps, so the screenshot would otherwise be lost — "Capture
+				// indisponible" despite the PNG existing on disk).
+				const preservedScreenshot =
+					failedJsonStep?.screenshotPath ?? extractFailureScreenshot(raw);
 
-				// Override report.steps with real recorded actions from custom reporter
+				// Build the step list from the recorded scenario as the backbone so a
+				// failed/partial run still shows the COMPLETE recorded flow with the
+				// block point located. The custom reporter gives the real per-action
+				// outcomes (the JSON reporter omits flat page.*/expect steps); recorded
+				// actions the run never reached are surfaced as "skipped" (non atteint).
 				const customSteps = readCustomSteps(stepsOut);
-				if (customSteps && customSteps.length > 0) {
-					// Carry over the failure screenshot to the first failed custom step
+				const executedSteps =
+					customSteps && customSteps.length > 0 ? customSteps : report.steps;
+
+				if (recordedSteps.length > 0 || executedSteps.length > 0) {
+					const aligned = alignStepsToRecorded(
+						recordedSteps,
+						executedSteps,
+						mode,
+					);
+					// Carry the failure screenshot to the first failed step.
 					if (preservedScreenshot !== undefined) {
-						const firstFailedCustomStep = customSteps.find(
-							(s) => s.status === "failed",
-						);
-						if (firstFailedCustomStep !== undefined) {
-							firstFailedCustomStep.screenshotPath = preservedScreenshot;
-						}
+						const firstFailed = aligned.find((s) => s.status === "failed");
+						if (firstFailed !== undefined)
+							firstFailed.screenshotPath = preservedScreenshot;
 					}
-					report.steps = customSteps;
+					report.steps = aligned;
 				}
 
 				if (state.cancelled) report.status = "cancelled";

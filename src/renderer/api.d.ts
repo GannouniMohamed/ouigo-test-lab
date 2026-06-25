@@ -2,6 +2,7 @@ import type {
 	Environment,
 	Platform,
 	Project,
+	RecordedStep,
 	Report,
 	ReportSummary,
 	RunEvent,
@@ -54,7 +55,19 @@ interface OtlApi {
 		tunnelId: string,
 		scenarioId: string,
 		envId: string,
+		opts?: { headed?: boolean; specDraft?: string },
 	): Promise<{ runId: string }>;
+	getScenarioSpec(
+		projectId: string,
+		tunnelId: string,
+		scenarioId: string,
+	): Promise<string>;
+	saveScenarioSpec(
+		projectId: string,
+		tunnelId: string,
+		scenarioId: string,
+		spec: string,
+	): Promise<RecordedStep[]>;
 	cancelRun(runId: string): Promise<void>;
 	onRunEvent(runId: string, cb: (e: RunEvent) => void): () => void;
 

@@ -1,8 +1,14 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import type { Platform, Scenario, Tunnel } from "../../shared/types";
+import type {
+	Environment,
+	Platform,
+	Scenario,
+	Tunnel,
+} from "../../shared/types";
 import { EnvPicker } from "../components/EnvPicker";
 import { PlatformIcon } from "../components/PlatformIcon";
+import RunOptionsModal from "../components/RunOptionsModal";
 import { StatusBadge } from "../components/StatusBadge";
 import { formatGroupStats } from "../lib/groupStats";
 import { formatDuration, formatRelative } from "../lib/time";
@@ -54,6 +60,11 @@ export default function HubLibrary(): JSX.Element {
 	const [groupFilter, setGroupFilter] = useState<GroupFilter>("all");
 	const [query, setQuery] = useState("");
 	const [envId, setEnvId] = useState("");
+	const [runModal, setRunModal] = useState<{
+		scenario: Scenario;
+		environments: Environment[];
+		defaultEnvId: string;
+	} | null>(null);
 
 	const reload = useCallback(async (): Promise<void> => {
 		if (!activeProjectId) return;
@@ -80,16 +91,27 @@ export default function HubLibrary(): JSX.Element {
 		reload();
 	}, [reload]);
 
-	async function handleLancer(scenario: Scenario): Promise<void> {
-		const env =
+	async function openRunOptions(scenario: Scenario): Promise<void> {
+		const envs = await window.api.listEnvironments(scenario.projectId);
+		const defaultEnvId =
 			activeEnvByProject[scenario.projectId] ||
 			envId ||
 			scenario.defaultEnvironmentId;
+		setRunModal({ scenario, environments: envs, defaultEnvId });
+	}
+
+	async function startRun(
+		scenario: Scenario,
+		chosenEnvId: string,
+		opts: { headed: boolean },
+	): Promise<void> {
+		setRunModal(null);
 		const { runId } = await window.api.runScenario(
 			scenario.projectId,
 			scenario.tunnelId,
 			scenario.id,
-			env,
+			chosenEnvId,
+			opts,
 		);
 		navigate(`/run/${runId}`);
 	}
@@ -261,9 +283,11 @@ export default function HubLibrary(): JSX.Element {
 											<div className="otl-card__meta">
 												{PLATFORM_LABELS[scenario.platform]} ·{" "}
 												{browserLabel(scenario.browser)}
-												{scenario.lastRun.stepCount != null
-													? ` · ${scenario.lastRun.stepCount} étapes`
-													: ""}
+												{scenario.recordedStepCount != null
+													? ` · ${scenario.recordedStepCount} étapes`
+													: scenario.lastRun.stepCount != null
+														? ` · ${scenario.lastRun.stepCount} étapes`
+														: ""}
 											</div>
 										</div>
 										<div className="otl-card__right">
@@ -289,7 +313,7 @@ export default function HubLibrary(): JSX.Element {
 													<button
 														type="button"
 														className="otl-btn-launch"
-														onClick={() => handleLancer(scenario)}
+														onClick={() => openRunOptions(scenario)}
 													>
 														Lancer
 													</button>
@@ -303,6 +327,18 @@ export default function HubLibrary(): JSX.Element {
 					</section>
 				));
 			})()}
+
+			{runModal && (
+				<RunOptionsModal
+					scenarioName={runModal.scenario.name}
+					environments={runModal.environments}
+					defaultEnvId={runModal.defaultEnvId}
+					onCancel={() => setRunModal(null)}
+					onConfirm={(chosenEnvId, opts) =>
+						startRun(runModal.scenario, chosenEnvId, opts)
+					}
+				/>
+			)}
 		</div>
 	);
 }

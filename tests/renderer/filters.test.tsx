@@ -156,8 +156,14 @@ describe("HubLibrary filtres/recherche/env", () => {
 		await userEvent.click(
 			screen.getAllByRole("button", { name: /lancer/i })[0],
 		);
+		// Confirm the run-options dialog; the chosen env carries through.
+		await userEvent.click(
+			await screen.findByRole("button", { name: "Démarrer" }),
+		);
 		expect(
 			window.api.runScenario as unknown as ReturnType<typeof vi.fn>,
-		).toHaveBeenCalledWith("default", "general", "login", "recette");
+		).toHaveBeenCalledWith("default", "general", "login", "recette", {
+			headed: true,
+		});
 	});
 });

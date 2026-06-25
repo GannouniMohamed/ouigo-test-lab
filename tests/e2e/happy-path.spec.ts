@@ -14,6 +14,7 @@ test("happy path: lancer le scénario seed et voir Réussi", async () => {
 			OTL_WORKSPACE: workspace,
 			OTL_FIXTURES: join(REPO, "fixtures"),
 			OTL_RUNNER_CONFIG: join(REPO, "playwright.runner.config.ts"),
+			OTL_FORCE_HEADLESS: "1",
 		},
 	});
 	try {
@@ -30,6 +31,8 @@ test("happy path: lancer le scénario seed et voir Réussi", async () => {
 			.getByTestId("scenario-card-passing")
 			.getByRole("button", { name: /lancer/i })
 			.click();
+		// The run-options dialog appears; confirm with "Démarrer".
+		await win.getByRole("button", { name: "Démarrer" }).click();
 		// The run executes Playwright headless against the file:// site, then routes to the report
 		await expect(win.getByText("Réussi")).toBeVisible({ timeout: 120000 });
 	} finally {
