@@ -60,27 +60,6 @@ function CrossIcon(): JSX.Element {
 	);
 }
 
-function ClockIcon(): JSX.Element {
-	return (
-		<svg
-			width="14"
-			height="14"
-			viewBox="0 0 14 14"
-			fill="none"
-			aria-hidden="true"
-		>
-			<circle cx="7" cy="7" r="5.5" stroke="currentColor" strokeWidth="1.3" />
-			<path
-				d="M7 4.5V7l1.5 1.5"
-				stroke="currentColor"
-				strokeWidth="1.3"
-				strokeLinecap="round"
-				strokeLinejoin="round"
-			/>
-		</svg>
-	);
-}
-
 function SpinRing(): JSX.Element {
 	return (
 		<span className="otl-step__spin" aria-label="running">
@@ -112,10 +91,11 @@ function SpinRing(): JSX.Element {
 function formatElapsed(secs: number): string {
 	const m = Math.floor(secs / 60);
 	const s = secs % 60;
-	if (m > 0) {
-		return `${m}m ${s.toString().padStart(2, "0")}s`;
-	}
-	return `${s}s`;
+	return `${m.toString().padStart(2, "0")}:${s.toString().padStart(2, "0")}`;
+}
+
+function formatDuration(ms: number): string {
+	return `${(ms / 1000).toFixed(1)}s`;
 }
 
 export default function LiveRun(): JSX.Element {
@@ -210,15 +190,23 @@ export default function LiveRun(): JSX.Element {
 		};
 	}, [runId, navigate]);
 
+	// X = steps started-or-finished, Y = total steps known.
+	const startedOrDone = state.steps.length;
+	const totalSteps = state.steps.length;
 	const doneSteps = state.steps.filter(
 		(s) => s.status === "passed" || s.status === "failed",
 	).length;
-	const totalSteps = state.steps.length;
 	const progress =
 		totalSteps > 0 ? Math.round((doneSteps / totalSteps) * 100) : 0;
 
-	// Build a list of all steps (pending ones are inferred as steps not yet started)
-	// For the pending display, we only show steps that have been received
+	const runningStep = state.steps.find((s) => s.status === "running");
+	// Current step title: the running step, else the last known step.
+	const currentTitle = runningStep?.title ?? state.steps.at(-1)?.title ?? "";
+
+	const title = auto
+		? "Première exécution — validation automatique"
+		: "Exécution en cours";
+
 	const stepsToShow = state.steps;
 
 	return (
@@ -226,26 +214,25 @@ export default function LiveRun(): JSX.Element {
 			{/* Header row */}
 			<div className="live-run__header">
 				<div className="live-run__header-left">
-					<span className="otl-run-status">
-						<span className="otl-run-status__dot" />
-						En cours
-					</span>
-					{auto && <span className="live-run__auto-badge">AUTO</span>}
-					<h1 className="live-run__title">Exécution en cours</h1>
+					{auto && <span className="otl-auto-pill">AUTO</span>}
+					<div className="live-run__heading">
+						<h1 className="live-run__title">{title}</h1>
+						{auto && (
+							<p className="live-run__subtitle">
+								Le scénario est lancé une fois pour vérifier qu'il fonctionne.
+								Aucune action requise — vous pouvez observer le déroulé en
+								direct.
+							</p>
+						)}
+					</div>
 				</div>
 				<div className="live-run__header-right">
-					<span className="live-run__timer">
-						<ClockIcon />
-						<span
-							style={{
-								fontFamily: "var(--otl-mono)",
-								fontSize: "13px",
-								color: "var(--otl-text-2)",
-							}}
-						>
+					<div className="live-run__elapsed">
+						<span className="otl-label">Temps écoulé</span>
+						<span className="live-run__elapsed-value">
 							{formatElapsed(elapsed)}
 						</span>
-					</span>
+					</div>
 					<button
 						type="button"
 						className="otl-btn-stop"
@@ -255,76 +242,89 @@ export default function LiveRun(): JSX.Element {
 							}
 						}}
 					>
-						Stop
+						<span aria-hidden="true">■</span> Arrêter
 					</button>
 				</div>
 			</div>
 
-			{auto && (
-				<div className="live-run__auto-banner">
-					<div className="live-run__auto-banner-title">
-						Première exécution — validation automatique
-					</div>
-					<div className="live-run__auto-banner-text">
-						Le scénario que vous venez d'enregistrer est lancé une fois pour
-						vérifier qu'il fonctionne. Aucune action requise.
-					</div>
+			{/* Progress block */}
+			<div className="live-run__progress-block">
+				<div className="live-run__progress-line">
+					<span>
+						Étape <strong>{startedOrDone}</strong> sur {totalSteps}
+						{currentTitle && ` · ${currentTitle}`}
+					</span>
+					<span className="live-run__progress-pct">{progress} %</span>
 				</div>
-			)}
-
-			{/* Progress bar */}
-			<div className="otl-progress">
-				<div className="otl-progress__fill" style={{ width: `${progress}%` }} />
+				<div className="otl-progress">
+					<div
+						className="otl-progress__fill"
+						style={{ width: `${progress}%` }}
+					/>
+				</div>
 			</div>
 
 			{/* Main content: preview + step list */}
 			<div className="live-run__body">
 				{/* Left preview panel */}
-				<div className="otl-preview">
-					<div className="otl-preview__chrome">
-						<span className="otl-preview__dot" />
-						<span className="otl-preview__dot" />
-						<span className="otl-preview__dot" />
-					</div>
-					<div className="otl-preview__inner">
-						<span className="otl-preview__spinner" aria-hidden="true" />
+				<div className="live-run__col">
+					<span className="otl-label">Aperçu live</span>
+					<div className="otl-preview">
+						<div className="otl-preview__inner">
+							<span className="otl-preview__ring" aria-hidden="true" />
+							<span className="otl-preview__caption">APERÇU LIVE</span>
+							<span className="otl-preview__subcaption">
+								Aperçu du navigateur
+							</span>
+						</div>
+						<span className="otl-preview__live">
+							<span className="otl-preview__live-dot" />
+							Capture en direct
+						</span>
 					</div>
 				</div>
 
 				{/* Right step list */}
-				<div className="otl-steps">
-					{stepsToShow.map((step) => {
-						const modClass =
-							step.status === "running"
-								? "otl-step--running"
-								: step.status === "passed"
-									? "otl-step--done"
-									: step.status === "skipped"
-										? "otl-step--skipped"
-										: "otl-step--done otl-step--failed";
-						return (
-							<div key={step.index} className={`otl-step ${modClass}`}>
-								<span className="otl-step__icon">
-									{step.status === "running" && <SpinRing />}
-									{step.status === "passed" && <CheckIcon />}
-									{step.status === "failed" && <CrossIcon />}
-									{step.status === "skipped" && <span aria-hidden>○</span>}
-								</span>
-								<span className="otl-step__title">{step.title}</span>
-								{step.status === "skipped" && (
-									<span className="otl-step__skipped-label">non atteint</span>
-								)}
-								{step.durationMs !== undefined && (
-									<span className="otl-step__duration">
-										{step.durationMs}ms
+				<div className="live-run__col live-run__col--steps">
+					<span className="otl-label">Étapes du parcours</span>
+					<div className="otl-steps">
+						{stepsToShow.map((step) => {
+							const modClass =
+								step.status === "running"
+									? "otl-step--running"
+									: step.status === "passed"
+										? "otl-step--done"
+										: step.status === "skipped"
+											? "otl-step--skipped"
+											: "otl-step--done otl-step--failed";
+							return (
+								<div key={step.index} className={`otl-step ${modClass}`}>
+									<span className="otl-step__icon">
+										{step.status === "running" && <SpinRing />}
+										{step.status === "passed" && <CheckIcon />}
+										{step.status === "failed" && <CrossIcon />}
+										{step.status === "skipped" && <span aria-hidden>○</span>}
 									</span>
-								)}
-								{step.error && (
-									<span className="otl-step__error"> — {step.error}</span>
-								)}
-							</div>
-						);
-					})}
+									<span className="otl-step__title">{step.title}</span>
+									{step.status === "running" && (
+										<span className="otl-step__running-label">en cours…</span>
+									)}
+									{step.status === "skipped" && (
+										<span className="otl-step__skipped-label">non atteint</span>
+									)}
+									{(step.status === "passed" || step.status === "failed") &&
+										step.durationMs !== undefined && (
+											<span className="otl-step__duration">
+												{formatDuration(step.durationMs)}
+											</span>
+										)}
+									{step.error && (
+										<span className="otl-step__error"> — {step.error}</span>
+									)}
+								</div>
+							);
+						})}
+					</div>
 				</div>
 			</div>
 

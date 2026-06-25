@@ -69,4 +69,39 @@ describe("LiveRun", () => {
 		renderAt(undefined);
 		expect(screen.queryByText("AUTO")).not.toBeInTheDocument();
 	});
+
+	it("rend les durées en secondes mono, l'étape en cours et la barre Étape X sur Y", async () => {
+		renderAt({ auto: true });
+		emit({ type: "run-started", runId: "run-1" });
+		emit({ type: "step-started", index: 0, title: "Ouvrir la page" });
+		emit({ type: "step-passed", index: 0, durationMs: 2100 });
+		emit({ type: "step-started", index: 1, title: "Saisir l'identifiant" });
+		emit({ type: "step-passed", index: 1, durationMs: 800 });
+		emit({ type: "step-started", index: 2, title: "Cliquer sur Valider" });
+
+		// passed step shows mono seconds with 1 decimal (NOT "2100ms")
+		expect(await screen.findByText("2.1s")).toBeInTheDocument();
+		expect(screen.queryByText("2100ms")).not.toBeInTheDocument();
+		expect(screen.getByText("0.8s")).toBeInTheDocument();
+
+		// running step renders "en cours…"
+		expect(screen.getByText(/en cours…/i)).toBeInTheDocument();
+
+		// progress line "Étape X sur Y" — 3 started, 3 total
+		const progress = screen.getByText(
+			(_content, el) =>
+				el?.textContent === "Étape 3 sur 3 · Cliquer sur Valider",
+		);
+		expect(progress).toBeInTheDocument();
+	});
+
+	it("le bouton est libellé Arrêter et appelle cancelRun", async () => {
+		const { default: userEvent } = await import("@testing-library/user-event");
+		const user = userEvent.setup();
+		renderAt({ auto: true });
+		emit({ type: "run-started", runId: "run-1" });
+		const stop = screen.getByRole("button", { name: /Arrêter/ });
+		await user.click(stop);
+		expect(window.api.cancelRun).toHaveBeenCalledWith("run-1");
+	});
 });
