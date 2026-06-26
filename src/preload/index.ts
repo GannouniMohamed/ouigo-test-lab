@@ -187,6 +187,7 @@ contextBridge.exposeInMainWorld("api", {
 		projectId: string;
 		tunnelId: string;
 		platform?: Platform;
+		deviceId?: string;
 	}) {
 		return ipcRenderer.invoke("recording:start", opts);
 	},

@@ -99,6 +99,7 @@ interface OtlApi {
 		projectId: string;
 		tunnelId: string;
 		platform?: Platform;
+		deviceId?: string;
 	}): Promise<{ recordingId: string }>;
 	stopRecording(recordingId: string): Promise<Scenario>;
 }
