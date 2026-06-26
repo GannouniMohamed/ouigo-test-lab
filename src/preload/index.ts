@@ -29,6 +29,16 @@ contextBridge.exposeInMainWorld("api", {
 		return ipcRenderer.invoke("browsers:install");
 	},
 
+	mobileDoctor() {
+		return ipcRenderer.invoke("mobile:doctor");
+	},
+	listDevices() {
+		return ipcRenderer.invoke("mobile:listDevices");
+	},
+	startDevice() {
+		return ipcRenderer.invoke("mobile:startDevice");
+	},
+
 	listProjects() {
 		return ipcRenderer.invoke("project:list");
 	},
