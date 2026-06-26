@@ -1,5 +1,5 @@
 import type { MobileDevice } from "../../shared/types";
-import { maestroBin, type ToolRunner, runTool, toolBin } from "./exec";
+import { type ToolRunner, maestroBin, runTool, toolBin } from "./exec";
 
 // États possibles de la 2e colonne de `adb devices`. Sert à distinguer une
 // vraie ligne d'appareil du bruit de démarrage du daemon (`* daemon ...`) ou de

@@ -1,7 +1,7 @@
 import { existsSync } from "node:fs";
 import type { DoctorCheck, MobileDoctorReport } from "../../shared/types";
 import { listDevices } from "./devices";
-import { maestroBin, type ToolRunner, runTool, toolBin } from "./exec";
+import { type ToolRunner, maestroBin, runTool, toolBin } from "./exec";
 
 const MIN_JAVA = 17;
 

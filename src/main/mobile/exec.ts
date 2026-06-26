@@ -73,7 +73,9 @@ export function toolBin(name: "java" | "maestro" | "adb"): string {
 // Résout le binaire maestro. Le script d'install le pose dans ~/.maestro/bin,
 // hors du PATH du process Electron — on le retrouve donc explicitement pour que
 // la re-vérification passe juste après une install, sans relancer l'app.
-export function maestroBin(exists: (p: string) => boolean = existsSync): string {
+export function maestroBin(
+	exists: (p: string) => boolean = existsSync,
+): string {
 	const override = process.env.OTL_MAESTRO_BIN;
 	if (override) return override;
 	const local = join(homedir(), ".maestro", "bin", "maestro");

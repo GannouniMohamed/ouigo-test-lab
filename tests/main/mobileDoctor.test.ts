@@ -21,7 +21,8 @@ describe("parseJavaMajor", () => {
 // (~/.maestro/bin/maestro) retrouve l'entrée « maestro ».
 function router(map: Record<string, ExecResult>) {
 	return async (bin: string): Promise<ExecResult> =>
-		map[bin] ?? map[basename(bin)] ?? { code: -1, stdout: "", stderr: "not found" };
+		map[bin] ??
+		map[basename(bin)] ?? { code: -1, stdout: "", stderr: "not found" };
 }
 
 describe("mobileDoctor", () => {
@@ -97,7 +98,8 @@ describe("mobileDoctor", () => {
 		const calls: string[] = [];
 		const run = async (bin: string): Promise<ExecResult> => {
 			calls.push(bin);
-			if (bin === localMaestro) return { code: 0, stdout: "1.39.0", stderr: "" };
+			if (bin === localMaestro)
+				return { code: 0, stdout: "1.39.0", stderr: "" };
 			if (bin === "java")
 				return { code: 0, stdout: "", stderr: 'openjdk version "17.0.8"' };
 			if (bin === "adb")
