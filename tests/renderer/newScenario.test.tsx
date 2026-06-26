@@ -215,6 +215,59 @@ describe("NewScenario", () => {
 		expect(screen.getByText(/hérité du projet/i)).toBeInTheDocument();
 		expect(screen.getByText("Local")).toBeInTheDocument();
 	});
+
+	it("startRecording échoue → message d'erreur affiché, bouton réutilisable", async () => {
+		// biome-ignore lint/suspicious/noExplicitAny: test stub
+		(globalThis as any).window.api.startRecording = vi
+			.fn()
+			.mockRejectedValue(new Error("Maestro Studio introuvable"));
+		render(
+			<MemoryRouter>
+				<NewScenario />
+			</MemoryRouter>,
+		);
+		await userEvent.type(
+			screen.getByPlaceholderText("Nom du scénario"),
+			"Parcours",
+		);
+		await userEvent.click(
+			screen.getByRole("button", { name: /démarrer l'enregistrement/i }),
+		);
+		await waitFor(() =>
+			expect(
+				screen.getByText(/maestro studio introuvable/i),
+			).toBeInTheDocument(),
+		);
+		// pas bloqué sur « Démarrage… » : le bouton revient
+		expect(
+			screen.getByRole("button", { name: /démarrer l'enregistrement/i }),
+		).toBeInTheDocument();
+	});
+
+	it("stopRecording échoue → message affiché, pas de navigation", async () => {
+		// biome-ignore lint/suspicious/noExplicitAny: test stub
+		(globalThis as any).window.api.stopRecording = vi
+			.fn()
+			.mockRejectedValue(new Error("Aucun flow détecté"));
+		render(
+			<MemoryRouter>
+				<NewScenario />
+			</MemoryRouter>,
+		);
+		await userEvent.type(
+			screen.getByPlaceholderText("Nom du scénario"),
+			"Parcours",
+		);
+		await userEvent.click(
+			screen.getByRole("button", { name: /démarrer l'enregistrement/i }),
+		);
+		await waitFor(() => expect(window.api.startRecording).toHaveBeenCalled());
+		await userEvent.click(screen.getByRole("button", { name: /arrêter/i }));
+		await waitFor(() =>
+			expect(screen.getByText(/aucun flow détecté/i)).toBeInTheDocument(),
+		);
+		expect(navigateMock).not.toHaveBeenCalled();
+	});
 });
 
 describe("NewScenario — mobile", () => {

@@ -29,6 +29,9 @@ export default function NewScenario(): JSX.Element {
 	const [appInstalling, setAppInstalling] = useState(false);
 	const [appInstallMsg, setAppInstallMsg] = useState("");
 	const [appInstallOk, setAppInstallOk] = useState(false);
+	const [starting, setStarting] = useState(false);
+	const [stopping, setStopping] = useState(false);
+	const [recError, setRecError] = useState("");
 
 	// Env is inherited from the active project — no per-scenario selection.
 	// Resolve it exactly like the context bar: the actively-selected env, else the
@@ -124,22 +127,41 @@ export default function NewScenario(): JSX.Element {
 	}
 
 	async function handleStart() {
-		const { recordingId: id } = await window.api.startRecording({
-			name,
-			browser: "chromium",
-			environmentId: inheritedEnvId || "local",
-			projectId: activeProjectId,
-			tunnelId: tunnelId || "general",
-			platform,
-			...(isMobile ? { deviceId } : {}),
-		});
-		setRecordingId(id);
+		// Le démarrage peut être lent (mobile : pull Firebase + lancement Studio)
+		// et échouer côté main (app absente, appareil injoignable, Studio…).
+		// Sans ce try/catch, l'erreur était avalée → « rien ne se passe ».
+		setStarting(true);
+		setRecError("");
+		try {
+			const { recordingId: id } = await window.api.startRecording({
+				name,
+				browser: "chromium",
+				environmentId: inheritedEnvId || "local",
+				projectId: activeProjectId,
+				tunnelId: tunnelId || "general",
+				platform,
+				...(isMobile ? { deviceId } : {}),
+			});
+			setRecordingId(id);
+		} catch (err) {
+			setRecError(
+				err instanceof Error
+					? err.message
+					: "Impossible de démarrer l'enregistrement.",
+			);
+		} finally {
+			setStarting(false);
+		}
 	}
 
 	async function handleStop() {
 		if (!recordingId) return;
+		setStopping(true);
+		setRecError("");
 		try {
 			const scenario = await window.api.stopRecording(recordingId);
+			// Enregistrement consommé : on libère pour éviter un double-stop.
+			setRecordingId(null);
 			const env =
 				activeEnvByProject[scenario.projectId] ||
 				scenario.defaultEnvironmentId ||
@@ -163,9 +185,18 @@ export default function NewScenario(): JSX.Element {
 							env,
 						);
 			navigate(`/run/${runId}`, { state: { auto: true, steps } });
-		} catch {
+		} catch (err) {
+			// On reste sur le formulaire avec un message clair plutôt que de
+			// rediriger en silence. « Aucun flow détecté » est le cas le plus
+			// courant (rien enregistré) — l'utilisateur peut réessayer.
 			setFirstRunScenarioId(null);
-			navigate("/scenarios");
+			setRecError(
+				err instanceof Error
+					? err.message
+					: "Impossible d'arrêter l'enregistrement.",
+			);
+		} finally {
+			setStopping(false);
 		}
 	}
 
@@ -465,8 +496,9 @@ export default function NewScenario(): JSX.Element {
 						<div>
 							<div className="otl-method__title">Enregistrer en naviguant</div>
 							<div className="otl-method__desc">
-								Naviguez dans le navigateur, les actions sont capturées
-								automatiquement.
+								{isMobile
+									? "Maestro Studio s'ouvre : enregistre ton parcours sur l'appareil, puis reviens cliquer « Arrêter »."
+									: "Naviguez dans le navigateur, les actions sont capturées automatiquement."}
 							</div>
 						</div>
 					</div>
@@ -475,26 +507,31 @@ export default function NewScenario(): JSX.Element {
 						<button
 							type="button"
 							className="otl-btn-primary otl-method__btn"
-							disabled={!name.trim() || !mobileReady}
+							disabled={!name.trim() || !mobileReady || starting}
 							onClick={handleStart}
 						>
-							Démarrer l'enregistrement
+							{starting ? "Démarrage…" : "Démarrer l'enregistrement"}
 						</button>
 					) : (
 						<div className="otl-method__recording">
 							<div className="otl-recording-indicator">
 								<span className="otl-recording-indicator__dot" />
-								Enregistrement en cours…
+								{isMobile
+									? "Enregistrement dans Maestro Studio…"
+									: "Enregistrement en cours…"}
 							</div>
 							<button
 								type="button"
 								className="otl-btn-stop otl-method__btn"
+								disabled={stopping}
 								onClick={handleStop}
 							>
-								Arrêter l'enregistrement
+								{stopping ? "Arrêt…" : "Arrêter l'enregistrement"}
 							</button>
 						</div>
 					)}
+
+					{recError && <p className="otl-method__error">{recError}</p>}
 				</div>
 
 				{/* AI method block — disabled, V3 */}
