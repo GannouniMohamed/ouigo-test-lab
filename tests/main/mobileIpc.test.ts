@@ -9,17 +9,20 @@ import {
 // Pas de vrai appareil/binaire en CI : adb/maestro/java sont absents, donc les
 // handlers doivent renvoyer des résultats dégradés cohérents sans lever.
 describe("mobileHandlers", () => {
+	// Ces deux tests lancent les vrais spawns d'outils (absents en CI). Sous
+	// Windows, chaque échec passe par cmd.exe et le cumul peut dépasser le délai
+	// par défaut (5s) sur un runner chargé → timeout généreux.
 	it("handleMobileDoctor renvoie un rapport (dégradé) sans lever", async () => {
 		const report = await handleMobileDoctor();
 		expect(report).toHaveProperty("allOk");
 		expect(report).toHaveProperty("java");
 		expect(typeof report.allOk).toBe("boolean");
-	});
+	}, 30000);
 
 	it("handleListDevices renvoie un tableau", async () => {
 		const devices = await handleListDevices();
 		expect(Array.isArray(devices)).toBe(true);
-	});
+	}, 30000);
 
 	it("handleStartDevice renvoie un objet { ok }", async () => {
 		// Force un binaire absent → échec rapide et déterministe, sans booter un
