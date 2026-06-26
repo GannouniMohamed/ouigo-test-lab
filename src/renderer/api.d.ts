@@ -28,6 +28,8 @@ interface OtlApi {
 	mobileDoctor(): Promise<MobileDoctorReport>;
 	listDevices(): Promise<MobileDevice[]>;
 	startDevice(): Promise<{ ok: boolean; error?: string }>;
+	installMaestro(): Promise<{ ok: boolean; error?: string }>;
+	openExternal(url: string): Promise<void>;
 
 	listProjects(): Promise<Project[]>;
 	getProject(id: string): Promise<Project>;

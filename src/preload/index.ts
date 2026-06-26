@@ -38,6 +38,12 @@ contextBridge.exposeInMainWorld("api", {
 	startDevice() {
 		return ipcRenderer.invoke("mobile:startDevice");
 	},
+	installMaestro() {
+		return ipcRenderer.invoke("mobile:installMaestro");
+	},
+	openExternal(url: string) {
+		return ipcRenderer.invoke("app:openExternal", url);
+	},
 
 	listProjects() {
 		return ipcRenderer.invoke("project:list");

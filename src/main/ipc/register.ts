@@ -1,4 +1,4 @@
-import { BrowserWindow, ipcMain } from "electron";
+import { BrowserWindow, ipcMain, shell } from "electron";
 import type {
 	BatchOptions,
 	Environment,
@@ -34,6 +34,7 @@ import {
 	handleUpdateTunnel,
 } from "./handlers";
 import {
+	handleInstallMaestro,
 	handleListDevices,
 	handleMobileDoctor,
 	handleStartDevice,
@@ -198,4 +199,8 @@ export function registerIpc(): void {
 	ipcMain.handle("mobile:doctor", () => handleMobileDoctor());
 	ipcMain.handle("mobile:listDevices", () => handleListDevices());
 	ipcMain.handle("mobile:startDevice", () => handleStartDevice());
+	ipcMain.handle("mobile:installMaestro", () => handleInstallMaestro());
+	ipcMain.handle("app:openExternal", (_e, url: string) =>
+		shell.openExternal(url),
+	);
 }
