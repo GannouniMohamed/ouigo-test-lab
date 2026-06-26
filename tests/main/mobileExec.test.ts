@@ -1,6 +1,8 @@
-import { resolve } from "node:path";
-import { describe, expect, it } from "vitest";
+import { homedir } from "node:os";
+import { join, resolve } from "node:path";
+import { afterEach, describe, expect, it } from "vitest";
 import {
+	maestroBin,
 	quoteArgForCmd,
 	quoteForCmd,
 	runTool,
@@ -67,5 +69,23 @@ describe("toolBin", () => {
 		process.env.OTL_MAESTRO_BIN = "/opt/maestro/bin/maestro";
 		expect(toolBin("maestro")).toBe("/opt/maestro/bin/maestro");
 		Reflect.deleteProperty(process.env, "OTL_MAESTRO_BIN");
+	});
+});
+
+describe("maestroBin", () => {
+	afterEach(() => Reflect.deleteProperty(process.env, "OTL_MAESTRO_BIN"));
+
+	it("préfère OTL_MAESTRO_BIN s'il est défini", () => {
+		process.env.OTL_MAESTRO_BIN = "/custom/maestro";
+		expect(maestroBin(() => true)).toBe("/custom/maestro");
+	});
+
+	it("retombe sur ~/.maestro/bin/maestro s'il existe", () => {
+		const expected = join(homedir(), ".maestro", "bin", "maestro");
+		expect(maestroBin((p) => p === expected)).toBe(expected);
+	});
+
+	it("retombe sur « maestro » (PATH) si rien d'autre", () => {
+		expect(maestroBin(() => false)).toBe("maestro");
 	});
 });

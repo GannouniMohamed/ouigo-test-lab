@@ -1,4 +1,7 @@
 import { spawn } from "node:child_process";
+import { existsSync } from "node:fs";
+import { homedir } from "node:os";
+import { join } from "node:path";
 
 export interface ExecResult {
 	code: number;
@@ -65,4 +68,15 @@ export const runTool: ToolRunner = (bin, args) =>
 // Résout le binaire d'un outil : override d'env OTL_<NAME>_BIN sinon le nom nu.
 export function toolBin(name: "java" | "maestro" | "adb"): string {
 	return process.env[`OTL_${name.toUpperCase()}_BIN`] || name;
+}
+
+// Résout le binaire maestro. Le script d'install le pose dans ~/.maestro/bin,
+// hors du PATH du process Electron — on le retrouve donc explicitement pour que
+// la re-vérification passe juste après une install, sans relancer l'app.
+export function maestroBin(exists: (p: string) => boolean = existsSync): string {
+	const override = process.env.OTL_MAESTRO_BIN;
+	if (override) return override;
+	const local = join(homedir(), ".maestro", "bin", "maestro");
+	if (exists(local)) return local;
+	return "maestro";
 }
