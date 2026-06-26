@@ -74,6 +74,35 @@ const icons = {
 			/>
 		</svg>
 	),
+	mobile: (
+		<svg
+			width="20"
+			height="20"
+			viewBox="0 0 24 24"
+			fill="none"
+			aria-hidden="true"
+		>
+			<rect
+				x="6"
+				y="2"
+				width="12"
+				height="20"
+				rx="2"
+				ry="2"
+				stroke="currentColor"
+				strokeWidth="1.6"
+			/>
+			<line
+				x1="11"
+				y1="18"
+				x2="13"
+				y2="18"
+				stroke="currentColor"
+				strokeWidth="1.6"
+				strokeLinecap="round"
+			/>
+		</svg>
+	),
 	ai: (
 		<svg
 			width="20"
@@ -116,6 +145,12 @@ const navItems: NavItem[] = [
 		icon: icons.reports,
 		to: "/reports",
 		match: (p) => p.startsWith("/reports") || p.startsWith("/report"),
+	},
+	{
+		label: "Mobile",
+		icon: icons.mobile,
+		to: "/mobile/doctor",
+		match: (p) => p.startsWith("/mobile"),
 	},
 ];
 

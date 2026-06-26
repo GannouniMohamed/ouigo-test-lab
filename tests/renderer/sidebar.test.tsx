@@ -4,7 +4,7 @@ import { describe, expect, it } from "vitest";
 import { Sidebar } from "../../src/renderer/components/Sidebar";
 
 describe("Sidebar", () => {
-	it("affiche les 5 items de navigation", () => {
+	it("affiche les items de navigation", () => {
 		render(
 			<MemoryRouter>
 				<Sidebar />
@@ -13,6 +13,7 @@ describe("Sidebar", () => {
 		expect(screen.getByText("Scénarios")).toBeInTheDocument();
 		expect(screen.getByText("Exéc.")).toBeInTheDocument();
 		expect(screen.getByText("Rapports")).toBeInTheDocument();
+		expect(screen.getByText("Mobile")).toBeInTheDocument();
 		expect(screen.getByText("IA")).toBeInTheDocument();
 		expect(screen.getByText("Projets")).toBeInTheDocument();
 	});

@@ -9,6 +9,7 @@ import EditGroupe from "./screens/EditGroupe";
 import History from "./screens/History";
 import HubLibrary from "./screens/HubLibrary";
 import LiveRun from "./screens/LiveRun";
+import MobileDoctor from "./screens/MobileDoctor";
 import NewGroupe from "./screens/NewGroupe";
 import NewProject from "./screens/NewProject";
 import NewScenario from "./screens/NewScenario";
@@ -45,6 +46,7 @@ function App(): JSX.Element {
 										path="/scenarios/groups/:tunnelId/edit"
 										element={<EditGroupe />}
 									/>
+									<Route path="/mobile/doctor" element={<MobileDoctor />} />
 									<Route path="/run/:runId" element={<LiveRun />} />
 									<Route path="/batch/:batchId" element={<BatchRun />} />
 									<Route path="/report/:runId" element={<Report />} />
