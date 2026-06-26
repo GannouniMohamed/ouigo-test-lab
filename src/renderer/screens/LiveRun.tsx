@@ -138,6 +138,7 @@ export default function LiveRun(): JSX.Element {
 	// Subscribe to run events
 	useEffect(() => {
 		if (!runId) return;
+		let cancelled = false;
 
 		const handle = (event: RunEvent) => {
 			if (event.type === "run-started") {
@@ -212,7 +213,27 @@ export default function LiveRun(): JSX.Element {
 		};
 
 		const unsub = window.api.onRunEvent(runId, handle);
+
+		// Terminal fallback for the guard-path / instant-finish race: a run can
+		// finish (emitting run-started + run-finished) before this screen
+		// subscribes, so those events are lost and the live view would hang.
+		// We subscribe FIRST, then probe the persisted report — saveReport always
+		// precedes the run-finished emit, so if the run already finished the report
+		// exists and we jump straight to it; otherwise getReport rejects (no report
+		// yet) and we keep relying on the streamed events.
+		window.api
+			.getReport?.(runId)
+			?.then((report) => {
+				if (cancelled || finishedRef.current || !report) return;
+				finishedRef.current = true;
+				navigate(`/report/${runId}`);
+			})
+			.catch(() => {
+				/* report not persisted yet — run still in progress */
+			});
+
 		return () => {
+			cancelled = true;
 			unsub();
 		};
 	}, [runId, navigate]);

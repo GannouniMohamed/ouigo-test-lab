@@ -172,4 +172,25 @@ describe("LiveRun", () => {
 		await user.click(stop);
 		expect(window.api.cancelRun).toHaveBeenCalledWith("run-1");
 	});
+
+	it("rapport déjà terminé au montage → navigue vers le rapport (repli course perdue)", async () => {
+		// biome-ignore lint/suspicious/noExplicitAny: test stub
+		(window.api as any).getReport = vi
+			.fn()
+			.mockResolvedValue({ runId: "run-1", status: "passed" });
+		renderAt();
+		await waitFor(() =>
+			expect(navigateMock).toHaveBeenCalledWith("/report/run-1"),
+		);
+	});
+
+	it("rapport absent (course en cours) → reste sur l'écran live", async () => {
+		// biome-ignore lint/suspicious/noExplicitAny: test stub
+		(window.api as any).getReport = vi
+			.fn()
+			.mockRejectedValue(new Error("Report not found"));
+		renderAt();
+		await new Promise((r) => setTimeout(r, 30));
+		expect(navigateMock).not.toHaveBeenCalled();
+	});
 });
