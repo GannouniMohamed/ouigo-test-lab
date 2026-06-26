@@ -1896,6 +1896,36 @@ body {
 	color: var(--otl-text-3);
 	cursor: pointer;
 }
+.otl-mobilebar {
+	display: flex;
+	flex-direction: column;
+	gap: 8px;
+	padding: 12px;
+	border-radius: 12px;
+	border: 1px solid rgba(255, 255, 255, 0.06);
+	background: rgba(15, 23, 42, 0.35);
+}
+.otl-mobilebar__row {
+	display: flex;
+	align-items: flex-end;
+	gap: 10px;
+	flex-wrap: wrap;
+}
+.otl-mobilebar__device {
+	flex: 1;
+	min-width: 220px;
+	display: flex;
+	flex-direction: column;
+	gap: 4px;
+}
+.otl-mobilebar__hint {
+	font-size: 12px;
+	color: var(--otl-text-3);
+	margin: 0;
+}
+.otl-mobilebar__hint--error {
+	color: var(--otl-danger);
+}
 .otl-doctor {
 	display: flex;
 	flex-direction: column;

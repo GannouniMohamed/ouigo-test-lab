@@ -1,6 +1,11 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import type { Environment, Platform, Tunnel } from "../../shared/types";
+import type {
+	Environment,
+	MobileDevice,
+	Platform,
+	Tunnel,
+} from "../../shared/types";
 import { Select } from "../components/Select";
 import { useAppStore } from "../store";
 
@@ -17,6 +22,10 @@ export default function NewScenario(): JSX.Element {
 	const [tunnels, setTunnels] = useState<Tunnel[]>([]);
 	const [tunnelId, setTunnelId] = useState("");
 	const [environments, setEnvironments] = useState<Environment[]>([]);
+	const [devices, setDevices] = useState<MobileDevice[]>([]);
+	const [deviceId, setDeviceId] = useState("");
+	const [booting, setBooting] = useState(false);
+	const [deviceError, setDeviceError] = useState("");
 
 	// Env is inherited from the active project — no per-scenario selection.
 	// Resolve it exactly like the context bar: the actively-selected env, else the
@@ -25,8 +34,13 @@ export default function NewScenario(): JSX.Element {
 	// e.g. "Préprod", instead of a non-existent "local").
 	const inheritedEnvId =
 		activeEnvByProject[activeProjectId] || environments[0]?.id || "";
-	const inheritedEnvLabel =
-		environments.find((e) => e.id === inheritedEnvId)?.label ?? "Local";
+	const inheritedEnv = environments.find((e) => e.id === inheritedEnvId);
+	const inheritedEnvLabel = inheritedEnv?.label ?? "Local";
+
+	// Pré-vol mobile : l'env doit porter une app ET un appareil doit être choisi.
+	const hasApp = !!inheritedEnv?.app?.appId;
+	const isMobile = platform === "mobile";
+	const mobileReady = !isMobile || (hasApp && !!deviceId);
 
 	useEffect(() => {
 		if (!activeProjectId) return;
@@ -40,6 +54,44 @@ export default function NewScenario(): JSX.Element {
 			.catch(() => setEnvironments([]));
 	}, [activeProjectId]);
 
+	// Charge la liste des appareils quand on bascule sur Mobile, et sélectionne
+	// par défaut le premier appareil démarré (sinon le premier disponible).
+	useEffect(() => {
+		if (!isMobile) return;
+		refreshDevices();
+	}, [isMobile]);
+
+	async function refreshDevices(): Promise<void> {
+		const list = await window.api.listDevices().catch(() => []);
+		setDevices(list);
+		setDeviceId((cur) => {
+			if (cur && list.some((d) => d.id === cur)) return cur;
+			const booted = list.find((d) => d.state === "booted");
+			return booted?.id ?? list[0]?.id ?? "";
+		});
+	}
+
+	// Démarre un émulateur. startDevice signale l'échec via {ok,error} (pas un
+	// rejet), mais on couvre aussi un rejet (binaire absent…). On bloque le
+	// bouton pendant le boot (long, 30-60s) pour éviter les démarrages multiples.
+	async function bootEmulator(): Promise<void> {
+		setBooting(true);
+		setDeviceError("");
+		try {
+			const res = await window.api.startDevice();
+			if (!res?.ok) {
+				setDeviceError(
+					res?.error ?? "Impossible de démarrer l'émulateur — voir Diagnostic.",
+				);
+			}
+		} catch {
+			setDeviceError("Impossible de démarrer l'émulateur — voir Diagnostic.");
+		} finally {
+			await refreshDevices();
+			setBooting(false);
+		}
+	}
+
 	async function handleStart() {
 		const { recordingId: id } = await window.api.startRecording({
 			name,
@@ -48,6 +100,7 @@ export default function NewScenario(): JSX.Element {
 			projectId: activeProjectId,
 			tunnelId: tunnelId || "general",
 			platform,
+			...(isMobile ? { deviceId } : {}),
 		});
 		setRecordingId(id);
 	}
@@ -63,12 +116,21 @@ export default function NewScenario(): JSX.Element {
 				"local";
 			setFirstRunScenarioId(scenario.id);
 			setCurrentScenarioName(scenario.name);
-			const { runId, steps } = await window.api.runScenario(
-				scenario.projectId,
-				scenario.tunnelId,
-				scenario.id,
-				env,
-			);
+			const { runId, steps } =
+				scenario.platform === "mobile"
+					? await window.api.runScenario(
+							scenario.projectId,
+							scenario.tunnelId,
+							scenario.id,
+							env,
+							{ deviceId },
+						)
+					: await window.api.runScenario(
+							scenario.projectId,
+							scenario.tunnelId,
+							scenario.id,
+							env,
+						);
 			navigate(`/run/${runId}`, { state: { auto: true, steps } });
 		} catch {
 			setFirstRunScenarioId(null);
@@ -189,11 +251,11 @@ export default function NewScenario(): JSX.Element {
 						</span>
 					</button>
 
-					{/* Mobile card — disabled */}
-					<div
-						className="otl-platform otl-platform--disabled"
-						aria-disabled="true"
-						title="Bientôt"
+					{/* Mobile card */}
+					<button
+						type="button"
+						className={`otl-platform${platform === "mobile" ? " otl-platform--selected" : ""}`}
+						onClick={() => setPlatform("mobile")}
 					>
 						<span className="otl-platform__icon">
 							{/* Phone SVG */}
@@ -217,10 +279,84 @@ export default function NewScenario(): JSX.Element {
 							<span className="otl-platform__sub">Maestro</span>
 						</span>
 						<span className="otl-platform__check">
-							<span className="otl-platform__soon-pill">bientôt</span>
+							{platform === "mobile" ? (
+								<svg
+									width="18"
+									height="18"
+									viewBox="0 0 24 24"
+									fill="var(--otl-cyan)"
+									aria-hidden="true"
+								>
+									<circle cx="12" cy="12" r="10" />
+									<path
+										d="M8 12l3 3 5-5"
+										stroke="#fff"
+										strokeWidth="2"
+										strokeLinecap="round"
+										strokeLinejoin="round"
+										fill="none"
+									/>
+								</svg>
+							) : (
+								<span className="otl-platform__hollow-circle" />
+							)}
 						</span>
-					</div>
+					</button>
 				</div>
+
+				{/* Mobile : sélecteur d'appareil + pré-vol */}
+				{isMobile && (
+					<div className="otl-mobilebar">
+						<div className="otl-mobilebar__row">
+							<div className="otl-mobilebar__device">
+								<div className="otl-field-label">Appareil</div>
+								<Select
+									ariaLabel="Appareil"
+									value={deviceId}
+									onChange={setDeviceId}
+									placeholder="Aucun appareil détecté"
+									options={devices.map((d) => ({
+										value: d.id,
+										label: `${d.name} · ${d.state === "booted" ? "démarré" : "hors ligne"}`,
+									}))}
+								/>
+							</div>
+							<button
+								type="button"
+								className="otl-tab"
+								disabled={booting}
+								onClick={bootEmulator}
+							>
+								{booting ? "Démarrage…" : "Démarrer un émulateur"}
+							</button>
+							<button
+								type="button"
+								className="otl-tab"
+								onClick={() => navigate("/mobile/doctor")}
+							>
+								Diagnostic
+							</button>
+						</div>
+						{deviceError && (
+							<p className="otl-mobilebar__hint otl-mobilebar__hint--error">
+								{deviceError}
+							</p>
+						)}
+						{!hasApp && (
+							<p className="otl-mobilebar__hint">
+								Configure une application mobile sur l'environnement{" "}
+								<strong>{inheritedEnvLabel}</strong> pour enregistrer un
+								parcours mobile.
+							</p>
+						)}
+						{hasApp && !deviceId && (
+							<p className="otl-mobilebar__hint">
+								Sélectionne un appareil (ou démarre un émulateur) pour
+								continuer.
+							</p>
+						)}
+					</div>
+				)}
 
 				{/* Tunnel */}
 				<div>
@@ -287,7 +423,7 @@ export default function NewScenario(): JSX.Element {
 						<button
 							type="button"
 							className="otl-btn-primary otl-method__btn"
-							disabled={!name.trim()}
+							disabled={!name.trim() || !mobileReady}
 							onClick={handleStart}
 						>
 							Démarrer l'enregistrement
