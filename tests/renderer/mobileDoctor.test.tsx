@@ -2,7 +2,9 @@ import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter } from "react-router-dom";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import MobileDoctor from "../../src/renderer/screens/MobileDoctor";
+import MobileDoctor, {
+	studioDownloadUrl,
+} from "../../src/renderer/screens/MobileDoctor";
 
 const ok = (label: string) => ({ ok: true, label, version: "x" });
 const bad = (label: string, hint: string) => ({ ok: false, label, hint });
@@ -20,6 +22,7 @@ beforeEach(() => {
 	openExternal.mockReset();
 	// biome-ignore lint/suspicious/noExplicitAny: test stub
 	(globalThis as any).window.api = {
+		platform: "darwin",
 		mobileDoctor,
 		startDevice,
 		installMaestro,
@@ -151,7 +154,7 @@ describe("MobileDoctor", () => {
 		);
 	});
 
-	it("Maestro Studio en échec → Ouvrir la page appelle openExternal", async () => {
+	it("Maestro Studio en échec → Télécharger ouvre le .dmg (macOS)", async () => {
 		mobileDoctor.mockResolvedValue({
 			allOk: false,
 			java: ok("Java 17+"),
@@ -162,11 +165,23 @@ describe("MobileDoctor", () => {
 		});
 		renderDoctor();
 		await screen.findByText("Maestro Studio");
-		await userEvent.click(
-			screen.getByRole("button", { name: /ouvrir la page/i }),
-		);
+		await userEvent.click(screen.getByRole("button", { name: /télécharger/i }));
 		expect(openExternal).toHaveBeenCalledWith(
-			"https://docs.maestro.dev/get-started/quickstart",
+			"https://studio.maestro.dev/MaestroStudio.dmg",
+		);
+	});
+});
+
+describe("studioDownloadUrl", () => {
+	it("mappe l'OS vers le bon artefact", () => {
+		expect(studioDownloadUrl("darwin")).toBe(
+			"https://studio.maestro.dev/MaestroStudio.dmg",
+		);
+		expect(studioDownloadUrl("win32")).toBe(
+			"https://studio.maestro.dev/MaestroStudio.exe",
+		);
+		expect(studioDownloadUrl("linux")).toBe(
+			"https://studio.maestro.dev/MaestroStudio.AppImage",
 		);
 	});
 });

@@ -19,12 +19,18 @@ const CHECK_KEYS: Array<keyof Omit<MobileDoctorReport, "allOk">> = [
 
 // Pages d'installation ouvertes pour les prérequis non auto-installables.
 const LINKS: Record<string, string> = {
-	// Page docs avec les boutons de téléchargement Studio + instructions
-	// (studio.maestro.dev renvoie un listing S3 brut en XML — à éviter).
-	studio: "https://docs.maestro.dev/get-started/quickstart",
 	java: "https://adoptium.net/temurin/releases/?version=17",
 	adb: "https://developer.android.com/tools/releases/platform-tools",
 };
+
+// Téléchargement direct de Maestro Studio selon l'OS (le .dmg/.exe/.AppImage
+// du bucket studio.maestro.dev).
+export function studioDownloadUrl(platform: string): string {
+	const base = "https://studio.maestro.dev/";
+	if (platform === "darwin") return `${base}MaestroStudio.dmg`;
+	if (platform === "win32") return `${base}MaestroStudio.exe`;
+	return `${base}MaestroStudio.AppImage`;
+}
 
 function CheckRow({
 	check,
@@ -133,6 +139,18 @@ export default function MobileDoctor(): JSX.Element {
 					onClick={bootEmulator}
 				>
 					Démarrer un émulateur
+				</button>
+			);
+		if (key === "studio")
+			return (
+				<button
+					type="button"
+					className="otl-tab"
+					onClick={() =>
+						window.api.openExternal(studioDownloadUrl(window.api.platform))
+					}
+				>
+					Télécharger
 				</button>
 			);
 		if (LINKS[key])
