@@ -13,7 +13,7 @@ import type {
 	Scenario,
 } from "../../shared/types";
 import { ensureAppOnDevice } from "../mobile/ensureAppOnDevice";
-import { toolBin } from "../mobile/exec";
+import { quoteForCmd, toolBin } from "../mobile/exec";
 import { saveReport } from "../stores/reportStore";
 import { updateLastRun } from "../stores/scenarioStore";
 import { getWorkspaceDir } from "../workspace";
@@ -178,11 +178,13 @@ export const maestroRunner: TestRunner = {
 		// detached:!isWindows → l'enfant devient leader de groupe pour que le kill
 		// par groupe (process.kill(-pid)) de cancel() atteigne tout l'arbre Maestro
 		// (JVM/driver/adb). Sur Windows, taskkill /T couvre déjà l'arbre.
-		const child = spawn(bin, args, {
-			env: process.env,
-			detached: !isWindows,
-			shell: isWindows,
-		});
+		// Sous shell:true (Windows), citer bin + args pour gérer les chemins avec
+		// espaces (runDir/flow sous le profil utilisateur). Cf. exec.quoteForCmd.
+		const child = spawn(
+			isWindows ? quoteForCmd(bin) : bin,
+			isWindows ? args.map(quoteForCmd) : args,
+			{ env: process.env, detached: !isWindows, shell: isWindows },
+		);
 		const state: RunState = { child, cancelled: false };
 		activeRuns.set(runId, state);
 

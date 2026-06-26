@@ -12,6 +12,13 @@ export type ToolRunner = (bin: string, args: string[]) => Promise<ExecResult>;
 
 const isWindows = process.platform === "win32";
 
+// Sous shell:true (Windows), Node passe `bin args.join(" ")` à cmd.exe SANS
+// citer les arguments → un chemin avec espaces (ex. C:\Users\John Doe\...apk)
+// serait découpé. On cite chaque token (bin + args) pour cmd.exe.
+export function quoteForCmd(s: string): string {
+	return `"${s.replace(/"/g, '\\"')}"`;
+}
+
 // Implémentation réelle. Ne rejette JAMAIS : un binaire absent est un état
 // normal du doctor (code -1), pas une exception.
 export const runTool: ToolRunner = (bin, args) =>
@@ -26,11 +33,14 @@ export const runTool: ToolRunner = (bin, args) =>
 		};
 		try {
 			// Sur Windows on passe par cmd.exe (shell:true) pour résoudre les
-			// binaires sans extension via PATHEXT ; on cite donc le binaire pour
-			// gérer un chemin avec espaces (ex. C:\Program Files\...\adb.exe).
-			const child = spawn(isWindows ? `"${bin}"` : bin, args, {
-				shell: isWindows,
-			});
+			// binaires sans extension via PATHEXT ; on cite le binaire ET chaque
+			// argument pour gérer les chemins avec espaces (ex. APK sous un profil
+			// utilisateur « C:\Users\John Doe\... »).
+			const child = spawn(
+				isWindows ? quoteForCmd(bin) : bin,
+				isWindows ? args.map(quoteForCmd) : args,
+				{ shell: isWindows },
+			);
 			child.stdout?.on("data", (b: Buffer) => {
 				stdout += b.toString();
 			});

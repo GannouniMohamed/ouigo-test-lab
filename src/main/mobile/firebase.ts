@@ -1,4 +1,4 @@
-import { existsSync, mkdirSync } from "node:fs";
+import { existsSync, mkdirSync, renameSync, rmSync } from "node:fs";
 import { writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import type { FirebaseAppDistConfig } from "../../shared/types";
@@ -7,6 +7,10 @@ import { getWorkspaceDir } from "../workspace";
 export interface FirebaseRelease {
 	binaryDownloadUri: string;
 	buildVersion?: string;
+	displayVersion?: string;
+	// Identifiant de release stable et unique (projects/…/releases/<id>) — la
+	// meilleure clé de cache (le versionCode seul est réutilisé entre builds).
+	name?: string;
 }
 
 export interface FirebaseDeps {
@@ -24,6 +28,12 @@ export function firebaseCacheDir(): string {
 	const dir = join(getWorkspaceDir(), "apk-cache");
 	mkdirSync(dir, { recursive: true });
 	return dir;
+}
+
+// firebaseAppId contient des « : » (1:123:android:abc) et release.name des « / »
+// → illégaux dans un nom de fichier Windows. On nettoie en caractères sûrs.
+function sanitizeFilename(s: string): string {
+	return s.replace(/[^A-Za-z0-9._-]/g, "_");
 }
 
 // Auth réelle : clé de compte de service → jeton OAuth (scope cloud-platform).
@@ -85,10 +95,35 @@ export async function pullLatestApk(
 			"Le build Firebase est un .aab : uploade un .apk vers App Distribution (un AAB n'est pas directement installable).",
 		);
 
-	const version = release.buildVersion ?? "latest";
-	const dest = join(firebaseCacheDir(), `${cfg.firebaseAppId}-${version}.apk`);
-	if (existsSync(dest)) return dest;
+	// Clé de cache stable et unique par binaire distribué. Le versionCode
+	// (buildVersion) seul est réutilisé entre builds → on privilégie le `name`
+	// de release, sinon displayVersion+buildVersion. Sans id stable, on NE met
+	// PAS en cache (on retélécharge) pour ne jamais servir un binaire périmé.
+	const stableId =
+		release.name ||
+		(release.displayVersion && release.buildVersion
+			? `${release.displayVersion}-${release.buildVersion}`
+			: "");
+	const base = sanitizeFilename(
+		`${cfg.firebaseAppId}-${stableId || "current"}`,
+	);
+	const dest = join(firebaseCacheDir(), `${base}.apk`);
+	if (stableId && existsSync(dest)) return dest;
 
-	await download(release.binaryDownloadUri, dest);
+	// Téléchargement atomique : on écrit dans un .part puis on renomme. Un
+	// téléchargement interrompu ne laisse donc jamais un .apk tronqué « valide »
+	// dans le cache (cache empoisonné).
+	const tmp = `${dest}.part`;
+	try {
+		await download(release.binaryDownloadUri, tmp);
+		renameSync(tmp, dest);
+	} catch (err) {
+		try {
+			if (existsSync(tmp)) rmSync(tmp);
+		} catch {
+			/* nettoyage best-effort */
+		}
+		throw err;
+	}
 	return dest;
 }
