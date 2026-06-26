@@ -19,7 +19,9 @@ const CHECK_KEYS: Array<keyof Omit<MobileDoctorReport, "allOk">> = [
 
 // Pages d'installation ouvertes pour les prérequis non auto-installables.
 const LINKS: Record<string, string> = {
-	studio: "https://studio.maestro.dev",
+	// Page docs avec les boutons de téléchargement Studio + instructions
+	// (studio.maestro.dev renvoie un listing S3 brut en XML — à éviter).
+	studio: "https://docs.maestro.dev/get-started/quickstart",
 	java: "https://adoptium.net/temurin/releases/?version=17",
 	adb: "https://developer.android.com/tools/releases/platform-tools",
 };

@@ -1929,16 +1929,16 @@ body {
 .otl-doctor {
 	display: flex;
 	flex-direction: column;
-	gap: 4px;
-	padding: 12px;
-	max-width: 560px;
+	gap: 6px;
+	padding: 14px;
+	max-width: 660px;
 	margin-top: 1rem;
 }
 .otl-doctor__row {
 	display: flex;
-	align-items: flex-start;
+	align-items: center;
 	gap: 12px;
-	padding: 10px 12px;
+	padding: 12px 14px;
 	border-radius: 10px;
 }
 .otl-doctor__row.is-bad {
@@ -1946,8 +1946,11 @@ body {
 }
 .otl-doctor__icon {
 	font-size: 14px;
-	line-height: 1.5;
+	width: 18px;
+	text-align: center;
 	flex: 0 0 auto;
+	align-self: flex-start;
+	margin-top: 1px;
 }
 .otl-doctor__row.is-ok .otl-doctor__icon {
 	color: var(--otl-cyan);
@@ -1959,6 +1962,8 @@ body {
 	display: flex;
 	flex-direction: column;
 	gap: 3px;
+	flex: 1;
+	min-width: 0;
 }
 .otl-doctor__label {
 	font-size: 13px;
@@ -1971,14 +1976,17 @@ body {
 .otl-doctor__hint {
 	font-size: 12px;
 	color: var(--otl-text-3);
+	line-height: 1.45;
 }
 .otl-doctor__error {
 	color: var(--otl-danger);
 }
 .otl-doctor__action {
-	margin-left: auto;
-	align-self: center;
 	flex: 0 0 auto;
+	padding-left: 16px;
+}
+.otl-doctor__action .otl-tab {
+	white-space: nowrap;
 }
 .otl-envrow-wrap {
 	display: flex;

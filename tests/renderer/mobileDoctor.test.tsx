@@ -165,6 +165,8 @@ describe("MobileDoctor", () => {
 		await userEvent.click(
 			screen.getByRole("button", { name: /ouvrir la page/i }),
 		);
-		expect(openExternal).toHaveBeenCalledWith("https://studio.maestro.dev");
+		expect(openExternal).toHaveBeenCalledWith(
+			"https://docs.maestro.dev/get-started/quickstart",
+		);
 	});
 });

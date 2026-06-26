@@ -1,3 +1,4 @@
+import { basename } from "node:path";
 import { describe, expect, it } from "vitest";
 import { listDevices, startDevice } from "../../src/main/mobile/devices";
 import type { ExecResult } from "../../src/main/mobile/exec";
@@ -80,7 +81,9 @@ describe("startDevice", () => {
 			calledArgs = args;
 			return { code: 0, stdout: "Device started", stderr: "" };
 		});
-		expect(calledBin).toBe("maestro");
+		// basename : maestroBin() peut résoudre un chemin absolu (~/.maestro/bin)
+		// si le CLI est installé localement.
+		expect(basename(calledBin)).toBe("maestro");
 		expect(calledArgs).toEqual(["start-device", "--platform", "android"]);
 		expect(res.ok).toBe(true);
 	});
