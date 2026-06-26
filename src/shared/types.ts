@@ -61,6 +61,24 @@ export interface MobileDevice {
 	state: "booted" | "offline";
 }
 
+// Un point de contrôle du diagnostic prérequis mobile (affiché en Phase 6).
+export interface DoctorCheck {
+	ok: boolean;
+	label: string; // ex. "Java 17+"
+	version?: string; // version détectée si dispo
+	hint?: string; // conseil d'installation si !ok (français)
+}
+
+// Rapport complet du doctor mobile.
+export interface MobileDoctorReport {
+	allOk: boolean;
+	java: DoctorCheck;
+	maestro: DoctorCheck;
+	adb: DoctorCheck;
+	studio: DoctorCheck;
+	device: DoctorCheck; // au moins un appareil/émulateur joignable
+}
+
 export interface Project {
 	id: string;
 	name: string;
