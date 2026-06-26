@@ -18,6 +18,7 @@ import type {
 import { slugify } from "../recorder/slugify";
 import { makeBatchReport, orchestrateBatch } from "../runner/batchRunner";
 import { isBrowserInstalled } from "../runner/ensureBrowsers";
+import { maestroRunner } from "../runner/maestroRunner";
 import { playwrightRunner } from "../runner/playwrightRunner";
 import { getBatch, saveBatch } from "../stores/batchStore";
 import {
@@ -295,8 +296,10 @@ export async function handleRunScenario(
 	// renderer knows the runId and can subscribe, so it never reaches the live
 	// screen. Return the plan with the runId so the caller can seed LiveRun via
 	// navigation state; subsequent step events then stream in normally.
+	const runner =
+		scenario.platform === "mobile" ? maestroRunner : playwrightRunner;
 	const ready = new Promise<{ runId: string; steps?: string[] }>((resolve) => {
-		void playwrightRunner.run(
+		void runner.run(
 			scenario,
 			env,
 			(ev) => {

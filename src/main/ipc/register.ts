@@ -7,6 +7,7 @@ import type {
 	Tunnel,
 } from "../../shared/types";
 import { installBrowser } from "../runner/ensureBrowsers";
+import { maestroRunner } from "../runner/maestroRunner";
 import { playwrightRunner } from "../runner/playwrightRunner";
 import {
 	handleBrowsersReady,
@@ -167,9 +168,11 @@ export function registerIpc(): void {
 
 	ipcMain.handle("batch:get", (_e, batchId: string) => handleGetBatch(batchId));
 
-	ipcMain.handle("run:cancel", (_e, runId: string) =>
-		playwrightRunner.cancel(runId),
-	);
+	ipcMain.handle("run:cancel", async (_e, runId: string) => {
+		// runId inconnu = no-op sûr côté chaque runner → on cible les deux.
+		await playwrightRunner.cancel(runId);
+		await maestroRunner.cancel(runId);
+	});
 
 	ipcMain.handle(
 		"scenario:getSpec",
