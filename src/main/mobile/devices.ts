@@ -1,6 +1,22 @@
 import type { MobileDevice } from "../../shared/types";
 import { type ToolRunner, runTool, toolBin } from "./exec";
 
+// États possibles de la 2e colonne de `adb devices`. Sert à distinguer une
+// vraie ligne d'appareil du bruit de démarrage du daemon (`* daemon ...`) ou de
+// toute autre ligne hors format.
+const ADB_STATES = new Set([
+	"device",
+	"offline",
+	"unauthorized",
+	"authorizing",
+	"connecting",
+	"bootloader",
+	"recovery",
+	"sideload",
+	"host",
+	"no", // "no permissions; see ..."
+]);
+
 // Extrait la valeur d'un champ `clé:valeur` d'une ligne `adb devices -l`.
 function field(rest: string, key: string): string | undefined {
 	const m = new RegExp(`${key}:(\\S+)`).exec(rest);
@@ -18,9 +34,16 @@ export async function listDevices(
 	const devices: MobileDevice[] = [];
 	for (const line of stdout.split("\n")) {
 		const trimmed = line.trim();
-		if (!trimmed || trimmed.startsWith("List of devices")) continue;
+		// Ignore l'en-tête et le bruit de démarrage du daemon (`* daemon ...`).
+		if (
+			!trimmed ||
+			trimmed.startsWith("List of devices") ||
+			trimmed.startsWith("*")
+		)
+			continue;
 		const [id, status, ...rest] = trimmed.split(/\s+/);
-		if (!id || !status) continue;
+		// N'accepte qu'une vraie ligne d'appareil : 2e colonne = état adb connu.
+		if (!id || !status || !ADB_STATES.has(status)) continue;
 		const restStr = rest.join(" ");
 		const model = field(restStr, "model");
 		devices.push({

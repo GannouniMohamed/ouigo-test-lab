@@ -49,6 +49,26 @@ describe("listDevices", () => {
 		}));
 		expect(devices).toEqual([]);
 	});
+
+	it("ignore le bruit de démarrage du daemon adb (lignes '*')", async () => {
+		const out = `* daemon not running; starting now at tcp:5037
+* daemon started successfully
+List of devices attached
+emulator-5554          device model:Pixel_6
+`;
+		const devices = await listDevices(fakeRun(out));
+		expect(devices).toHaveLength(1);
+		expect(devices[0].id).toBe("emulator-5554");
+	});
+
+	it("mappe un appareil 'unauthorized' en offline (pas booted)", async () => {
+		const out = `List of devices attached
+ABCD1234               unauthorized
+`;
+		const devices = await listDevices(fakeRun(out));
+		expect(devices).toHaveLength(1);
+		expect(devices[0].state).toBe("offline");
+	});
 });
 
 describe("startDevice", () => {

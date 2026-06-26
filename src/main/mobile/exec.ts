@@ -25,7 +25,12 @@ export const runTool: ToolRunner = (bin, args) =>
 			resolve(r);
 		};
 		try {
-			const child = spawn(bin, args, { shell: isWindows });
+			// Sur Windows on passe par cmd.exe (shell:true) pour résoudre les
+			// binaires sans extension via PATHEXT ; on cite donc le binaire pour
+			// gérer un chemin avec espaces (ex. C:\Program Files\...\adb.exe).
+			const child = spawn(isWindows ? `"${bin}"` : bin, args, {
+				shell: isWindows,
+			});
 			child.stdout?.on("data", (b: Buffer) => {
 				stdout += b.toString();
 			});

@@ -58,6 +58,23 @@ describe("mobileDoctor", () => {
 		expect(report.allOk).toBe(false);
 	});
 
+	it("appareil présent mais offline → device.ok=false, allOk=false", async () => {
+		const report = await mobileDoctor({
+			run: router({
+				java: { code: 0, stdout: "", stderr: 'openjdk version "17.0.1"' },
+				maestro: { code: 0, stdout: "1.39.0", stderr: "" },
+				adb: {
+					code: 0,
+					stdout: "List of devices attached\nABCD1234 unauthorized\n",
+					stderr: "",
+				},
+			}),
+			exists: () => true,
+		});
+		expect(report.device.ok).toBe(false);
+		expect(report.allOk).toBe(false);
+	});
+
 	it("binaires absents → checks ko avec hints, device ko", async () => {
 		const report = await mobileDoctor({
 			run: router({}), // tout renvoie code -1
