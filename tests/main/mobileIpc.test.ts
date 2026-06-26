@@ -1,5 +1,6 @@
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it } from "vitest";
 import {
+	handleInstallMaestro,
 	handleListDevices,
 	handleMobileDoctor,
 	handleStartDevice,
@@ -25,4 +26,12 @@ describe("mobileHandlers", () => {
 		expect(res).toHaveProperty("ok");
 		expect(typeof res.ok).toBe("boolean");
 	});
+
+	it("handleInstallMaestro délègue à installMaestroCli (seam → succès)", async () => {
+		process.env.OTL_MAESTRO_INSTALL_CMD = "true"; // commande qui réussit
+		const res = await handleInstallMaestro();
+		expect(res.ok).toBe(true);
+	});
 });
+
+afterEach(() => Reflect.deleteProperty(process.env, "OTL_MAESTRO_INSTALL_CMD"));

@@ -1,3 +1,5 @@
+import { homedir } from "node:os";
+import { basename, join } from "node:path";
 import { describe, expect, it } from "vitest";
 import { mobileDoctor, parseJavaMajor } from "../../src/main/mobile/doctor";
 import type { ExecResult } from "../../src/main/mobile/exec";
@@ -14,10 +16,13 @@ describe("parseJavaMajor", () => {
 	});
 });
 
-// Routeur de stub : renvoie une sortie canned selon le binaire appelé.
+// Routeur de stub : renvoie une sortie canned selon le binaire appelé. On
+// matche aussi sur le basename pour que maestroBin() résolu en chemin absolu
+// (~/.maestro/bin/maestro) retrouve l'entrée « maestro ».
 function router(map: Record<string, ExecResult>) {
 	return async (bin: string): Promise<ExecResult> =>
-		map[bin] ?? { code: -1, stdout: "", stderr: "not found" };
+		map[bin] ??
+		map[basename(bin)] ?? { code: -1, stdout: "", stderr: "not found" };
 }
 
 describe("mobileDoctor", () => {
@@ -86,5 +91,31 @@ describe("mobileDoctor", () => {
 		expect(report.studio.ok).toBe(false);
 		expect(report.device.ok).toBe(false);
 		expect(report.allOk).toBe(false);
+	});
+
+	it("résout maestro depuis ~/.maestro/bin quand présent (post-install)", async () => {
+		const localMaestro = join(homedir(), ".maestro", "bin", "maestro");
+		const calls: string[] = [];
+		const run = async (bin: string): Promise<ExecResult> => {
+			calls.push(bin);
+			if (bin === localMaestro)
+				return { code: 0, stdout: "1.39.0", stderr: "" };
+			if (bin === "java")
+				return { code: 0, stdout: "", stderr: 'openjdk version "17.0.8"' };
+			if (bin === "adb")
+				return {
+					code: 0,
+					stdout: "List of devices attached\nemulator-5554 device\n",
+					stderr: "",
+				};
+			return { code: -1, stdout: "", stderr: "not found" };
+		};
+		// exists vrai UNIQUEMENT pour le binaire maestro local (pas Studio).
+		const report = await mobileDoctor({
+			run,
+			exists: (p) => p === localMaestro,
+		});
+		expect(calls).toContain(localMaestro);
+		expect(report.maestro.ok).toBe(true);
 	});
 });

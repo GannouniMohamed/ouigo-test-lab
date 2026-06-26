@@ -1,5 +1,5 @@
 import type { MobileDevice } from "../../shared/types";
-import { type ToolRunner, runTool, toolBin } from "./exec";
+import { type ToolRunner, maestroBin, runTool, toolBin } from "./exec";
 
 // États possibles de la 2e colonne de `adb devices`. Sert à distinguer une
 // vraie ligne d'appareil du bruit de démarrage du daemon (`* daemon ...`) ou de
@@ -61,7 +61,7 @@ export async function listDevices(
 export async function startDevice(
 	run: ToolRunner = runTool,
 ): Promise<{ ok: boolean; error?: string }> {
-	const { code, stderr } = await run(toolBin("maestro"), [
+	const { code, stderr } = await run(maestroBin(), [
 		"start-device",
 		"--platform",
 		"android",
