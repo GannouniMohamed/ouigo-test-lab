@@ -34,4 +34,31 @@ describe("parseFlowSteps", () => {
 	it("renvoie [] pour un flow sans commande", () => {
 		expect(parseFlowSteps("appId: com.ouigo.app\n---\n")).toEqual([]);
 	});
+
+	it("ne compte PAS les items de liste imbriqués (ex. sous runFlow/commands)", () => {
+		const flow = `appId: com.ouigo.app
+---
+- runFlow:
+    commands:
+      - tapOn: "A"
+      - tapOn: "B"
+- tapOn: "C"
+`;
+		const steps = parseFlowSteps(flow);
+		expect(steps.map((s) => s.title)).toEqual(["runFlow:", 'tapOn: "C"']);
+	});
+
+	it("gère les fins de ligne CRLF (ne renvoie pas 0 étape)", () => {
+		const crlf =
+			'appId: com.ouigo.app\r\n---\r\n- launchApp\r\n- tapOn: "X"\r\n';
+		const steps = parseFlowSteps(crlf);
+		expect(steps).toHaveLength(2);
+		// pas de \r résiduel dans les titres
+		expect(steps[1].title).toBe('tapOn: "X"');
+	});
+
+	it("sans séparateur ---, retombe sur le scan de tout le document", () => {
+		const steps = parseFlowSteps('- launchApp\n- tapOn: "X"\n');
+		expect(steps).toHaveLength(2);
+	});
 });

@@ -40,4 +40,19 @@ describe("rebaseFlowAppId", () => {
 		const out = rebaseFlowAppId(flow, "com.ouigo.app");
 		expect(out.startsWith("appId: com.ouigo.app\n")).toBe(true);
 	});
+
+	it("remplace l'appId même avec des fins de ligne CRLF (pas de doublon)", () => {
+		const crlf = "appId: com.example.recorded\r\n---\r\n- launchApp\r\n";
+		const out = rebaseFlowAppId(crlf, "com.ouigo.app");
+		expect(out).toContain("appId: com.ouigo.app");
+		expect(out).not.toContain("com.example.recorded");
+		// exactement un en-tête appId — pas de doublon préfixé
+		expect(out.match(/^appId:/gm) ?? []).toHaveLength(1);
+	});
+
+	it("remplace l'appId d'en-tête même sans séparateur ---", () => {
+		const out = rebaseFlowAppId("appId: old\n- launchApp\n", "com.ouigo.app");
+		expect(out).toContain("appId: com.ouigo.app");
+		expect(out).not.toContain("appId: old");
+	});
 });

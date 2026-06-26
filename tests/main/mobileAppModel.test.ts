@@ -45,8 +45,20 @@ describe("modèle app mobile", () => {
 		expect(loaded.environments[0].app).toEqual(app);
 	});
 
-	it("une source 'installed' n'a pas besoin du bloc firebase", () => {
+	it("un Environment.app (source installed, sans firebase) survit au round-trip", () => {
 		const app: MobileApp = { appId: "com.ouigo.app", source: "installed" };
-		expect(app.firebase).toBeUndefined();
+		const project: Project = {
+			id: "p2",
+			name: "OUIGO Mobile",
+			description: "",
+			createdAt: new Date().toISOString(),
+			environments: [
+				{ id: "preprod", label: "Préprod", baseURL: "", variables: {}, app },
+			],
+		};
+		store.saveProject(project);
+		const loaded = store.getProject("p2");
+		expect(loaded.environments[0].app).toEqual(app);
+		expect(loaded.environments[0].app?.firebase).toBeUndefined();
 	});
 });

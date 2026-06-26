@@ -11,12 +11,20 @@ import type { RecordedStep } from "./types";
 const APPID_RE = /^appId:\s*.*$/;
 const SEPARATOR_RE = /^---\s*$/;
 
+// Maestro Studio écrit des flows en texte multi-plateforme : un fichier CRLF
+// (Windows / éditeur / presse-papier) laisserait un \r en fin de ligne après
+// split("\n"), que les regex ancrées en `$` ne matchent pas — d'où un appId
+// dupliqué et 0 étape comptée. On normalise en LF avant tout traitement.
+function toLines(flow: string): string[] {
+	return flow.replace(/\r\n?/g, "\n").split("\n");
+}
+
 // Réécrit la ligne `appId:` de l'en-tête (avant le premier `---`) vers `appId`.
 // N'altère pas un override `appId:` situé dans le corps (ex. sous launchApp).
 // Parallèle de rebaseSpecUrls : switcher d'env switche l'app sous test.
 export function rebaseFlowAppId(flow: string, appId: string): string {
 	if (!appId) return flow;
-	const lines = flow.split("\n");
+	const lines = toLines(flow);
 	for (let i = 0; i < lines.length; i++) {
 		if (SEPARATOR_RE.test(lines[i])) break; // fin de l'en-tête
 		if (APPID_RE.test(lines[i])) {
@@ -35,7 +43,7 @@ const TOP_LEVEL_ITEM_RE = /^-\s+(.*)$/;
 // premier niveau. Le titre est le texte de la commande sans le tiret de tête.
 // Parallèle de parseRecordedSteps : alimente recordedStepCount.
 export function parseFlowSteps(flow: string): RecordedStep[] {
-	const lines = flow.split("\n");
+	const lines = toLines(flow);
 	const sepIndex = lines.findIndex((l) => SEPARATOR_RE.test(l));
 	const body = sepIndex === -1 ? lines : lines.slice(sepIndex + 1);
 	const steps: RecordedStep[] = [];
