@@ -32,6 +32,11 @@ import {
 	handleUpdateProject,
 	handleUpdateTunnel,
 } from "./handlers";
+import {
+	handleListDevices,
+	handleMobileDoctor,
+	handleStartDevice,
+} from "./mobileHandlers";
 import { handleStartRecording, handleStopRecording } from "./recordingHandlers";
 
 export function registerIpc(): void {
@@ -185,4 +190,9 @@ export function registerIpc(): void {
 
 	ipcMain.handle("recording:start", (_e, opts) => handleStartRecording(opts));
 	ipcMain.handle("recording:stop", (_e, id: string) => handleStopRecording(id));
+
+	// Mobile (Maestro)
+	ipcMain.handle("mobile:doctor", () => handleMobileDoctor());
+	ipcMain.handle("mobile:listDevices", () => handleListDevices());
+	ipcMain.handle("mobile:startDevice", () => handleStartDevice());
 }

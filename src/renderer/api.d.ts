@@ -3,6 +3,8 @@ import type {
 	BatchOptions,
 	BatchReport,
 	Environment,
+	MobileDevice,
+	MobileDoctorReport,
 	Platform,
 	Project,
 	RecordedStep,
@@ -22,6 +24,10 @@ interface OtlApi {
 	};
 	browsersReady(): Promise<boolean>;
 	installBrowsers(): Promise<boolean>;
+
+	mobileDoctor(): Promise<MobileDoctorReport>;
+	listDevices(): Promise<MobileDevice[]>;
+	startDevice(): Promise<{ ok: boolean; error?: string }>;
 
 	listProjects(): Promise<Project[]>;
 	getProject(id: string): Promise<Project>;
