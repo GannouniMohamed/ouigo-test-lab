@@ -41,6 +41,14 @@ contextBridge.exposeInMainWorld("api", {
 	installMaestro() {
 		return ipcRenderer.invoke("mobile:installMaestro");
 	},
+	installApp(projectId: string, environmentId: string, deviceId: string) {
+		return ipcRenderer.invoke(
+			"mobile:installApp",
+			projectId,
+			environmentId,
+			deviceId,
+		);
+	},
 	openExternal(url: string) {
 		return ipcRenderer.invoke("app:openExternal", url);
 	},

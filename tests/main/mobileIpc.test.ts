@@ -1,10 +1,12 @@
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import {
+	handleInstallApp,
 	handleInstallMaestro,
 	handleListDevices,
 	handleMobileDoctor,
 	handleStartDevice,
 } from "../../src/main/ipc/mobileHandlers";
+import { saveProject } from "../../src/main/stores/projectStore";
 
 // Pas de vrai appareil/binaire en CI : adb/maestro/java sont absents, donc les
 // handlers doivent renvoyer des résultats dégradés cohérents sans lever.
@@ -42,3 +44,50 @@ describe("mobileHandlers", () => {
 });
 
 afterEach(() => Reflect.deleteProperty(process.env, "OTL_MAESTRO_INSTALL_CMD"));
+
+describe("handleInstallApp", () => {
+	let dir: string;
+	beforeEach(async () => {
+		const { mkdtempSync } = await import("node:fs");
+		const { tmpdir } = await import("node:os");
+		const { join } = await import("node:path");
+		dir = mkdtempSync(join(tmpdir(), "otl-iapp-"));
+		process.env.OTL_WORKSPACE = dir;
+		saveProject({
+			id: "p1",
+			name: "P",
+			description: "",
+			createdAt: "2026-06-26T00:00:00Z",
+			environments: [
+				{
+					id: "preprod",
+					label: "Préprod",
+					baseURL: "",
+					variables: {},
+					app: { appId: "com.ouigo.app", source: "installed" },
+				},
+				{ id: "noapp", label: "SansApp", baseURL: "", variables: {} },
+			],
+		});
+	});
+	afterEach(async () => {
+		const { rmSync } = await import("node:fs");
+		rmSync(dir, { recursive: true, force: true });
+		Reflect.deleteProperty(process.env, "OTL_WORKSPACE");
+	});
+
+	it("source installed → { ok: true } (aucun spawn)", async () => {
+		const res = await handleInstallApp("p1", "preprod", "emulator-5554");
+		expect(res.ok).toBe(true);
+	});
+
+	it("env sans app → { ok: false }", async () => {
+		const res = await handleInstallApp("p1", "noapp", "emulator-5554");
+		expect(res.ok).toBe(false);
+	});
+
+	it("projet/env inconnu → { ok: false } (ne lève pas)", async () => {
+		const res = await handleInstallApp("nope", "nope", "emulator-5554");
+		expect(res.ok).toBe(false);
+	});
+});

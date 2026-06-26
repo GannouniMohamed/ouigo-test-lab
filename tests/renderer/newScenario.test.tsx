@@ -33,6 +33,7 @@ beforeEach(() => {
 		]),
 		listDevices: vi.fn().mockResolvedValue([]),
 		startDevice: vi.fn().mockResolvedValue({ ok: true }),
+		installApp: vi.fn().mockResolvedValue({ ok: true }),
 		startRecording: vi.fn().mockResolvedValue({ recordingId: "rec-1" }),
 		stopRecording: vi.fn().mockResolvedValue({
 			id: "scn-1",
@@ -232,6 +233,26 @@ describe("NewScenario — mobile", () => {
 				baseURL: "https://preprod.example.com",
 				variables: {},
 				app: { appId: "com.ouigo.app", source: "installed" as const },
+			},
+		];
+	}
+
+	function envWithFirebaseApp() {
+		return [
+			{
+				id: "preprod",
+				label: "Préprod",
+				baseURL: "https://preprod.example.com",
+				variables: {},
+				app: {
+					appId: "com.ouigo.app",
+					source: "firebase" as const,
+					firebase: {
+						projectNumber: "1",
+						firebaseAppId: "1:1:android:x",
+						serviceAccountKeyPath: "/k.json",
+					},
+				},
 			},
 		];
 	}
@@ -436,5 +457,70 @@ describe("NewScenario — mobile", () => {
 				screen.getByText(/impossible de démarrer l'émulateur/i),
 			).toBeInTheDocument(),
 		);
+	});
+
+	it("env firebase → « Installer l'app (Firebase) » appelle installApp + message succès", async () => {
+		// biome-ignore lint/suspicious/noExplicitAny: test stub
+		(globalThis as any).window.api.listEnvironments = vi
+			.fn()
+			.mockResolvedValue(envWithFirebaseApp());
+		// biome-ignore lint/suspicious/noExplicitAny: test stub
+		(globalThis as any).window.api.listDevices = vi
+			.fn()
+			.mockResolvedValue([bootedDevice]);
+		const installApp = vi.fn().mockResolvedValue({ ok: true });
+		// biome-ignore lint/suspicious/noExplicitAny: test stub
+		(globalThis as any).window.api.installApp = installApp;
+		useAppStore.setState({
+			activeProjectId: "default",
+			activeEnvByProject: { default: "preprod" },
+		});
+		render(
+			<MemoryRouter>
+				<NewScenario />
+			</MemoryRouter>,
+		);
+		await screen.findByText("Général");
+		await pickMobile();
+		await userEvent.click(
+			screen.getByRole("button", { name: /installer l'app \(firebase\)/i }),
+		);
+		await waitFor(() =>
+			expect(installApp).toHaveBeenCalledWith(
+				"default",
+				"preprod",
+				"emulator-5554",
+			),
+		);
+		await waitFor(() =>
+			expect(screen.getByText(/app installée/i)).toBeInTheDocument(),
+		);
+	});
+
+	it("env installed → pas de bouton « Installer l'app (Firebase) »", async () => {
+		// biome-ignore lint/suspicious/noExplicitAny: test stub
+		(globalThis as any).window.api.listEnvironments = vi
+			.fn()
+			.mockResolvedValue(envWithApp());
+		// biome-ignore lint/suspicious/noExplicitAny: test stub
+		(globalThis as any).window.api.listDevices = vi
+			.fn()
+			.mockResolvedValue([bootedDevice]);
+		useAppStore.setState({
+			activeProjectId: "default",
+			activeEnvByProject: { default: "preprod" },
+		});
+		render(
+			<MemoryRouter>
+				<NewScenario />
+			</MemoryRouter>,
+		);
+		await screen.findByText("Général");
+		await pickMobile();
+		expect(
+			screen.queryByRole("button", {
+				name: /installer l'app \(firebase\)/i,
+			}),
+		).not.toBeInTheDocument();
 	});
 });
