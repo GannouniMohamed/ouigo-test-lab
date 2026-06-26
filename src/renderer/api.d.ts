@@ -29,6 +29,11 @@ interface OtlApi {
 	listDevices(): Promise<MobileDevice[]>;
 	startDevice(): Promise<{ ok: boolean; error?: string }>;
 	installMaestro(): Promise<{ ok: boolean; error?: string }>;
+	installApp(
+		projectId: string,
+		environmentId: string,
+		deviceId: string,
+	): Promise<{ ok: boolean; error?: string }>;
 	openExternal(url: string): Promise<void>;
 
 	listProjects(): Promise<Project[]>;

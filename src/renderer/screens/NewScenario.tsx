@@ -26,6 +26,9 @@ export default function NewScenario(): JSX.Element {
 	const [deviceId, setDeviceId] = useState("");
 	const [booting, setBooting] = useState(false);
 	const [deviceError, setDeviceError] = useState("");
+	const [appInstalling, setAppInstalling] = useState(false);
+	const [appInstallMsg, setAppInstallMsg] = useState("");
+	const [appInstallOk, setAppInstallOk] = useState(false);
 
 	// Env is inherited from the active project — no per-scenario selection.
 	// Resolve it exactly like the context bar: the actively-selected env, else the
@@ -40,6 +43,7 @@ export default function NewScenario(): JSX.Element {
 	// Pré-vol mobile : l'env doit porter une app ET un appareil doit être choisi.
 	const hasApp = !!inheritedEnv?.app?.appId;
 	const isMobile = platform === "mobile";
+	const isFirebase = inheritedEnv?.app?.source === "firebase";
 	const mobileReady = !isMobile || (hasApp && !!deviceId);
 
 	useEffect(() => {
@@ -89,6 +93,33 @@ export default function NewScenario(): JSX.Element {
 		} finally {
 			await refreshDevices();
 			setBooting(false);
+		}
+	}
+
+	// Installe l'app depuis Firebase sur l'appareil sélectionné (pull du dernier
+	// APK + adb install -r). Permet de valider la config Firebase avant de
+	// commencer, au lieu de la découvrir au lancement.
+	async function installFirebaseApp(): Promise<void> {
+		if (!deviceId) return;
+		setAppInstalling(true);
+		setAppInstallMsg("");
+		try {
+			const res = await window.api.installApp(
+				activeProjectId,
+				inheritedEnvId,
+				deviceId,
+			);
+			setAppInstallOk(!!res?.ok);
+			setAppInstallMsg(
+				res?.ok
+					? "App installée ✓"
+					: (res?.error ?? "Échec de l'installation."),
+			);
+		} catch {
+			setAppInstallOk(false);
+			setAppInstallMsg("Échec de l'installation.");
+		} finally {
+			setAppInstalling(false);
 		}
 	}
 
@@ -354,6 +385,27 @@ export default function NewScenario(): JSX.Element {
 								Sélectionne un appareil (ou démarre un émulateur) pour
 								continuer.
 							</p>
+						)}
+						{isFirebase && (
+							<div className="otl-mobilebar__row">
+								<button
+									type="button"
+									className="otl-tab"
+									disabled={!deviceId || appInstalling}
+									onClick={installFirebaseApp}
+								>
+									{appInstalling
+										? "Installation…"
+										: "Installer l'app (Firebase)"}
+								</button>
+								{appInstallMsg && (
+									<span
+										className={`otl-mobilebar__hint${appInstallOk ? "" : " otl-mobilebar__hint--error"}`}
+									>
+										{appInstallMsg}
+									</span>
+								)}
+							</div>
 						)}
 					</div>
 				)}

@@ -34,6 +34,7 @@ import {
 	handleUpdateTunnel,
 } from "./handlers";
 import {
+	handleInstallApp,
 	handleInstallMaestro,
 	handleListDevices,
 	handleMobileDoctor,
@@ -200,6 +201,11 @@ export function registerIpc(): void {
 	ipcMain.handle("mobile:listDevices", () => handleListDevices());
 	ipcMain.handle("mobile:startDevice", () => handleStartDevice());
 	ipcMain.handle("mobile:installMaestro", () => handleInstallMaestro());
+	ipcMain.handle(
+		"mobile:installApp",
+		(_e, projectId: string, environmentId: string, deviceId: string) =>
+			handleInstallApp(projectId, environmentId, deviceId),
+	);
 	ipcMain.handle("app:openExternal", (_e, url: string) => {
 		// Garde-fou : on n'ouvre que du http(s) (les URLs sont fixées côté
 		// renderer, mais le canal accepte n'importe quelle chaîne).
