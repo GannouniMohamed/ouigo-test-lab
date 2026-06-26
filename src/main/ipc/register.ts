@@ -200,7 +200,10 @@ export function registerIpc(): void {
 	ipcMain.handle("mobile:listDevices", () => handleListDevices());
 	ipcMain.handle("mobile:startDevice", () => handleStartDevice());
 	ipcMain.handle("mobile:installMaestro", () => handleInstallMaestro());
-	ipcMain.handle("app:openExternal", (_e, url: string) =>
-		shell.openExternal(url),
-	);
+	ipcMain.handle("app:openExternal", (_e, url: string) => {
+		// Garde-fou : on n'ouvre que du http(s) (les URLs sont fixées côté
+		// renderer, mais le canal accepte n'importe quelle chaîne).
+		if (!/^https?:\/\//i.test(url)) return Promise.resolve();
+		return shell.openExternal(url);
+	});
 }
