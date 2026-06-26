@@ -10,6 +10,7 @@ import {
 import { join } from "node:path";
 import { parseFlowSteps, rebaseFlowAppId } from "../../shared/flow";
 import type { Scenario } from "../../shared/types";
+import { studioInstalled } from "../mobile/doctor";
 import { ensureAppOnDevice } from "../mobile/ensureAppOnDevice";
 import { getEnvironment } from "../stores/projectStore";
 import { getScenario, saveScenario } from "../stores/scenarioStore";
@@ -61,13 +62,16 @@ function uniqueId(projectId: string, tunnelId: string, base: string): string {
 }
 
 export const maestroRecorder = {
-	async startRecording(opts: {
-		name: string;
-		environmentId: string;
-		projectId: string;
-		tunnelId: string;
-		deviceId?: string;
-	}): Promise<{ recordingId: string }> {
+	async startRecording(
+		opts: {
+			name: string;
+			environmentId: string;
+			projectId: string;
+			tunnelId: string;
+			deviceId?: string;
+		},
+		deps?: { studioInstalled?: () => boolean },
+	): Promise<{ recordingId: string }> {
 		const env = getEnvironment(opts.projectId, opts.environmentId);
 		if (!env.app?.appId)
 			throw new Error(
@@ -76,6 +80,17 @@ export const maestroRecorder = {
 		if (!opts.deviceId)
 			throw new Error(
 				"Aucun appareil sélectionné — branche un téléphone ou démarre un émulateur.",
+			);
+
+		// Studio est indispensable pour enregistrer : on échoue tôt avec un
+		// message clair plutôt que de "démarrer" sans qu'aucune fenêtre s'ouvre.
+		// (En test/headless OTL_SKIP_STUDIO_LAUNCH court-circuite la vérification.)
+		const hasStudio = deps?.studioInstalled
+			? deps.studioInstalled()
+			: process.env.OTL_SKIP_STUDIO_LAUNCH === "1" || studioInstalled();
+		if (!hasStudio)
+			throw new Error(
+				"Maestro Studio n'est pas installé — installe-le depuis l'écran Diagnostic mobile (bouton « Télécharger »).",
 			);
 
 		// L'app doit être présente sur l'appareil pour que Studio l'inspecte.
