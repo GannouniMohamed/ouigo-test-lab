@@ -109,28 +109,40 @@ export const maestroRecorder = {
 		const session = activeRecordings.get(recordingId);
 		if (!session) throw new Error(`Recording not found: ${recordingId}`);
 
-		// Importe le flow .yaml/.yml non vide le plus récemment modifié.
+		// Importe le flow .yaml/.yml le plus récent qui contient au moins une
+		// commande. On lit + parse chaque candidat une seule fois. Le filtre par
+		// nombre d'étapes (et non par contenu non vide) écarte le fichier
+		// pré-amorcé (en-tête + commentaire, 0 commande) : il ne peut donc jamais
+		// gagner le tri par mtime ni être importé comme un scénario à 0 étape.
 		const candidates = readdirSync(session.folder)
 			.filter((f) => f.endsWith(".yaml") || f.endsWith(".yml"))
-			.map((f) => join(session.folder, f))
-			.filter((p) => {
+			.map((f) => {
+				const path = join(session.folder, f);
 				try {
-					return readFileSync(p, "utf-8").trim().length > 0;
+					const raw = readFileSync(path, "utf-8");
+					return {
+						path,
+						raw,
+						steps: parseFlowSteps(raw),
+						mtime: statSync(path).mtimeMs,
+					};
 				} catch {
-					return false;
+					return null;
 				}
 			})
-			.sort((a, b) => statSync(b).mtimeMs - statSync(a).mtimeMs);
+			.filter(
+				(c): c is NonNullable<typeof c> => c !== null && c.steps.length > 0,
+			)
+			.sort((a, b) => b.mtime - a.mtime);
 
 		if (candidates.length === 0) {
 			activeRecordings.delete(recordingId);
 			throw new Error(
-				"Aucun flow détecté — as-tu enregistré dans le bon dossier ?",
+				"Aucun flow détecté — as-tu enregistré ton parcours dans Maestro Studio (dans le bon dossier) ?",
 			);
 		}
 
-		const raw = readFileSync(candidates[0], "utf-8");
-		const flow = rebaseFlowAppId(raw, session.appId);
+		const flow = rebaseFlowAppId(candidates[0].raw, session.appId);
 		const steps = parseFlowSteps(flow);
 
 		const id = uniqueId(

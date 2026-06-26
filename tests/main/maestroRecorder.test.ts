@@ -4,6 +4,7 @@ import {
 	readFileSync,
 	readdirSync,
 	rmSync,
+	utimesSync,
 	writeFileSync,
 } from "node:fs";
 import { tmpdir } from "node:os";
@@ -139,7 +140,7 @@ describe("maestroRecorder.stopRecording", () => {
 		expect(spec).not.toContain("com.autre.enregistre");
 	});
 
-	it("aucun flow exploitable → erreur", async () => {
+	it("rien enregistré (seul le seed pré-amorcé subsiste) → erreur, pas de scénario à 0 étape", async () => {
 		const { recordingId } = await maestroRecorder.startRecording({
 			name: "Vide",
 			environmentId: "preprod",
@@ -147,11 +148,48 @@ describe("maestroRecorder.stopRecording", () => {
 			tunnelId: "general",
 			deviceId: "emulator-5554",
 		});
-		// on retire le fichier pré-amorcé pour simuler « rien enregistré »
+		// On ne touche à rien : le seed (en-tête + commentaire, 0 commande) est le
+		// seul fichier — c'est le cas réaliste « j'ai oublié d'enregistrer ».
+		await expect(maestroRecorder.stopRecording(recordingId)).rejects.toThrow(
+			/flow/i,
+		);
+	});
+
+	it("dossier vide → erreur", async () => {
+		const { recordingId } = await maestroRecorder.startRecording({
+			name: "Vide",
+			environmentId: "preprod",
+			projectId: "p1",
+			tunnelId: "general",
+			deviceId: "emulator-5554",
+		});
 		const folder = recordingFolder(recordingId);
 		for (const f of readdirSync(folder)) rmSync(join(folder, f));
 		await expect(maestroRecorder.stopRecording(recordingId)).rejects.toThrow(
 			/flow/i,
 		);
+	});
+
+	it("mtime identique entre le seed et le flow enregistré → c'est le flow réel qui gagne", async () => {
+		const { recordingId } = await maestroRecorder.startRecording({
+			name: "Réservation",
+			environmentId: "preprod",
+			projectId: "p1",
+			tunnelId: "general",
+			deviceId: "emulator-5554",
+		});
+		const folder = recordingFolder(recordingId);
+		writeFileSync(
+			join(folder, "recorded.yaml"),
+			'appId: com.autre.enregistre\n---\n- launchApp\n- tapOn: "Réserver"\n',
+		);
+		// Force des mtimes strictement identiques sur le seed et l'export : sur un
+		// FS à granularité grossière (ext4/NTFS) l'égalité est réaliste. Le seed
+		// (0 commande) ne doit jamais gagner.
+		const t = new Date("2026-06-26T12:00:00Z");
+		utimesSync(join(folder, "flow.yaml"), t, t);
+		utimesSync(join(folder, "recorded.yaml"), t, t);
+		const scenario = await maestroRecorder.stopRecording(recordingId);
+		expect(scenario.recordedStepCount).toBe(2);
 	});
 });
