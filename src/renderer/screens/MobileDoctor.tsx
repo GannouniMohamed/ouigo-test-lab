@@ -1,4 +1,10 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import {
+	type ReactNode,
+	useCallback,
+	useEffect,
+	useRef,
+	useState,
+} from "react";
 import { useNavigate } from "react-router-dom";
 import type { DoctorCheck, MobileDoctorReport } from "../../shared/types";
 
@@ -11,7 +17,22 @@ const CHECK_KEYS: Array<keyof Omit<MobileDoctorReport, "allOk">> = [
 	"device",
 ];
 
-function CheckRow({ check }: { check: DoctorCheck }): JSX.Element {
+// Pages d'installation ouvertes pour les prérequis non auto-installables.
+const LINKS: Record<string, string> = {
+	studio: "https://studio.maestro.dev",
+	java: "https://adoptium.net/temurin/releases/?version=17",
+	adb: "https://developer.android.com/tools/releases/platform-tools",
+};
+
+function CheckRow({
+	check,
+	action,
+	extraError,
+}: {
+	check: DoctorCheck;
+	action?: ReactNode;
+	extraError?: string;
+}): JSX.Element {
 	return (
 		<div className={`otl-doctor__row${check.ok ? " is-ok" : " is-bad"}`}>
 			<span className="otl-doctor__icon" aria-hidden="true">
@@ -27,7 +48,11 @@ function CheckRow({ check }: { check: DoctorCheck }): JSX.Element {
 				{!check.ok && check.hint && (
 					<div className="otl-doctor__hint">{check.hint}</div>
 				)}
+				{extraError && (
+					<div className="otl-doctor__hint otl-doctor__error">{extraError}</div>
+				)}
 			</div>
+			{action && <div className="otl-doctor__action">{action}</div>}
 		</div>
 	);
 }
@@ -36,6 +61,8 @@ export default function MobileDoctor(): JSX.Element {
 	const navigate = useNavigate();
 	const [report, setReport] = useState<MobileDoctorReport | null>(null);
 	const [loading, setLoading] = useState(false);
+	const [installing, setInstalling] = useState(false);
+	const [installError, setInstallError] = useState("");
 	const cancelled = useRef(false);
 
 	const refresh = useCallback(async (): Promise<void> => {
@@ -66,6 +93,59 @@ export default function MobileDoctor(): JSX.Element {
 		}
 	}
 
+	// Installe le Maestro CLI (script). Spinner simple + re-vérification auto ;
+	// message court en cas d'échec.
+	async function installCli(): Promise<void> {
+		setInstalling(true);
+		setInstallError("");
+		try {
+			const res = await window.api.installMaestro();
+			if (!res?.ok) setInstallError(res?.error ?? "Échec de l'installation.");
+		} catch {
+			setInstallError("Échec de l'installation.");
+		} finally {
+			await refresh();
+			setInstalling(false);
+		}
+	}
+
+	// Construit l'action d'une ligne en échec selon le prérequis.
+	function actionFor(key: (typeof CHECK_KEYS)[number]): ReactNode {
+		if (key === "maestro")
+			return (
+				<button
+					type="button"
+					className="otl-tab"
+					disabled={installing}
+					onClick={installCli}
+				>
+					{installing ? "Installation…" : "Installer"}
+				</button>
+			);
+		if (key === "device")
+			return (
+				<button
+					type="button"
+					className="otl-tab"
+					disabled={loading}
+					onClick={bootEmulator}
+				>
+					Démarrer un émulateur
+				</button>
+			);
+		if (LINKS[key])
+			return (
+				<button
+					type="button"
+					className="otl-tab"
+					onClick={() => window.api.openExternal(LINKS[key])}
+				>
+					Ouvrir la page
+				</button>
+			);
+		return null;
+	}
+
 	return (
 		<div className="otl-screen">
 			<nav className="otl-breadcrumb">
@@ -88,7 +168,19 @@ export default function MobileDoctor(): JSX.Element {
 
 			<div className="otl-surface otl-doctor">
 				{report ? (
-					CHECK_KEYS.map((k) => <CheckRow key={k} check={report[k]} />)
+					CHECK_KEYS.map((k) => {
+						const check = report[k];
+						return (
+							<CheckRow
+								key={k}
+								check={check}
+								action={check.ok ? undefined : actionFor(k)}
+								extraError={
+									k === "maestro" && installError ? installError : undefined
+								}
+							/>
+						);
+					})
 				) : (
 					<div className="otl-doctor__row">
 						<span className="otl-doctor__body">Diagnostic en cours…</span>
@@ -104,14 +196,6 @@ export default function MobileDoctor(): JSX.Element {
 					onClick={refresh}
 				>
 					Revérifier
-				</button>
-				<button
-					type="button"
-					className="otl-tab"
-					disabled={loading}
-					onClick={bootEmulator}
-				>
-					Démarrer un émulateur
 				</button>
 			</div>
 		</div>
