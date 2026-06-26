@@ -1,6 +1,11 @@
 import { useCallback, useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import type { Environment, Project } from "../../shared/types";
+import type {
+	Environment,
+	MobileApp,
+	MobileAppSource,
+	Project,
+} from "../../shared/types";
 
 export default function ProjectEnvironments(): JSX.Element {
 	const navigate = useNavigate();
@@ -20,6 +25,63 @@ export default function ProjectEnvironments(): JSX.Element {
 
 	function updateRow(envId: string, patch: Partial<Environment>): void {
 		setRows((rs) => rs.map((r) => (r.id === envId ? { ...r, ...patch } : r)));
+	}
+
+	// Active/désactive l'app mobile sur un environnement.
+	function toggleApp(envId: string, on: boolean): void {
+		updateRow(
+			envId,
+			on ? { app: { appId: "", source: "installed" } } : { app: undefined },
+		);
+	}
+
+	// Patche l'app mobile d'un environnement de manière immuable.
+	function updateApp(envId: string, patch: Partial<MobileApp>): void {
+		setRows((rs) =>
+			rs.map((r) =>
+				r.id === envId && r.app ? { ...r, app: { ...r.app, ...patch } } : r,
+			),
+		);
+	}
+
+	// Change la source ; (dé)sème la config firebase selon le cas.
+	function setAppSource(envId: string, source: MobileAppSource): void {
+		setRows((rs) =>
+			rs.map((r) => {
+				if (r.id !== envId || !r.app) return r;
+				if (source === "firebase") {
+					return {
+						...r,
+						app: {
+							...r.app,
+							source,
+							firebase: r.app.firebase ?? {
+								projectNumber: "",
+								firebaseAppId: "",
+								serviceAccountKeyPath: "",
+							},
+						},
+					};
+				}
+				const { firebase: _drop, ...rest } = r.app;
+				return { ...r, app: { ...rest, source } };
+			}),
+		);
+	}
+
+	function updateFirebase(
+		envId: string,
+		patch: Partial<NonNullable<MobileApp["firebase"]>>,
+	): void {
+		setRows((rs) =>
+			rs.map((r) => {
+				if (r.id !== envId || !r.app?.firebase) return r;
+				return {
+					...r,
+					app: { ...r.app, firebase: { ...r.app.firebase, ...patch } },
+				};
+			}),
+		);
 	}
 	function addRow(): void {
 		const base = "env";
@@ -80,26 +142,117 @@ export default function ProjectEnvironments(): JSX.Element {
 					<span />
 				</div>
 				{rows.map((r) => (
-					<div className="otl-envrow" key={r.id}>
-						<input
-							className="otl-input otl-envrow__label"
-							value={r.label}
-							onChange={(e) => updateRow(r.id, { label: e.target.value })}
-						/>
-						<input
-							className="otl-input otl-envrow__urlwrap"
-							value={r.baseURL}
-							onChange={(e) => updateRow(r.id, { baseURL: e.target.value })}
-						/>
-						<button
-							type="button"
-							className="otl-envrow__remove"
-							aria-label="Supprimer l'environnement"
-							disabled={rows.length <= 1}
-							onClick={() => remove(r.id)}
-						>
-							–
-						</button>
+					<div className="otl-envrow-wrap" key={r.id}>
+						<div className="otl-envrow">
+							<input
+								className="otl-input otl-envrow__label"
+								value={r.label}
+								onChange={(e) => updateRow(r.id, { label: e.target.value })}
+							/>
+							<input
+								className="otl-input otl-envrow__urlwrap"
+								value={r.baseURL}
+								onChange={(e) => updateRow(r.id, { baseURL: e.target.value })}
+							/>
+							<button
+								type="button"
+								className="otl-envrow__remove"
+								aria-label="Supprimer l'environnement"
+								disabled={rows.length <= 1}
+								onClick={() => remove(r.id)}
+							>
+								–
+							</button>
+						</div>
+
+						<div className="otl-envapp">
+							<label className="otl-envapp__toggle">
+								<input
+									type="checkbox"
+									checked={!!r.app}
+									onChange={(e) => toggleApp(r.id, e.target.checked)}
+								/>
+								<span>Application mobile (Maestro)</span>
+							</label>
+
+							{r.app && (
+								<div className="otl-envapp__fields">
+									<div>
+										<div className="otl-field-label">
+											App ID (nom de package)
+										</div>
+										<input
+											className="otl-input"
+											placeholder="com.exemple.app"
+											value={r.app.appId}
+											onChange={(e) =>
+												updateApp(r.id, { appId: e.target.value })
+											}
+										/>
+									</div>
+
+									<div
+										className="otl-envapp__source"
+										role="radiogroup"
+										aria-label="Source de l'application"
+									>
+										<label>
+											<input
+												type="radio"
+												name={`app-source-${r.id}`}
+												checked={r.app.source === "installed"}
+												onChange={() => setAppSource(r.id, "installed")}
+											/>
+											<span>Déjà installée</span>
+										</label>
+										<label>
+											<input
+												type="radio"
+												name={`app-source-${r.id}`}
+												checked={r.app.source === "firebase"}
+												onChange={() => setAppSource(r.id, "firebase")}
+											/>
+											<span>Firebase App Distribution</span>
+										</label>
+									</div>
+
+									{r.app.source === "firebase" && r.app.firebase && (
+										<div className="otl-envapp__firebase">
+											<input
+												className="otl-input"
+												placeholder="Numéro de projet Firebase"
+												value={r.app.firebase.projectNumber}
+												onChange={(e) =>
+													updateFirebase(r.id, {
+														projectNumber: e.target.value,
+													})
+												}
+											/>
+											<input
+												className="otl-input"
+												placeholder="App ID Firebase (1:…:android:…)"
+												value={r.app.firebase.firebaseAppId}
+												onChange={(e) =>
+													updateFirebase(r.id, {
+														firebaseAppId: e.target.value,
+													})
+												}
+											/>
+											<input
+												className="otl-input"
+												placeholder="Chemin du compte de service (JSON)"
+												value={r.app.firebase.serviceAccountKeyPath}
+												onChange={(e) =>
+													updateFirebase(r.id, {
+														serviceAccountKeyPath: e.target.value,
+													})
+												}
+											/>
+										</div>
+									)}
+								</div>
+							)}
+						</div>
 					</div>
 				))}
 			</div>
