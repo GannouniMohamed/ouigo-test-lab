@@ -12,7 +12,8 @@ import type {
 	RunResult,
 	Scenario,
 } from "../../shared/types";
-import { toolBin } from "../mobile/exec";
+import { ensureAppOnDevice } from "../mobile/ensureAppOnDevice";
+import { quoteArgForCmd, quoteForCmd, toolBin } from "../mobile/exec";
 import { saveReport } from "../stores/reportStore";
 import { updateLastRun } from "../stores/scenarioStore";
 import { getWorkspaceDir } from "../workspace";
@@ -120,15 +121,15 @@ export const maestroRunner: TestRunner = {
 			return guard(
 				"Aucune application mobile configurée pour cet environnement.",
 			);
-		if (env.app.source === "firebase")
-			return guard(
-				"Récupération du build via Firebase App Distribution : disponible en Phase 4.",
-			);
 		const deviceId = opts?.deviceId;
 		if (!deviceId)
 			return guard(
 				"Aucun appareil sélectionné — branche un téléphone ou démarre un émulateur.",
 			);
+
+		// Prépare l'app sur l'appareil : "installed" no-op, "firebase" pull+install.
+		const prep = await ensureAppOnDevice(env, deviceId);
+		if (!prep.ok) return guard(prep.error);
 
 		// Flow effectif : rebase l'appId d'en-tête vers l'app de l'env de run.
 		const scenarioDir = join(
@@ -177,11 +178,13 @@ export const maestroRunner: TestRunner = {
 		// detached:!isWindows → l'enfant devient leader de groupe pour que le kill
 		// par groupe (process.kill(-pid)) de cancel() atteigne tout l'arbre Maestro
 		// (JVM/driver/adb). Sur Windows, taskkill /T couvre déjà l'arbre.
-		const child = spawn(bin, args, {
-			env: process.env,
-			detached: !isWindows,
-			shell: isWindows,
-		});
+		// Sous shell:true (Windows), citer bin + args pour gérer les chemins avec
+		// espaces (runDir/flow sous le profil utilisateur). Cf. exec.quoteForCmd.
+		const child = spawn(
+			isWindows ? quoteForCmd(bin) : bin,
+			isWindows ? args.map(quoteArgForCmd) : args,
+			{ env: process.env, detached: !isWindows, shell: isWindows },
+		);
 		const state: RunState = { child, cancelled: false };
 		activeRuns.set(runId, state);
 

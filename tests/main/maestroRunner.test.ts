@@ -147,18 +147,29 @@ describe("maestroRunner", () => {
 		expect(res.status).toBe("failed");
 	});
 
-	it("source firebase → rapport d'échec mappé (Phase 4)", async () => {
+	it("source firebase sans creds valides → rapport d'échec mappé (Firebase)", async () => {
 		const scenario = mobileScenario();
 		saveScenario(scenario, FLOW);
 		const res = await maestroRunner.run(
 			scenario,
-			mobileEnv({ app: { appId: "com.ouigo.app", source: "firebase" } }),
+			mobileEnv({
+				app: {
+					appId: "com.ouigo.app",
+					source: "firebase",
+					firebase: {
+						projectNumber: "123",
+						firebaseAppId: "1:123:android:abc",
+						serviceAccountKeyPath: "/chemin/inexistant/sa.json",
+					},
+				},
+			}),
 			() => {},
 			{ deviceId: "emulator-5554" },
 		);
 		expect(res.status).toBe("failed");
-		expect((res.report.steps[0].error ?? "").toLowerCase()).toContain(
-			"firebase",
-		);
+		const err = res.report.steps[0].error ?? "";
+		expect(err.toLowerCase()).toContain("firebase");
+		// passe réellement par ensureAppOnDevice (et non plus par le garde-fou Phase 4)
+		expect(err).not.toContain("Phase 4");
 	});
 });

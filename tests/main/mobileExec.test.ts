@@ -1,6 +1,11 @@
 import { resolve } from "node:path";
 import { describe, expect, it } from "vitest";
-import { runTool, toolBin } from "../../src/main/mobile/exec";
+import {
+	quoteArgForCmd,
+	quoteForCmd,
+	runTool,
+	toolBin,
+} from "../../src/main/mobile/exec";
 
 // Fixtures shell-safe (chemins sans espaces) → fiables même sous cmd.exe (Windows).
 const EXIT_STDERR_FIXTURE = resolve(
@@ -26,6 +31,29 @@ describe("runTool", () => {
 		// -1 (erreur de spawn sur *nix) ou code shell non nul (Windows/cmd).
 		expect(r.code).not.toBe(0);
 		expect(r.stderr.length).toBeGreaterThan(0);
+	});
+});
+
+describe("quoteForCmd", () => {
+	it("entoure de guillemets (chemin avec espaces)", () => {
+		expect(quoteForCmd("C:\\Users\\John Doe\\app.apk")).toBe(
+			'"C:\\Users\\John Doe\\app.apk"',
+		);
+	});
+	it("échappe les guillemets internes", () => {
+		expect(quoteForCmd('a"b')).toBe('"a\\"b"');
+	});
+});
+
+describe("quoteArgForCmd", () => {
+	it("ne cite PAS un argument sans espace (ex. -version)", () => {
+		expect(quoteArgForCmd("-version")).toBe("-version");
+		expect(quoteArgForCmd("devices")).toBe("devices");
+	});
+	it("cite un argument contenant une espace (ex. chemin d'APK)", () => {
+		expect(quoteArgForCmd("C:\\Users\\John Doe\\app.apk")).toBe(
+			'"C:\\Users\\John Doe\\app.apk"',
+		);
 	});
 });
 
