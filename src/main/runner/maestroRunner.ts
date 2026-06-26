@@ -13,7 +13,7 @@ import type {
 	Scenario,
 } from "../../shared/types";
 import { ensureAppOnDevice } from "../mobile/ensureAppOnDevice";
-import { quoteForCmd, toolBin } from "../mobile/exec";
+import { quoteArgForCmd, quoteForCmd, toolBin } from "../mobile/exec";
 import { saveReport } from "../stores/reportStore";
 import { updateLastRun } from "../stores/scenarioStore";
 import { getWorkspaceDir } from "../workspace";
@@ -182,7 +182,7 @@ export const maestroRunner: TestRunner = {
 		// espaces (runDir/flow sous le profil utilisateur). Cf. exec.quoteForCmd.
 		const child = spawn(
 			isWindows ? quoteForCmd(bin) : bin,
-			isWindows ? args.map(quoteForCmd) : args,
+			isWindows ? args.map(quoteArgForCmd) : args,
 			{ env: process.env, detached: !isWindows, shell: isWindows },
 		);
 		const state: RunState = { child, cancelled: false };

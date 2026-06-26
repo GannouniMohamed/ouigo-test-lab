@@ -14,9 +14,15 @@ const isWindows = process.platform === "win32";
 
 // Sous shell:true (Windows), Node passe `bin args.join(" ")` à cmd.exe SANS
 // citer les arguments → un chemin avec espaces (ex. C:\Users\John Doe\...apk)
-// serait découpé. On cite chaque token (bin + args) pour cmd.exe.
+// serait découpé. On cite donc un token pour cmd.exe.
 export function quoteForCmd(s: string): string {
 	return `"${s.replace(/"/g, '\\"')}"`;
+}
+
+// Ne cite QUE les arguments contenant une espace : citer un drapeau sans espace
+// (ex. "-version") perturbe cmd.exe et peut faire échouer/bloquer la commande.
+export function quoteArgForCmd(s: string): string {
+	return /\s/.test(s) ? quoteForCmd(s) : s;
 }
 
 // Implémentation réelle. Ne rejette JAMAIS : un binaire absent est un état
@@ -38,7 +44,7 @@ export const runTool: ToolRunner = (bin, args) =>
 			// utilisateur « C:\Users\John Doe\... »).
 			const child = spawn(
 				isWindows ? quoteForCmd(bin) : bin,
-				isWindows ? args.map(quoteForCmd) : args,
+				isWindows ? args.map(quoteArgForCmd) : args,
 				{ shell: isWindows },
 			);
 			child.stdout?.on("data", (b: Buffer) => {
