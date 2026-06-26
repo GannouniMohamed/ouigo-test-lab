@@ -1,7 +1,7 @@
 import { existsSync } from "node:fs";
 import type { DoctorCheck, MobileDoctorReport } from "../../shared/types";
 import { listDevices } from "./devices";
-import { type ToolRunner, runTool, toolBin } from "./exec";
+import { maestroBin, type ToolRunner, runTool, toolBin } from "./exec";
 
 const MIN_JAVA = 17;
 
@@ -47,7 +47,7 @@ export async function mobileDoctor(deps?: {
 	};
 
 	// Maestro CLI
-	const maestroOut = await run(toolBin("maestro"), ["--version"]);
+	const maestroOut = await run(maestroBin(exists), ["--version"]);
 	const maestro: DoctorCheck = {
 		label: "Maestro CLI",
 		ok: maestroOut.code === 0,

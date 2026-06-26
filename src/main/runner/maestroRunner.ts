@@ -13,7 +13,7 @@ import type {
 	Scenario,
 } from "../../shared/types";
 import { ensureAppOnDevice } from "../mobile/ensureAppOnDevice";
-import { quoteArgForCmd, quoteForCmd, toolBin } from "../mobile/exec";
+import { maestroBin, quoteArgForCmd, quoteForCmd } from "../mobile/exec";
 import { saveReport } from "../stores/reportStore";
 import { updateLastRun } from "../stores/scenarioStore";
 import { getWorkspaceDir } from "../workspace";
@@ -156,7 +156,7 @@ export const maestroRunner: TestRunner = {
 		});
 
 		// Spawn maestro (injectable via OTL_MAESTRO_BIN[_ARGS], cf. OTL_CODEGEN).
-		const bin = toolBin("maestro");
+		const bin = maestroBin();
 		const prefixArgs = process.env.OTL_MAESTRO_BIN_ARGS
 			? [process.env.OTL_MAESTRO_BIN_ARGS]
 			: [];
