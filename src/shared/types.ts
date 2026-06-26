@@ -26,11 +26,39 @@ export interface Scenario {
 	lastRun: LastRun;
 }
 
+// Source du build mobile (Maestro) attaché à un environnement.
+//  - "installed" : l'app est supposée déjà présente sur l'appareil (appId seul)
+//  - "firebase"  : on récupère le dernier APK via Firebase App Distribution
+export type MobileAppSource = "installed" | "firebase";
+
+export interface FirebaseAppDistConfig {
+	projectNumber: string; // numéro de projet Firebase (numérique)
+	firebaseAppId: string; // 1:1234567890:android:abc123
+	serviceAccountKeyPath: string; // chemin du JSON de compte de service
+}
+
+export interface MobileApp {
+	appId: string; // package name Android (com.ouigo.app) — install/launch Maestro
+	source: MobileAppSource;
+	firebase?: FirebaseAppDistConfig; // présent ssi source === "firebase"
+}
+
 export interface Environment {
 	id: string;
 	label: string;
 	baseURL: string;
 	variables: Record<string, string>;
+	// Mobile (Maestro) : config de l'app sous test. Optionnel — ignoré par les
+	// scénarios web/responsive.
+	app?: MobileApp;
+}
+
+// Appareil/émulateur mobile cible (Android en v1).
+export interface MobileDevice {
+	id: string; // "emulator-5554" ou UDID
+	name: string; // "Pixel 6 — API 33"
+	kind: "emulator" | "physical";
+	state: "booted" | "offline";
 }
 
 export interface Project {
@@ -165,6 +193,8 @@ export interface RunOptions {
 	// Set when this run is one iteration of a batch — stamped onto the persisted
 	// Report so the history can group the lot. Undefined for simple runs.
 	batchId?: string;
+	// Mobile : appareil/émulateur cible choisi au lancement.
+	deviceId?: string;
 }
 
 // ── Batch runs (Feature 2: lancer N fois pour valider KPI / trackings) ───────
