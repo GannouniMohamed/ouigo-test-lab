@@ -12,6 +12,7 @@ import type {
 	RunResult,
 	Scenario,
 } from "../../shared/types";
+import { ensureAppOnDevice } from "../mobile/ensureAppOnDevice";
 import { toolBin } from "../mobile/exec";
 import { saveReport } from "../stores/reportStore";
 import { updateLastRun } from "../stores/scenarioStore";
@@ -120,15 +121,15 @@ export const maestroRunner: TestRunner = {
 			return guard(
 				"Aucune application mobile configurée pour cet environnement.",
 			);
-		if (env.app.source === "firebase")
-			return guard(
-				"Récupération du build via Firebase App Distribution : disponible en Phase 4.",
-			);
 		const deviceId = opts?.deviceId;
 		if (!deviceId)
 			return guard(
 				"Aucun appareil sélectionné — branche un téléphone ou démarre un émulateur.",
 			);
+
+		// Prépare l'app sur l'appareil : "installed" no-op, "firebase" pull+install.
+		const prep = await ensureAppOnDevice(env, deviceId);
+		if (!prep.ok) return guard(prep.error);
 
 		// Flow effectif : rebase l'appId d'en-tête vers l'app de l'env de run.
 		const scenarioDir = join(
