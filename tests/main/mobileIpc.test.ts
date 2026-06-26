@@ -22,7 +22,11 @@ describe("mobileHandlers", () => {
 	});
 
 	it("handleStartDevice renvoie un objet { ok }", async () => {
+		// Force un binaire absent → échec rapide et déterministe, sans booter un
+		// vrai émulateur sur une machine de dev où maestro est installé.
+		process.env.OTL_MAESTRO_BIN = "/nonexistent/otl-maestro-test";
 		const res = await handleStartDevice();
+		Reflect.deleteProperty(process.env, "OTL_MAESTRO_BIN");
 		expect(res).toHaveProperty("ok");
 		expect(typeof res.ok).toBe("boolean");
 	});

@@ -1,7 +1,11 @@
 import { homedir } from "node:os";
 import { basename, join } from "node:path";
 import { describe, expect, it } from "vitest";
-import { mobileDoctor, parseJavaMajor } from "../../src/main/mobile/doctor";
+import {
+	mobileDoctor,
+	parseJavaMajor,
+	parseMaestroVersion,
+} from "../../src/main/mobile/doctor";
 import type { ExecResult } from "../../src/main/mobile/exec";
 
 describe("parseJavaMajor", () => {
@@ -13,6 +17,27 @@ describe("parseJavaMajor", () => {
 	});
 	it("renvoie null si illisible", () => {
 		expect(parseJavaMajor("commande introuvable")).toBeNull();
+	});
+});
+
+describe("parseMaestroVersion", () => {
+	it("extrait le semver de la dernière ligne malgré la bannière analytics", () => {
+		const out = [
+			"Anonymous analytics enabled. To opt out, set MAESTRO_CLI_NO_ANALYTICS ...",
+			"||| Try out our new Analyze with AI feature. ||| See what's new: ...",
+			"2.6.1",
+		].join("\n");
+		expect(parseMaestroVersion(out)).toBe("2.6.1");
+	});
+
+	it("retombe sur le premier semver trouvé si pas de ligne nue", () => {
+		expect(parseMaestroVersion("Maestro version 1.39.0 installed")).toBe(
+			"1.39.0",
+		);
+	});
+
+	it("renvoie undefined si aucune version", () => {
+		expect(parseMaestroVersion("rien d'utile")).toBeUndefined();
 	});
 });
 

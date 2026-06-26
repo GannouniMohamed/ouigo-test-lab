@@ -5,6 +5,21 @@ import { type ToolRunner, maestroBin, runTool, toolBin } from "./exec";
 
 const MIN_JAVA = 17;
 
+// `maestro --version` crache une bannière (analytics, pubs « Analyze with AI »…)
+// puis la version nue sur la dernière ligne. On extrait juste le semver pour
+// l'afficher proprement (sinon toute la bannière s'affiche comme « version »).
+export function parseMaestroVersion(out: string): string | undefined {
+	const lines = out
+		.split(/\r?\n/)
+		.map((l) => l.trim())
+		.filter(Boolean);
+	for (let i = lines.length - 1; i >= 0; i--) {
+		if (/^\d+\.\d+(?:\.\d+)?$/.test(lines[i])) return lines[i];
+	}
+	const m = /\b(\d+\.\d+\.\d+)\b/.exec(out);
+	return m ? m[1] : undefined;
+}
+
 // Extrait la version majeure depuis la sortie de `java -version`.
 // Gère "17.0.8" → 17 et le legacy "1.8.0_x" → 8.
 export function parseJavaMajor(versionOutput: string): number | null {
@@ -51,7 +66,10 @@ export async function mobileDoctor(deps?: {
 	const maestro: DoctorCheck = {
 		label: "Maestro CLI",
 		ok: maestroOut.code === 0,
-		version: maestroOut.code === 0 ? maestroOut.stdout.trim() : undefined,
+		version:
+			maestroOut.code === 0
+				? parseMaestroVersion(maestroOut.stdout)
+				: undefined,
 		hint:
 			maestroOut.code === 0
 				? undefined
@@ -78,7 +96,7 @@ export async function mobileDoctor(deps?: {
 		ok: studioOk,
 		hint: studioOk
 			? undefined
-			: "Installe l'app Maestro Studio desktop depuis https://maestro.dev (nécessaire pour enregistrer un parcours).",
+			: "Installe l'app Maestro Studio desktop (nécessaire pour enregistrer un parcours).",
 	};
 
 	// Au moins un appareil/émulateur joignable
