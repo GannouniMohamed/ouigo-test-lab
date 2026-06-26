@@ -2,6 +2,7 @@ import { type ChildProcess, spawn } from "node:child_process";
 import { randomUUID } from "node:crypto";
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
+import { StringDecoder } from "node:string_decoder";
 import { parseFlowSteps, rebaseFlowAppId } from "../../shared/flow";
 import type {
 	Environment,
@@ -98,7 +99,7 @@ export const maestroRunner: TestRunner = {
 		mkdirSync(runDir, { recursive: true });
 
 		// Garde-fous → rapports d'échec mappés (jamais d'exception).
-		const guard = (error: string): RunResult => {
+		const guard = async (error: string): Promise<RunResult> => {
 			const report = failedReport(runId, scenario, env, startedAt, 0, error);
 			onEvent({
 				type: "run-started",
@@ -106,6 +107,12 @@ export const maestroRunner: TestRunner = {
 				totalSteps: 1,
 				steps: [report.steps[0].title],
 			});
+			// Cède le tick après run-started (qui résout la promesse côté IPC). La
+			// livraison live d'un run terminé instantanément est finalisée en Phase 6
+			// (LiveRun récupère le rapport persisté au montage + validation amont).
+			await Promise.resolve();
+			onEvent({ type: "step-started", index: 0, title: report.steps[0].title });
+			onEvent({ type: "step-failed", index: 0, error });
 			return persist(scenario, report, startedAt, onEvent);
 		};
 
@@ -167,18 +174,30 @@ export const maestroRunner: TestRunner = {
 		];
 
 		let stdout = "";
-		const child = spawn(bin, args, { env: process.env, shell: isWindows });
+		// detached:!isWindows → l'enfant devient leader de groupe pour que le kill
+		// par groupe (process.kill(-pid)) de cancel() atteigne tout l'arbre Maestro
+		// (JVM/driver/adb). Sur Windows, taskkill /T couvre déjà l'arbre.
+		const child = spawn(bin, args, {
+			env: process.env,
+			detached: !isWindows,
+			shell: isWindows,
+		});
 		const state: RunState = { child, cancelled: false };
 		activeRuns.set(runId, state);
 
-		const onChunk = (b: Buffer) => {
-			const s = b.toString();
+		// StringDecoder (un par flux) : un glyphe UTF-8 ✅/❌ (3 octets) peut être
+		// coupé entre deux chunks Buffer ; toString() par chunk le corromprait et
+		// fausserait le parsing d'étapes. Le decoder recolle les octets partiels.
+		const outDecoder = new StringDecoder("utf8");
+		const errDecoder = new StringDecoder("utf8");
+		const handleText = (s: string) => {
+			if (!s) return;
 			stdout += s;
 			for (const line of s.split("\n"))
 				if (line.trim()) onEvent({ type: "log", line });
 		};
-		child.stdout?.on("data", onChunk);
-		child.stderr?.on("data", onChunk);
+		child.stdout?.on("data", (b: Buffer) => handleText(outDecoder.write(b)));
+		child.stderr?.on("data", (b: Buffer) => handleText(errDecoder.write(b)));
 
 		return new Promise<RunResult>((resolve) => {
 			let settled = false;
@@ -233,6 +252,8 @@ export const maestroRunner: TestRunner = {
 				);
 			});
 			child.on("close", () => {
+				handleText(outDecoder.end());
+				handleText(errDecoder.end());
 				const durationMs = Date.now() - beginMs;
 				let junitXml = "";
 				try {

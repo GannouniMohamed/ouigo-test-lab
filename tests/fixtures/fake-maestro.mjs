@@ -8,7 +8,11 @@ const outIdx = argv.indexOf("--output");
 const outPath = outIdx >= 0 ? argv[outIdx + 1] : null;
 const fail = process.env.OTL_FAKE_MAESTRO_FAIL === "1";
 
-if (fail) {
+// OTL_FAKE_MAESTRO_SLEEP=1 → reste vivant (pour tester cancel()).
+if (process.env.OTL_FAKE_MAESTRO_SLEEP === "1") {
+	process.stdout.write("  ✅  Launch app\n");
+	setTimeout(() => process.exit(0), 60000);
+} else if (fail) {
 	process.stdout.write("  ✅  Launch app\n");
 	process.stdout.write("  ❌  Assert visible\n");
 	if (outPath)

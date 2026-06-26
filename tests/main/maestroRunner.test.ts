@@ -57,6 +57,7 @@ afterEach(() => {
 		"OTL_MAESTRO_BIN",
 		"OTL_MAESTRO_BIN_ARGS",
 		"OTL_FAKE_MAESTRO_FAIL",
+		"OTL_FAKE_MAESTRO_SLEEP",
 	])
 		Reflect.deleteProperty(process.env, k);
 });
@@ -109,6 +110,41 @@ describe("maestroRunner", () => {
 		);
 		expect(res.status).toBe("failed");
 		expect(res.report.steps[0].error).toContain("application");
+	});
+
+	it("cancel() tue le run et renvoie le statut cancelled", async () => {
+		process.env.OTL_FAKE_MAESTRO_SLEEP = "1";
+		const scenario = mobileScenario();
+		saveScenario(scenario, FLOW);
+		let runId = "";
+		const runPromise = maestroRunner.run(
+			scenario,
+			mobileEnv(),
+			(e) => {
+				if (e.type === "run-started") runId = e.runId;
+			},
+			{ deviceId: "emulator-5554" },
+		);
+		await new Promise((r) => setTimeout(r, 150));
+		expect(runId).toBeTruthy();
+		await maestroRunner.cancel(runId);
+		const res = await runPromise;
+		expect(res.status).toBe("cancelled");
+	});
+
+	it("cancel() d'un runId inconnu est un no-op (pas d'exception)", async () => {
+		await expect(maestroRunner.cancel("inconnu")).resolves.toBeUndefined();
+	});
+
+	it("maestro introuvable → rapport d'échec (pas d'exception)", async () => {
+		process.env.OTL_MAESTRO_BIN = "otl-maestro-inexistant-xyz";
+		Reflect.deleteProperty(process.env, "OTL_MAESTRO_BIN_ARGS");
+		const scenario = mobileScenario();
+		saveScenario(scenario, FLOW);
+		const res = await maestroRunner.run(scenario, mobileEnv(), () => {}, {
+			deviceId: "emulator-5554",
+		});
+		expect(res.status).toBe("failed");
 	});
 
 	it("source firebase → rapport d'échec mappé (Phase 4)", async () => {
