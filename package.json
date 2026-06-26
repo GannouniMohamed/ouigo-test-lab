@@ -35,6 +35,7 @@
 	},
 	"dependencies": {
 		"electron": "^33.0.0",
+		"google-auth-library": "^10.9.0",
 		"react": "^18.3.1",
 		"react-dom": "^18.3.1",
 		"react-router-dom": "^6.28.0",
