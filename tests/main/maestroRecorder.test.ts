@@ -100,6 +100,21 @@ describe("maestroRecorder.startRecording", () => {
 			}),
 		).rejects.toThrow(/application/i);
 	});
+
+	it("Maestro Studio absent → erreur claire (pas de démarrage silencieux)", async () => {
+		await expect(
+			maestroRecorder.startRecording(
+				{
+					name: "x",
+					environmentId: "preprod",
+					projectId: "p1",
+					tunnelId: "general",
+					deviceId: "emulator-5554",
+				},
+				{ studioInstalled: () => false },
+			),
+		).rejects.toThrow(/Maestro Studio/i);
+	});
 });
 
 describe("maestroRecorder.stopRecording", () => {

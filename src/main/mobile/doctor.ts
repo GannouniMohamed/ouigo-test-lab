@@ -41,6 +41,13 @@ function studioPaths(): string[] {
 	return [`${process.env.HOME ?? ""}/.local/bin/maestro-studio`];
 }
 
+// L'app Maestro Studio desktop est-elle installée ? (recorder + doctor)
+export function studioInstalled(
+	exists: (p: string) => boolean = existsSync,
+): boolean {
+	return studioPaths().some((p) => exists(p));
+}
+
 export async function mobileDoctor(deps?: {
 	run?: ToolRunner;
 	exists?: (p: string) => boolean;
@@ -90,7 +97,7 @@ export async function mobileDoctor(deps?: {
 	};
 
 	// Maestro Studio desktop (présence du fichier)
-	const studioOk = studioPaths().some((p) => exists(p));
+	const studioOk = studioInstalled(exists);
 	const studio: DoctorCheck = {
 		label: "Maestro Studio (desktop)",
 		ok: studioOk,
