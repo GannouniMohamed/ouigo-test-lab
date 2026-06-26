@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
-	buildMaestroReport,
 	type MaestroMapCtx,
+	buildMaestroReport,
 	parseJUnitStatus,
 	parseMaestroSteps,
 } from "../../src/main/runner/maestroReportMapper";

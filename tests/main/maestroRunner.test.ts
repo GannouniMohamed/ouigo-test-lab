@@ -121,6 +121,8 @@ describe("maestroRunner", () => {
 			{ deviceId: "emulator-5554" },
 		);
 		expect(res.status).toBe("failed");
-		expect(res.report.steps[0].error.toLowerCase()).toContain("firebase");
+		expect((res.report.steps[0].error ?? "").toLowerCase()).toContain(
+			"firebase",
+		);
 	});
 });
