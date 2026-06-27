@@ -373,6 +373,11 @@ describe("NewScenario — mobile", () => {
 		});
 		expect(startBtn).toBeDisabled();
 		expect(startBtn).toHaveAttribute("aria-describedby", "no-app-hint");
+		// #14 minor: also assert the title attribute value
+		expect(startBtn).toHaveAttribute(
+			"title",
+			"Configure l'App ID dans Environnements pour activer l'enregistrement mobile",
+		);
 	});
 
 	it("sans app sur l'env → démarrage bloqué avec un message", async () => {
@@ -841,6 +846,83 @@ describe("NewScenario — mobile", () => {
 		// pastedFlow should still be in the textarea
 		expect(screen.getByLabelText("Parcours enregistré")).toHaveValue(
 			"appId: x\n---\n- launchApp\n",
+		);
+	});
+
+	// #18: retry button after run failure
+	it("run échoue → bouton « Réessayer l'exécution » visible et relance le run", async () => {
+		const runMock = vi
+			.fn()
+			.mockRejectedValueOnce(new Error("Appareil déconnecté"))
+			.mockResolvedValueOnce({ runId: "run-retry", steps: [] });
+		// biome-ignore lint/suspicious/noExplicitAny: test stub
+		(globalThis as any).window.api.listEnvironments = vi
+			.fn()
+			.mockResolvedValue(envWithApp());
+		// biome-ignore lint/suspicious/noExplicitAny: test stub
+		(globalThis as any).window.api.listDevices = vi
+			.fn()
+			.mockResolvedValue([bootedDevice]);
+		// biome-ignore lint/suspicious/noExplicitAny: test stub
+		(globalThis as any).window.api.stopRecording = vi.fn().mockResolvedValue({
+			id: "scn-retry",
+			projectId: "p1",
+			tunnelId: "t1",
+			name: "Mon Parcours",
+			platform: "mobile",
+			browser: "chromium",
+			defaultEnvironmentId: "preprod",
+			tags: [],
+			specFile: "s.yaml",
+			createdAt: "2026-06-26T00:00:00Z",
+			lastRun: { status: "never" },
+		});
+		// biome-ignore lint/suspicious/noExplicitAny: test stub
+		(globalThis as any).window.api.runScenario = runMock;
+		useAppStore.setState({
+			activeProjectId: "default",
+			activeEnvByProject: { default: "preprod" },
+		});
+		render(
+			<MemoryRouter>
+				<NewScenario />
+			</MemoryRouter>,
+		);
+		await screen.findByText("Général");
+		await pickMobile();
+		await userEvent.type(
+			screen.getByPlaceholderText("Nom du scénario"),
+			"Test",
+		);
+		await userEvent.click(
+			screen.getByRole("button", { name: /démarrer l'enregistrement/i }),
+		);
+		await waitFor(() => expect(window.api.startRecording).toHaveBeenCalled());
+		const area = await screen.findByLabelText("Parcours enregistré");
+		await userEvent.type(area, "appId: x\n---\n- launchApp\n");
+		await userEvent.click(
+			screen.getByRole("button", { name: /créer le scénario/i }),
+		);
+		// Wait for run failure state — retry button should appear
+		await waitFor(() =>
+			expect(
+				screen.getByRole("button", { name: /réessayer l'exécution/i }),
+			).toBeInTheDocument(),
+		);
+		// pastedFlow still present
+		expect(screen.getByLabelText("Parcours enregistré")).toHaveValue(
+			"appId: x\n---\n- launchApp\n",
+		);
+		// Click retry — should call runScenario again
+		await userEvent.click(
+			screen.getByRole("button", { name: /réessayer l'exécution/i }),
+		);
+		await waitFor(() => expect(runMock).toHaveBeenCalledTimes(2));
+		// On success, navigate to the run
+		await waitFor(() =>
+			expect(navigateMock).toHaveBeenCalledWith("/run/run-retry", {
+				state: { auto: true, steps: [] },
+			}),
 		);
 	});
 });

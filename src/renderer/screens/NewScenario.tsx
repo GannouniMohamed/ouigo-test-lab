@@ -35,6 +35,14 @@ export default function NewScenario(): JSX.Element {
 	const [pastedFlow, setPastedFlow] = useState("");
 	// #18: track whether stopRecording succeeded but runScenario failed
 	const [runFailed, setRunFailed] = useState(false);
+	// #18: store the saved scenario so the retry button can re-trigger the run
+	const [savedScenario, setSavedScenario] = useState<{
+		id: string;
+		projectId: string;
+		tunnelId: string;
+		platform: string;
+	} | null>(null);
+	const [savedEnv, setSavedEnv] = useState<string>("");
 
 	// Env is inherited from the active project — no per-scenario selection.
 	// Resolve it exactly like the context bar: the actively-selected env, else the
@@ -181,6 +189,14 @@ export default function NewScenario(): JSX.Element {
 				scenario.defaultEnvironmentId ||
 				environments[0]?.id ||
 				"local";
+			// #18: mémoriser le scénario sauvegardé pour permettre la relance
+			setSavedScenario({
+				id: scenario.id,
+				projectId: scenario.projectId,
+				tunnelId: scenario.tunnelId,
+				platform: scenario.platform,
+			});
+			setSavedEnv(env);
 			setFirstRunScenarioId(scenario.id);
 			setCurrentScenarioName(scenario.name);
 			const { runId, steps } =
@@ -201,6 +217,7 @@ export default function NewScenario(): JSX.Element {
 			// Run réussi : on peut effacer le contenu collé
 			setPastedFlow("");
 			setRunFailed(false);
+			setSavedScenario(null);
 			navigate(`/run/${runId}`, { state: { auto: true, steps } });
 		} catch (err) {
 			// On reste sur le formulaire avec un message clair plutôt que de
@@ -216,6 +233,34 @@ export default function NewScenario(): JSX.Element {
 				err instanceof Error
 					? err.message
 					: "Impossible d'arrêter l'enregistrement.",
+			);
+		} finally {
+			setStopping(false);
+		}
+	}
+
+	// #18: relance l'exécution du scénario déjà sauvegardé après un échec de run.
+	async function handleRetry() {
+		if (!savedScenario) return;
+		setStopping(true);
+		setRecError("");
+		try {
+			const { runId, steps } = await window.api.runScenario(
+				savedScenario.projectId,
+				savedScenario.tunnelId,
+				savedScenario.id,
+				savedEnv,
+				savedScenario.platform === "mobile" ? { deviceId } : undefined,
+			);
+			setPastedFlow("");
+			setRunFailed(false);
+			setSavedScenario(null);
+			navigate(`/run/${runId}`, { state: { auto: true, steps } });
+		} catch (err) {
+			setRecError(
+				err instanceof Error
+					? err.message
+					: "Impossible de relancer l'exécution.",
 			);
 		} finally {
 			setStopping(false);
@@ -603,7 +648,27 @@ export default function NewScenario(): JSX.Element {
 								</p>
 							)}
 							<div className="otl-method__rec-actions">
-								{!runFailed && (
+								{runFailed ? (
+									<>
+										{/* #18: retry affordance après un échec de run */}
+										<button
+											type="button"
+											className="otl-btn-primary otl-method__btn"
+											disabled={stopping}
+											onClick={handleRetry}
+										>
+											{stopping ? "Relance…" : "Réessayer l'exécution"}
+										</button>
+										<button
+											type="button"
+											className="otl-tab"
+											disabled={stopping}
+											onClick={handleCancel}
+										>
+											Annuler
+										</button>
+									</>
+								) : (
 									<>
 										<button
 											type="button"
