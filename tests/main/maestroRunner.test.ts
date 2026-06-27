@@ -3,7 +3,8 @@ import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { maestroRunner } from "../../src/main/runner/maestroRunner";
-import { saveScenario } from "../../src/main/stores/scenarioStore";
+import { getReport } from "../../src/main/stores/reportStore";
+import { getScenario, saveScenario } from "../../src/main/stores/scenarioStore";
 import type { Environment, RunEvent, Scenario } from "../../src/shared/types";
 
 const FAKE = resolve(process.cwd(), "tests/fixtures/fake-maestro.mjs");
@@ -79,6 +80,43 @@ describe("maestroRunner", () => {
 			type: "run-finished",
 			status: "passed",
 		});
+
+		// #21/#26 step-level events : step-started puis step-passed entre run-started et run-finished
+		const types = events.map((e) => e.type);
+		const startedIdx = types.indexOf("run-started");
+		const finishedIdx = types.lastIndexOf("run-finished");
+		const middleTypes = types.slice(startedIdx + 1, finishedIdx);
+		expect(middleTypes).toContain("step-started");
+		expect(middleTypes).toContain("step-passed");
+		// step-started doit précéder step-passed
+		expect(middleTypes.indexOf("step-started")).toBeLessThan(
+			middleTypes.lastIndexOf("step-passed"),
+		);
+		// aucun step-failed dans un run passant
+		expect(middleTypes).not.toContain("step-failed");
+	});
+
+	it("#21/#26 run échouant : émet step-failed avec error, étapes suivantes step-skipped", async () => {
+		process.env.OTL_FAKE_MAESTRO_FAIL = "1";
+		const scenario = mobileScenario();
+		saveScenario(scenario, FLOW);
+		const events: RunEvent[] = [];
+		const res = await maestroRunner.run(
+			scenario,
+			mobileEnv(),
+			(e) => events.push(e),
+			{ deviceId: "emulator-5554" },
+		);
+		expect(res.status).toBe("failed");
+
+		const types = events.map((e) => e.type);
+		expect(types).toContain("step-failed");
+		// l'événement step-failed doit avoir un champ error non vide
+		const failEvt = events.find((e) => e.type === "step-failed") as Extract<
+			RunEvent,
+			{ type: "step-failed" }
+		>;
+		expect(failEvt?.error).toBeTruthy();
 	});
 
 	it("run échouant : statut failed", async () => {
@@ -171,5 +209,56 @@ describe("maestroRunner", () => {
 		expect(err.toLowerCase()).toContain("firebase");
 		// passe réellement par ensureAppOnDevice (et non plus par le garde-fou Phase 4)
 		expect(err).not.toContain("Phase 4");
+	});
+
+	it("#37 ensureManagedMaestro échoue → res.status === 'failed' avec message d'erreur", async () => {
+		// Supprime OTL_MAESTRO_BIN pour que ensureManagedMaestro ne court-circuite pas.
+		Reflect.deleteProperty(process.env, "OTL_MAESTRO_BIN");
+		Reflect.deleteProperty(process.env, "OTL_MAESTRO_BIN_ARGS");
+		// Le workspace (dir) est vide → pas de binaire géré présent.
+		// On stubbe fetch pour que le téléchargement échoue immédiatement.
+		const origFetch = globalThis.fetch;
+		globalThis.fetch = async () => {
+			throw new Error("Téléchargement impossible (test stub)");
+		};
+		try {
+			const scenario = mobileScenario();
+			saveScenario(scenario, FLOW);
+			const res = await maestroRunner.run(scenario, mobileEnv(), () => {}, {
+				deviceId: "emulator-5554",
+			});
+			expect(res.status).toBe("failed");
+			// Le rapport doit contenir un message d'erreur
+			expect(res.report.steps[0].error).toBeTruthy();
+		} finally {
+			globalThis.fetch = origFetch;
+			// Restaure les vars pour les autres tests
+			process.env.OTL_MAESTRO_BIN = process.execPath;
+			process.env.OTL_MAESTRO_BIN_ARGS = FAKE;
+		}
+	});
+
+	it("#40 persistance du rapport : getReport et lastRun correspondent au résultat du run", async () => {
+		const scenario = mobileScenario();
+		saveScenario(scenario, FLOW);
+		const res = await maestroRunner.run(scenario, mobileEnv(), () => {}, {
+			deviceId: "emulator-5554",
+		});
+
+		// Vérifie que le rapport est persisté correctement
+		const persisted = getReport(res.runId);
+		expect(persisted.runId).toBe(res.runId);
+		expect(persisted.status).toBe(res.status);
+		expect(persisted.scenarioId).toBe(scenario.id);
+
+		// Vérifie que lastRun du scénario correspond au résultat
+		const updatedScenario = getScenario(
+			scenario.projectId,
+			scenario.tunnelId,
+			scenario.id,
+		);
+		expect(updatedScenario.lastRun.status).toBe(
+			res.status === "passed" ? "passed" : "failed",
+		);
 	});
 });

@@ -56,6 +56,12 @@ describe("parseJUnitStatus", () => {
 	it("XML illisible → considéré échoué (sécurité)", () => {
 		expect(parseJUnitStatus("pas du xml").failed).toBe(true);
 	});
+	it("#9 errors='1' sans tag <error> enfant → considéré échoué (crash JVM)", () => {
+		const xml = `<?xml version="1.0"?>
+<testsuites><testsuite name="flow" tests="1" failures="0" errors="1">
+<testcase name="my flow"/></testsuite></testsuites>`;
+		expect(parseJUnitStatus(xml).failed).toBe(true);
+	});
 });
 
 describe("parseMaestroSteps", () => {

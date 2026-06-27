@@ -2,7 +2,7 @@ import { existsSync } from "node:fs";
 import type { DoctorCheck, MobileDoctorReport } from "../../shared/types";
 import { listDevices } from "./devices";
 import { type ToolRunner, runTool, toolBin } from "./exec";
-import { isManagedMaestroReady } from "./managedMaestro";
+import { MAESTRO_VERSION, isManagedMaestroReady } from "./managedMaestro";
 
 const MIN_JAVA = 17;
 
@@ -51,12 +51,12 @@ export async function mobileDoctor(deps?: {
 			: "Installe un JDK 17+ (ex. `brew install openjdk@17` ou Adoptium Temurin) et configure JAVA_HOME.",
 	};
 
-	// Maestro est géré par l'app (binaire 2.5.1 téléchargé et mis en cache).
+	// Maestro est géré par l'app (binaire téléchargé et mis en cache).
 	const maestroReady = isManagedMaestroReady(exists);
 	const maestro: DoctorCheck = {
 		label: "Maestro (géré par l'app)",
 		ok: maestroReady,
-		version: maestroReady ? "2.5.1" : undefined,
+		version: maestroReady ? MAESTRO_VERSION : undefined,
 		hint: maestroReady
 			? undefined
 			: "L'app téléchargera Maestro automatiquement au premier enregistrement, ou clique « Préparer ».",

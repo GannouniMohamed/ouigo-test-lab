@@ -22,9 +22,12 @@ export function parseJUnitStatus(xml: string): {
 } {
 	if (!xml || !/<testsuite/i.test(xml)) return { failed: true };
 	const failuresAttr = /failures="(\d+)"/i.exec(xml);
+	const errorsAttr = /errors="(\d+)"/i.exec(xml);
 	const hasFailureTag = /<(failure|error)\b/i.test(xml);
 	const failed =
-		(failuresAttr ? Number(failuresAttr[1]) > 0 : false) || hasFailureTag;
+		(failuresAttr ? Number(failuresAttr[1]) > 0 : false) ||
+		(errorsAttr ? Number(errorsAttr[1]) > 0 : false) ||
+		hasFailureTag;
 	const msg = /<(?:failure|error)\b[^>]*>([\s\S]*?)<\/(?:failure|error)>/i.exec(
 		xml,
 	);

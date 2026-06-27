@@ -90,7 +90,7 @@ export async function pullLatestApk(
 		throw new Error("Aucune release Firebase trouvée pour cette application.");
 
 	const release = releases[0];
-	if (/\.aab(\?|$)/i.test(release.binaryDownloadUri))
+	if (/\.aab(?:[?#]|$)/i.test(release.binaryDownloadUri))
 		throw new Error(
 			"Le build Firebase est un .aab : uploade un .apk vers App Distribution (un AAB n'est pas directement installable).",
 		);
