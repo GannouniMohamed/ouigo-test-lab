@@ -1,7 +1,7 @@
 import { type ChildProcess, spawn } from "node:child_process";
 import { randomUUID } from "node:crypto";
 import { parseFlowSteps, rebaseFlowAppId } from "../../shared/flow";
-import type { Scenario } from "../../shared/types";
+import type { Environment, Scenario } from "../../shared/types";
 import { ensureAppOnDevice } from "../mobile/ensureAppOnDevice";
 import { quoteArgForCmd, quoteForCmd } from "../mobile/exec";
 import { ensureManagedMaestro } from "../mobile/managedMaestro";
@@ -121,6 +121,18 @@ function uniqueId(projectId: string, tunnelId: string, base: string): string {
 	}
 }
 
+/**
+ * Tue tous les enregistrements Studio actifs et vide la map.
+ * Appelé depuis index.ts lors du `before-quit` d'Electron.
+ * Pas d'import electron ici → reste testable en vitest pur.
+ */
+export function killAllRecordings(): void {
+	for (const session of activeRecordings.values()) {
+		session.kill();
+	}
+	activeRecordings.clear();
+}
+
 export const maestroRecorder = {
 	async startRecording(
 		opts: {
@@ -135,6 +147,10 @@ export const maestroRecorder = {
 			spawnStudio?: (bin: string, deviceId: string) => StudioHandle;
 			waitForPort?: (url: string, timeoutMs: number) => Promise<void>;
 			openExternal?: (url: string) => void;
+			ensureAppOnDevice?: (
+				env: Environment,
+				deviceId: string,
+			) => Promise<{ ok: true } | { ok: false; error: string }>;
 		},
 	): Promise<{ recordingId: string }> {
 		const env = getEnvironment(opts.projectId, opts.environmentId);
@@ -152,7 +168,8 @@ export const maestroRecorder = {
 		const { bin } = await ensure();
 
 		// L'app doit être présente sur l'appareil pour que Studio l'inspecte.
-		const prep = await ensureAppOnDevice(env, opts.deviceId);
+		const ensureApp = deps?.ensureAppOnDevice ?? ensureAppOnDevice;
+		const prep = await ensureApp(env, opts.deviceId);
 		if (!prep.ok) throw new Error(prep.error);
 
 		const recordingId = randomUUID();
@@ -192,17 +209,23 @@ export const maestroRecorder = {
 		pastedFlow?: string,
 	): Promise<Scenario> {
 		const session = activeRecordings.get(recordingId);
-		if (!session) throw new Error(`Recording not found: ${recordingId}`);
+		if (!session)
+			throw new Error(
+				`Session d'enregistrement introuvable (${recordingId}) — elle a peut-être déjà été arrêtée ou annulée.`,
+			);
 
-		session.kill(); // stoppe le serveur Studio
-
+		// #8 Valider AVANT de tuer Studio : si le flow est vide ou sans étapes,
+		// on lève une erreur sans toucher à la session → l'utilisateur peut corriger
+		// et réessayer en rappelant stopRecording avec le bon YAML.
 		const raw = (pastedFlow ?? "").trim();
 		if (!raw || parseFlowSteps(raw).length === 0) {
-			activeRecordings.delete(recordingId);
 			throw new Error(
 				"Aucune étape détectée — colle bien le parcours copié depuis Maestro Studio.",
 			);
 		}
+
+		session.kill(); // stoppe le serveur Studio
+		activeRecordings.delete(recordingId);
 
 		const flow = rebaseFlowAppId(raw, session.appId);
 		const steps = parseFlowSteps(flow);
@@ -227,7 +250,6 @@ export const maestroRecorder = {
 			lastRun: { status: "never" },
 		};
 		saveScenario(scenario, flow);
-		activeRecordings.delete(recordingId);
 		return scenario;
 	},
 

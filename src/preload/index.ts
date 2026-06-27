@@ -126,7 +126,7 @@ contextBridge.exposeInMainWorld("api", {
 		tunnelId: string,
 		scenarioId: string,
 		envId: string,
-		opts?: { headed?: boolean; specDraft?: string },
+		opts?: { headed?: boolean; specDraft?: string; deviceId?: string },
 	) {
 		return ipcRenderer.invoke(
 			"scenario:run",

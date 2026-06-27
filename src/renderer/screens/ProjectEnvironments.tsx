@@ -12,6 +12,7 @@ export default function ProjectEnvironments(): JSX.Element {
 	const { id = "" } = useParams();
 	const [project, setProject] = useState<Project | null>(null);
 	const [rows, setRows] = useState<Environment[]>([]);
+	const [appIdError, setAppIdError] = useState<string | null>(null);
 
 	const load = useCallback(async (): Promise<void> => {
 		const p = await window.api.getProject(id);
@@ -33,6 +34,7 @@ export default function ProjectEnvironments(): JSX.Element {
 			envId,
 			on ? { app: { appId: "", source: "installed" } } : { app: undefined },
 		);
+		setAppIdError(null);
 	}
 
 	// Patche l'app mobile d'un environnement de manière immuable.
@@ -42,6 +44,9 @@ export default function ProjectEnvironments(): JSX.Element {
 				r.id === envId && r.app ? { ...r, app: { ...r.app, ...patch } } : r,
 			),
 		);
+		if (appIdError === envId && patch.appId !== undefined) {
+			setAppIdError(null);
+		}
 	}
 
 	// Change la source ; (dé)sème la config firebase selon le cas.
@@ -96,6 +101,13 @@ export default function ProjectEnvironments(): JSX.Element {
 	}
 
 	async function save(): Promise<void> {
+		// #16: Valider que toute app activée a un appId non vide.
+		const invalid = rows.find((r) => r.app && !r.app.appId.trim());
+		if (invalid) {
+			setAppIdError(invalid.id);
+			return;
+		}
+		setAppIdError(null);
 		// Upsert chaque ligne (id conservé), sans régénérer l'id.
 		for (const r of rows) {
 			await window.api.saveEnvironment(id, r);
@@ -144,13 +156,16 @@ export default function ProjectEnvironments(): JSX.Element {
 				{rows.map((r) => (
 					<div className="otl-envrow-wrap" key={r.id}>
 						<div className="otl-envrow">
+							{/* #32: aria-label on label and URL inputs */}
 							<input
 								className="otl-input otl-envrow__label"
+								aria-label={`Libellé de l'environnement ${r.label || r.id}`}
 								value={r.label}
 								onChange={(e) => updateRow(r.id, { label: e.target.value })}
 							/>
 							<input
 								className="otl-input otl-envrow__urlwrap"
+								aria-label={`URL de l'environnement ${r.label || r.id}`}
 								value={r.baseURL}
 								onChange={(e) => updateRow(r.id, { baseURL: e.target.value })}
 							/>
@@ -189,6 +204,13 @@ export default function ProjectEnvironments(): JSX.Element {
 												updateApp(r.id, { appId: e.target.value })
 											}
 										/>
+										{/* #16: inline error when appId is empty */}
+										{appIdError === r.id && (
+											<p className="otl-mobilebar__hint otl-mobilebar__hint--error">
+												App ID requis — saisir le nom de package de
+												l'application.
+											</p>
+										)}
 									</div>
 
 									<div
@@ -218,36 +240,50 @@ export default function ProjectEnvironments(): JSX.Element {
 
 									{r.app.source === "firebase" && r.app.firebase && (
 										<div className="otl-envapp__firebase">
-											<input
-												className="otl-input"
-												placeholder="Numéro de projet Firebase"
-												value={r.app.firebase.projectNumber}
-												onChange={(e) =>
-													updateFirebase(r.id, {
-														projectNumber: e.target.value,
-													})
-												}
-											/>
-											<input
-												className="otl-input"
-												placeholder="App ID Firebase (1:…:android:…)"
-												value={r.app.firebase.firebaseAppId}
-												onChange={(e) =>
-													updateFirebase(r.id, {
-														firebaseAppId: e.target.value,
-													})
-												}
-											/>
-											<input
-												className="otl-input"
-												placeholder="Chemin du compte de service (JSON)"
-												value={r.app.firebase.serviceAccountKeyPath}
-												onChange={(e) =>
-													updateFirebase(r.id, {
-														serviceAccountKeyPath: e.target.value,
-													})
-												}
-											/>
+											{/* #33: field labels for Firebase inputs */}
+											<div>
+												<div className="otl-field-label">
+													Numéro de projet Firebase
+												</div>
+												<input
+													className="otl-input"
+													placeholder="Numéro de projet Firebase"
+													value={r.app.firebase.projectNumber}
+													onChange={(e) =>
+														updateFirebase(r.id, {
+															projectNumber: e.target.value,
+														})
+													}
+												/>
+											</div>
+											<div>
+												<div className="otl-field-label">App ID Firebase</div>
+												<input
+													className="otl-input"
+													placeholder="App ID Firebase (1:…:android:…)"
+													value={r.app.firebase.firebaseAppId}
+													onChange={(e) =>
+														updateFirebase(r.id, {
+															firebaseAppId: e.target.value,
+														})
+													}
+												/>
+											</div>
+											<div>
+												<div className="otl-field-label">
+													Compte de service (JSON)
+												</div>
+												<input
+													className="otl-input"
+													placeholder="Chemin du compte de service (JSON)"
+													value={r.app.firebase.serviceAccountKeyPath}
+													onChange={(e) =>
+														updateFirebase(r.id, {
+															serviceAccountKeyPath: e.target.value,
+														})
+													}
+												/>
+											</div>
 										</div>
 									)}
 								</div>

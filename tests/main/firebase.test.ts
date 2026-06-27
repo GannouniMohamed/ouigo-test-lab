@@ -117,6 +117,70 @@ describe("pullLatestApk", () => {
 		).rejects.toThrow(/apk/i);
 	});
 
+	it("#27 .aab avec fragment # → erreur explicite (apk requis)", async () => {
+		await expect(
+			pullLatestApk(
+				CFG,
+				deps({
+					listReleases: async () => [
+						{
+							binaryDownloadUri: "https://signed/app.aab#sig",
+							buildVersion: "1",
+						},
+					],
+				}),
+			),
+		).rejects.toThrow(/apk/i);
+	});
+
+	it("#11 getAccessToken échoue → pullLatestApk rejette avec le message du jeton", async () => {
+		await expect(
+			pullLatestApk(
+				CFG,
+				deps({
+					getAccessToken: async () => {
+						throw new Error("Jeton invalide");
+					},
+				}),
+			),
+		).rejects.toThrow(/Jeton invalide/);
+	});
+
+	it("#11 listReleases retourne 4xx → pullLatestApk rejette avec message d'erreur API", async () => {
+		await expect(
+			pullLatestApk(
+				CFG,
+				deps({
+					listReleases: async () => {
+						throw new Error("Échec de l'API App Distribution (403)");
+					},
+				}),
+			),
+		).rejects.toThrow(/403/);
+	});
+
+	it("#24 displayVersion+buildVersion sans name → cache après 2e appel (1 seul download)", async () => {
+		let downloads = 0;
+		const d = deps({
+			listReleases: async () => [
+				{
+					binaryDownloadUri: "https://signed/app.apk",
+					buildVersion: "42",
+					displayVersion: "1.5.0",
+					// pas de name → clé de cache displayVersion-buildVersion
+				},
+			],
+			download: async (_u: string, dest: string) => {
+				downloads++;
+				const { writeFileSync } = await import("node:fs");
+				writeFileSync(dest, "APK");
+			},
+		});
+		await pullLatestApk(CFG, d);
+		await pullLatestApk(CFG, d);
+		expect(downloads).toBe(1);
+	});
+
 	it("chemins réels (realListReleases/realDownload) via fetch stubbé", async () => {
 		const calls: string[] = [];
 		const orig = globalThis.fetch;

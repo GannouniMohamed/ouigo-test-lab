@@ -8,6 +8,7 @@ import {
 	parseMaestroVersion,
 } from "../../src/main/mobile/doctor";
 import type { ExecResult } from "../../src/main/mobile/exec";
+import { MAESTRO_VERSION } from "../../src/main/mobile/managedMaestro";
 
 describe("parseJavaMajor", () => {
 	it("extrait 17 d'un openjdk 17.x", () => {
@@ -141,5 +142,23 @@ describe("mobileDoctor", () => {
 		const report = await mobileDoctor({ run, exists: () => false });
 		expect(report.maestro.ok).toBe(false);
 		expect(report.allOk).toBe(false);
+	});
+
+	it("#23 maestro.version suit la constante MAESTRO_VERSION (pas un littéral codé en dur)", async () => {
+		const run = router({
+			java: { code: 0, stdout: "", stderr: 'openjdk version "17.0.8"' },
+			adb: {
+				code: 0,
+				stdout:
+					"List of devices attached\nemulator-5554 device model:Pixel_6\n",
+				stderr: "",
+			},
+		});
+		const report = await mobileDoctor({
+			run,
+			exists: (p) => p.includes(`maestro-${MAESTRO_VERSION}`),
+		});
+		expect(report.maestro.ok).toBe(true);
+		expect(report.maestro.version).toBe(MAESTRO_VERSION);
 	});
 });

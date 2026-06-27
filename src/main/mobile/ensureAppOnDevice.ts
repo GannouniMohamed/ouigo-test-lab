@@ -50,7 +50,7 @@ export async function ensureAppOnDevice(
 	if (res.code !== 0)
 		return {
 			ok: false,
-			error: `Échec de l'installation de l'APK : ${res.stderr.trim() || `adb a quitté (code ${res.code})`}`,
+			error: `Échec de l'installation de l'APK : ${res.stderr.trim() || res.stdout.trim() || `adb a quitté (code ${res.code})`}`,
 		};
 	return { ok: true };
 }

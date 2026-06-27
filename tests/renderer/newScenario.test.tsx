@@ -11,12 +11,13 @@ vi.mock("react-router-dom", async (orig) => ({
 	useNavigate: () => navigateMock,
 }));
 
-const runScenario = vi.fn().mockResolvedValue({ runId: "run-9" });
+// #36 fix: mock returns steps: []
+const runScenario = vi.fn().mockResolvedValue({ runId: "run-9", steps: [] });
 
 beforeEach(() => {
 	navigateMock.mockReset();
 	runScenario.mockReset();
-	runScenario.mockResolvedValue({ runId: "run-9" });
+	runScenario.mockResolvedValue({ runId: "run-9", steps: [] });
 	// biome-ignore lint/suspicious/noExplicitAny: test stub
 	(globalThis as any).window.api = {
 		listEnvironments: vi.fn().mockResolvedValue([]),
@@ -49,6 +50,7 @@ beforeEach(() => {
 			lastRun: { status: "never" },
 		}),
 		runScenario,
+		openExternal: vi.fn(),
 	} as unknown as typeof window.api;
 	useAppStore.setState({ activeProjectId: "default" });
 });
@@ -85,8 +87,9 @@ describe("NewScenario", () => {
 		await userEvent.click(screen.getByRole("button", { name: /arrêter/i }));
 		await waitFor(() => {
 			expect(window.api.stopRecording).toHaveBeenCalledWith("rec-1", undefined);
+			// #36 fix: assert includes steps: []
 			expect(navigateMock).toHaveBeenCalledWith("/run/run-9", {
-				state: { auto: true },
+				state: { auto: true, steps: [] },
 			});
 		});
 	});
@@ -113,8 +116,9 @@ describe("NewScenario", () => {
 				"scn-1",
 				expect.any(String),
 			);
+			// #36 fix: assert includes steps: []
 			expect(navigateMock).toHaveBeenCalledWith("/run/run-9", {
-				state: { auto: true },
+				state: { auto: true, steps: [] },
 			});
 		});
 		expect(useAppStore.getState().firstRunScenarioId).toBe("scn-1");
@@ -315,6 +319,66 @@ describe("NewScenario — mobile", () => {
 		if (!mobileCard) throw new Error("carte Mobile introuvable");
 		await userEvent.click(mobileCard);
 	}
+
+	// #14: escape hatch test
+	it("sans app → le message inclut un bouton vers /projects/:id/environments", async () => {
+		// biome-ignore lint/suspicious/noExplicitAny: test stub
+		(globalThis as any).window.api.listEnvironments = vi
+			.fn()
+			.mockResolvedValue([
+				{ id: "preprod", label: "Préprod", baseURL: "", variables: {} },
+			]);
+		// biome-ignore lint/suspicious/noExplicitAny: test stub
+		(globalThis as any).window.api.listDevices = vi.fn().mockResolvedValue([]);
+		useAppStore.setState({
+			activeProjectId: "proj-1",
+			activeEnvByProject: {},
+		});
+		render(
+			<MemoryRouter>
+				<NewScenario />
+			</MemoryRouter>,
+		);
+		await screen.findByText("Général");
+		await pickMobile();
+		const link = await screen.findByRole("button", {
+			name: /configurer l'environnement/i,
+		});
+		await userEvent.click(link);
+		expect(navigateMock).toHaveBeenCalledWith("/projects/proj-1/environments");
+	});
+
+	it("sans app → bouton Démarrer a un title et aria-describedby", async () => {
+		// biome-ignore lint/suspicious/noExplicitAny: test stub
+		(globalThis as any).window.api.listEnvironments = vi
+			.fn()
+			.mockResolvedValue([
+				{ id: "preprod", label: "Préprod", baseURL: "", variables: {} },
+			]);
+		// biome-ignore lint/suspicious/noExplicitAny: test stub
+		(globalThis as any).window.api.listDevices = vi.fn().mockResolvedValue([]);
+		useAppStore.setState({
+			activeProjectId: "proj-1",
+			activeEnvByProject: {},
+		});
+		render(
+			<MemoryRouter>
+				<NewScenario />
+			</MemoryRouter>,
+		);
+		await screen.findByText("Général");
+		await pickMobile();
+		const startBtn = screen.getByRole("button", {
+			name: /démarrer l'enregistrement/i,
+		});
+		expect(startBtn).toBeDisabled();
+		expect(startBtn).toHaveAttribute("aria-describedby", "no-app-hint");
+		// #14 minor: also assert the title attribute value
+		expect(startBtn).toHaveAttribute(
+			"title",
+			"Configure l'App ID dans Environnements pour activer l'enregistrement mobile",
+		);
+	});
 
 	it("sans app sur l'env → démarrage bloqué avec un message", async () => {
 		// biome-ignore lint/suspicious/noExplicitAny: test stub
@@ -651,5 +715,214 @@ describe("NewScenario — mobile", () => {
 				name: /installer l'app \(firebase\)/i,
 			}),
 		).not.toBeInTheDocument();
+	});
+
+	// #17: Studio URL + format hint
+	it("enregistrement mobile actif → affiche l'URL Studio et un indice de format", async () => {
+		// biome-ignore lint/suspicious/noExplicitAny: test stub
+		(globalThis as any).window.api.listEnvironments = vi
+			.fn()
+			.mockResolvedValue(envWithApp());
+		// biome-ignore lint/suspicious/noExplicitAny: test stub
+		(globalThis as any).window.api.listDevices = vi
+			.fn()
+			.mockResolvedValue([bootedDevice]);
+		useAppStore.setState({
+			activeProjectId: "default",
+			activeEnvByProject: { default: "preprod" },
+		});
+		render(
+			<MemoryRouter>
+				<NewScenario />
+			</MemoryRouter>,
+		);
+		await screen.findByText("Général");
+		await pickMobile();
+		await userEvent.type(
+			screen.getByPlaceholderText("Nom du scénario"),
+			"Test",
+		);
+		await userEvent.click(
+			screen.getByRole("button", { name: /démarrer l'enregistrement/i }),
+		);
+		await waitFor(() => expect(window.api.startRecording).toHaveBeenCalled());
+		// Studio URL visible
+		expect(await screen.findByText(/localhost:9999/)).toBeInTheDocument();
+		// Format hint visible
+		expect(screen.getByText(/Le flow doit commencer par/i)).toBeInTheDocument();
+	});
+
+	// #17: format warning
+	it("flow sans appId: → avertissement avant soumission", async () => {
+		// biome-ignore lint/suspicious/noExplicitAny: test stub
+		(globalThis as any).window.api.listEnvironments = vi
+			.fn()
+			.mockResolvedValue(envWithApp());
+		// biome-ignore lint/suspicious/noExplicitAny: test stub
+		(globalThis as any).window.api.listDevices = vi
+			.fn()
+			.mockResolvedValue([bootedDevice]);
+		useAppStore.setState({
+			activeProjectId: "default",
+			activeEnvByProject: { default: "preprod" },
+		});
+		render(
+			<MemoryRouter>
+				<NewScenario />
+			</MemoryRouter>,
+		);
+		await screen.findByText("Général");
+		await pickMobile();
+		await userEvent.type(
+			screen.getByPlaceholderText("Nom du scénario"),
+			"Test",
+		);
+		await userEvent.click(
+			screen.getByRole("button", { name: /démarrer l'enregistrement/i }),
+		);
+		await waitFor(() => expect(window.api.startRecording).toHaveBeenCalled());
+		const area = await screen.findByLabelText("Parcours enregistré");
+		await userEvent.type(area, "launchApp\n");
+		// Warning should appear (no appId: in content) — the error variant
+		const warnings = await screen.findAllByText(/doit commencer par/i);
+		expect(warnings.length).toBeGreaterThanOrEqual(1);
+	});
+
+	// #18: preserve pastedFlow on run failure
+	it("run échoue → pastedFlow conservé, message d'erreur affiché", async () => {
+		// biome-ignore lint/suspicious/noExplicitAny: test stub
+		(globalThis as any).window.api.listEnvironments = vi
+			.fn()
+			.mockResolvedValue(envWithApp());
+		// biome-ignore lint/suspicious/noExplicitAny: test stub
+		(globalThis as any).window.api.listDevices = vi
+			.fn()
+			.mockResolvedValue([bootedDevice]);
+		// biome-ignore lint/suspicious/noExplicitAny: test stub
+		(globalThis as any).window.api.stopRecording = vi.fn().mockResolvedValue({
+			id: "scn-m",
+			projectId: "p1",
+			tunnelId: "t1",
+			name: "Mon Parcours",
+			platform: "mobile",
+			browser: "chromium",
+			defaultEnvironmentId: "preprod",
+			tags: [],
+			specFile: "s.yaml",
+			createdAt: "2026-06-26T00:00:00Z",
+			lastRun: { status: "never" },
+		});
+		// biome-ignore lint/suspicious/noExplicitAny: test stub
+		(globalThis as any).window.api.runScenario = vi
+			.fn()
+			.mockRejectedValue(new Error("Appareil déconnecté"));
+		useAppStore.setState({
+			activeProjectId: "default",
+			activeEnvByProject: { default: "preprod" },
+		});
+		render(
+			<MemoryRouter>
+				<NewScenario />
+			</MemoryRouter>,
+		);
+		await screen.findByText("Général");
+		await pickMobile();
+		await userEvent.type(
+			screen.getByPlaceholderText("Nom du scénario"),
+			"Test",
+		);
+		await userEvent.click(
+			screen.getByRole("button", { name: /démarrer l'enregistrement/i }),
+		);
+		await waitFor(() => expect(window.api.startRecording).toHaveBeenCalled());
+		const area = await screen.findByLabelText("Parcours enregistré");
+		await userEvent.type(area, "appId: x\n---\n- launchApp\n");
+		await userEvent.click(
+			screen.getByRole("button", { name: /créer le scénario/i }),
+		);
+		await waitFor(() =>
+			expect(screen.getByText(/appareil déconnecté/i)).toBeInTheDocument(),
+		);
+		// pastedFlow should still be in the textarea
+		expect(screen.getByLabelText("Parcours enregistré")).toHaveValue(
+			"appId: x\n---\n- launchApp\n",
+		);
+	});
+
+	// #18: retry button after run failure
+	it("run échoue → bouton « Réessayer l'exécution » visible et relance le run", async () => {
+		const runMock = vi
+			.fn()
+			.mockRejectedValueOnce(new Error("Appareil déconnecté"))
+			.mockResolvedValueOnce({ runId: "run-retry", steps: [] });
+		// biome-ignore lint/suspicious/noExplicitAny: test stub
+		(globalThis as any).window.api.listEnvironments = vi
+			.fn()
+			.mockResolvedValue(envWithApp());
+		// biome-ignore lint/suspicious/noExplicitAny: test stub
+		(globalThis as any).window.api.listDevices = vi
+			.fn()
+			.mockResolvedValue([bootedDevice]);
+		// biome-ignore lint/suspicious/noExplicitAny: test stub
+		(globalThis as any).window.api.stopRecording = vi.fn().mockResolvedValue({
+			id: "scn-retry",
+			projectId: "p1",
+			tunnelId: "t1",
+			name: "Mon Parcours",
+			platform: "mobile",
+			browser: "chromium",
+			defaultEnvironmentId: "preprod",
+			tags: [],
+			specFile: "s.yaml",
+			createdAt: "2026-06-26T00:00:00Z",
+			lastRun: { status: "never" },
+		});
+		// biome-ignore lint/suspicious/noExplicitAny: test stub
+		(globalThis as any).window.api.runScenario = runMock;
+		useAppStore.setState({
+			activeProjectId: "default",
+			activeEnvByProject: { default: "preprod" },
+		});
+		render(
+			<MemoryRouter>
+				<NewScenario />
+			</MemoryRouter>,
+		);
+		await screen.findByText("Général");
+		await pickMobile();
+		await userEvent.type(
+			screen.getByPlaceholderText("Nom du scénario"),
+			"Test",
+		);
+		await userEvent.click(
+			screen.getByRole("button", { name: /démarrer l'enregistrement/i }),
+		);
+		await waitFor(() => expect(window.api.startRecording).toHaveBeenCalled());
+		const area = await screen.findByLabelText("Parcours enregistré");
+		await userEvent.type(area, "appId: x\n---\n- launchApp\n");
+		await userEvent.click(
+			screen.getByRole("button", { name: /créer le scénario/i }),
+		);
+		// Wait for run failure state — retry button should appear
+		await waitFor(() =>
+			expect(
+				screen.getByRole("button", { name: /réessayer l'exécution/i }),
+			).toBeInTheDocument(),
+		);
+		// pastedFlow still present
+		expect(screen.getByLabelText("Parcours enregistré")).toHaveValue(
+			"appId: x\n---\n- launchApp\n",
+		);
+		// Click retry — should call runScenario again
+		await userEvent.click(
+			screen.getByRole("button", { name: /réessayer l'exécution/i }),
+		);
+		await waitFor(() => expect(runMock).toHaveBeenCalledTimes(2));
+		// On success, navigate to the run
+		await waitFor(() =>
+			expect(navigateMock).toHaveBeenCalledWith("/run/run-retry", {
+				state: { auto: true, steps: [] },
+			}),
+		);
 	});
 });

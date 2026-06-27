@@ -108,7 +108,10 @@ describe("maestroBin — binaire géré par l'app", () => {
 			"bin",
 			process.platform === "win32" ? "maestro.bat" : "maestro",
 		);
-		expect(maestroBin((p) => p === managed)).toBe(managed);
+		// Le sentinel (.maestro-ok) doit aussi être présent pour que le binaire
+		// géré soit considéré comme prêt (sentinel gate — finding #2).
+		const sentinel = join(ws, "tools", "maestro-2.5.1", ".maestro-ok");
+		expect(maestroBin((p) => p === managed || p === sentinel)).toBe(managed);
 	});
 
 	it("OTL_MAESTRO_BIN reste prioritaire sur le binaire géré", () => {

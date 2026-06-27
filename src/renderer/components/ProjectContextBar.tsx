@@ -10,7 +10,12 @@ export function ProjectContextBar(): JSX.Element | null {
 	const activeEnvByProject = useAppStore((s) => s.activeEnvByProject);
 	const setActiveEnv = useAppStore((s) => s.setActiveEnv);
 
-	if (pathname.startsWith("/projects")) return null;
+	if (
+		pathname === "/projects" ||
+		pathname === "/projects/new" ||
+		pathname.startsWith("/projects/new/")
+	)
+		return null;
 
 	const project = projects.find((p) => p.id === activeProjectId) ?? null;
 	const envId = activeEnvByProject[activeProjectId] ?? "";

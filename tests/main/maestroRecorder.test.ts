@@ -3,6 +3,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
+	killAllRecordings,
 	maestroRecorder,
 	studioSpawnInvocation,
 } from "../../src/main/recorder/maestroRecorder";
@@ -31,8 +32,39 @@ function seedProject(): void {
 	projectStore.saveProject(project);
 }
 
+function seedFirebaseProject(): void {
+	const project: Project = {
+		id: "pfb",
+		name: "P Firebase",
+		description: "",
+		createdAt: "2026-06-26T00:00:00Z",
+		environments: [
+			{
+				id: "preprod-fb",
+				label: "Préprod Firebase",
+				baseURL: "",
+				variables: {},
+				app: {
+					appId: "com.ouigo.app",
+					source: "firebase",
+					firebase: {
+						projectNumber: "123",
+						firebaseAppId: "1:123:android:abc",
+						serviceAccountKeyPath: "/fake/key.json",
+					},
+				},
+			},
+		],
+	};
+	projectStore.saveProject(project);
+}
+
 // Dépendances injectées : Studio « lancé » sans process réel.
-function fakeDeps() {
+function fakeDeps(overrides?: {
+	ensureAppOnDevice?: () => Promise<
+		{ ok: true } | { ok: false; error: string }
+	>;
+}) {
 	const kill = vi.fn();
 	return {
 		kill,
@@ -41,6 +73,9 @@ function fakeDeps() {
 			spawnStudio: vi.fn(() => ({ pid: 4242, kill })),
 			waitForPort: vi.fn(async () => {}),
 			openExternal: vi.fn(),
+			ensureAppOnDevice:
+				overrides?.ensureAppOnDevice ??
+				vi.fn(async () => ({ ok: true as const })),
 		},
 	};
 }
@@ -130,6 +165,28 @@ describe("maestroRecorder.startRecording", () => {
 		).rejects.toThrow(/Studio n'a pas démarré/i);
 		expect(kill).toHaveBeenCalledTimes(1);
 	});
+
+	it("#38 source:firebase + ensureAppOnDevice échoue → rejet avec message Firebase", async () => {
+		seedFirebaseProject();
+		const { deps } = fakeDeps({
+			ensureAppOnDevice: vi.fn(async () => ({
+				ok: false as const,
+				error: "Firebase: réseau coupé",
+			})),
+		});
+		await expect(
+			maestroRecorder.startRecording(
+				{
+					name: "x",
+					environmentId: "preprod-fb",
+					projectId: "pfb",
+					tunnelId: "general",
+					deviceId: "emulator-5554",
+				},
+				deps,
+			),
+		).rejects.toThrow(/Firebase/i);
+	});
 });
 
 describe("maestroRecorder.stopRecording", () => {
@@ -177,24 +234,92 @@ describe("maestroRecorder.stopRecording", () => {
 		expect(spec).not.toContain("com.autre.enregistre");
 	});
 
-	it("YAML vide → erreur, pas de scénario", async () => {
-		const { recordingId } = await start();
+	it("YAML vide → erreur, kill NOT appelé, retry fonctionne", async () => {
+		const { recordingId, kill } = await start();
+		// Premier appel → erreur, kill pas appelé
 		await expect(
 			maestroRecorder.stopRecording(recordingId, "   "),
 		).rejects.toThrow(/étape/i);
+		expect(kill).not.toHaveBeenCalled();
+
+		// Retry avec YAML valide → succès
+		const scenario = await maestroRecorder.stopRecording(
+			recordingId,
+			"appId: com.ouigo.app\n---\n- launchApp\n",
+		);
+		expect(scenario.platform).toBe("mobile");
+		expect(kill).toHaveBeenCalledTimes(1);
 	});
 
-	it("YAML sans commande → erreur", async () => {
-		const { recordingId } = await start();
+	it("YAML sans commande → erreur, kill NOT appelé, retry fonctionne", async () => {
+		const { recordingId, kill } = await start();
+		// Premier appel → erreur, kill pas appelé
 		await expect(
 			maestroRecorder.stopRecording(recordingId, "appId: com.x\n---\n# rien\n"),
 		).rejects.toThrow(/étape/i);
+		expect(kill).not.toHaveBeenCalled();
+
+		// Retry avec YAML valide → succès
+		const scenario = await maestroRecorder.stopRecording(
+			recordingId,
+			"appId: com.ouigo.app\n---\n- launchApp\n",
+		);
+		expect(scenario.platform).toBe("mobile");
+		expect(kill).toHaveBeenCalledTimes(1);
 	});
 
-	it("recordingId inconnu → erreur", async () => {
+	it("recordingId inconnu → erreur en français (introuvable)", async () => {
 		await expect(
 			maestroRecorder.stopRecording("nope", "appId: x\n---\n- launchApp\n"),
-		).rejects.toThrow(/not found/i);
+		).rejects.toThrow(/introuvable/i);
+	});
+
+	it("#42 dédup : deux stop avec le même nom → ids distincts, les deux existent", async () => {
+		// Premier enregistrement
+		const { kill: kill1, deps: deps1 } = fakeDeps();
+		const { recordingId: id1 } = await maestroRecorder.startRecording(
+			{
+				name: "Réservation",
+				environmentId: "preprod",
+				projectId: "p1",
+				tunnelId: "general",
+				deviceId: "emulator-5554",
+			},
+			deps1,
+		);
+		const scenario1 = await maestroRecorder.stopRecording(
+			id1,
+			"appId: com.ouigo.app\n---\n- launchApp\n",
+		);
+		expect(kill1).toHaveBeenCalledTimes(1);
+
+		// Deuxième enregistrement avec le même nom
+		const { kill: kill2, deps: deps2 } = fakeDeps();
+		const { recordingId: id2 } = await maestroRecorder.startRecording(
+			{
+				name: "Réservation",
+				environmentId: "preprod",
+				projectId: "p1",
+				tunnelId: "general",
+				deviceId: "emulator-5554",
+			},
+			deps2,
+		);
+		const scenario2 = await maestroRecorder.stopRecording(
+			id2,
+			"appId: com.ouigo.app\n---\n- launchApp\n",
+		);
+		expect(kill2).toHaveBeenCalledTimes(1);
+
+		// IDs distincts, second est suffixé
+		expect(scenario1.id).toBe("reservation");
+		expect(scenario2.id).toBe("reservation-2");
+
+		// Les deux scénarios existent dans le store
+		const saved1 = getScenario("p1", "general", scenario1.id);
+		const saved2 = getScenario("p1", "general", scenario2.id);
+		expect(saved1.name).toBe("Réservation");
+		expect(saved2.name).toBe("Réservation");
 	});
 });
 
@@ -219,11 +344,55 @@ describe("maestroRecorder.cancelRecording", () => {
 				recordingId,
 				"appId: x\n---\n- launchApp\n",
 			),
-		).rejects.toThrow(/not found/i);
+		).rejects.toThrow(/introuvable/i);
 	});
 
 	it("recordingId inconnu → no-op", () => {
 		expect(() => maestroRecorder.cancelRecording("nope")).not.toThrow();
+	});
+});
+
+describe("killAllRecordings", () => {
+	it("tue tous les enregistrements actifs et vide la map", async () => {
+		// Démarre deux enregistrements
+		const { kill: kill1, deps: deps1 } = fakeDeps();
+		const { recordingId: id1 } = await maestroRecorder.startRecording(
+			{
+				name: "Rec1",
+				environmentId: "preprod",
+				projectId: "p1",
+				tunnelId: "general",
+				deviceId: "emulator-5554",
+			},
+			deps1,
+		);
+
+		const { kill: kill2, deps: deps2 } = fakeDeps();
+		const { recordingId: id2 } = await maestroRecorder.startRecording(
+			{
+				name: "Rec2",
+				environmentId: "preprod",
+				projectId: "p1",
+				tunnelId: "general",
+				deviceId: "emulator-5556",
+			},
+			deps2,
+		);
+
+		// Appelle killAllRecordings
+		killAllRecordings();
+
+		// Les deux kills ont été appelés
+		expect(kill1).toHaveBeenCalledTimes(1);
+		expect(kill2).toHaveBeenCalledTimes(1);
+
+		// La map est vide → stopRecording renvoie "introuvable"
+		await expect(
+			maestroRecorder.stopRecording(id1, "appId: x\n---\n- launchApp\n"),
+		).rejects.toThrow(/introuvable/i);
+		await expect(
+			maestroRecorder.stopRecording(id2, "appId: x\n---\n- launchApp\n"),
+		).rejects.toThrow(/introuvable/i);
 	});
 });
 

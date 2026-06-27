@@ -1,12 +1,13 @@
 import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
 	handleCancelRecording,
 	handleStartRecording,
 	handleStopRecording,
 } from "../../src/main/ipc/recordingHandlers";
+import { playwrightRecorder } from "../../src/main/recorder/playwrightRecorder";
 import * as projectStore from "../../src/main/stores/projectStore";
 import { saveTunnel } from "../../src/main/stores/tunnelStore";
 import { DEFAULT_TUNNEL_COLOR } from "../../src/shared/groups";
@@ -95,7 +96,35 @@ describe("dispatch d'enregistrement par plateforme", () => {
 		handleCancelRecording(recordingId);
 		await expect(
 			handleStopRecording(recordingId, "appId: x\n---\n- launchApp\n"),
-		).rejects.toThrow(/not found/i);
+		).rejects.toThrow(/introuvable/i);
+	});
+
+	it("stop avec id inconnu → rejette avec message français (introuvable)", async () => {
+		await expect(handleStopRecording("completely-unknown-id")).rejects.toThrow(
+			/Enregistrement introuvable ou déjà annulé/,
+		);
+	});
+
+	it("cancel web → libère le recordingId et tue le processus (stop ensuite rejette avec introuvable)", async () => {
+		const cancelSpy = vi.spyOn(playwrightRecorder, "cancelRecording");
+		try {
+			const { recordingId } = await handleStartRecording({
+				name: "Annulé web",
+				browser: "chromium",
+				environmentId: "preprod",
+				projectId: "p1",
+				tunnelId: "general",
+			});
+			handleCancelRecording(recordingId);
+			// Vérifie que playwrightRecorder.cancelRecording (qui appelle killProcessTree)
+			// a bien été invoqué sur le bon recordingId.
+			expect(cancelSpy).toHaveBeenCalledWith(recordingId);
+			await expect(handleStopRecording(recordingId)).rejects.toThrow(
+				/introuvable/i,
+			);
+		} finally {
+			cancelSpy.mockRestore();
+		}
 	});
 
 	it("platform absente → playwrightRecorder (crée un scénario web), start+stop routés via la Map", async () => {

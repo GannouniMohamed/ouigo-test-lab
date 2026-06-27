@@ -86,6 +86,34 @@ describe("ensureAppOnDevice", () => {
 		if (!r.ok) expect(r.error).toContain("INSTALL_FAILED");
 	});
 
+	it("#10 échec adb avec raison dans stdout (stderr vide) → message contient INSTALL_FAILED", async () => {
+		const r = await ensureAppOnDevice(
+			env({
+				app: {
+					appId: "com.ouigo.app",
+					source: "firebase",
+					firebase: {
+						projectNumber: "123",
+						firebaseAppId: "1:123:android:abc",
+						serviceAccountKeyPath: "/keys/sa.json",
+					},
+				},
+			}),
+			"emulator-5554",
+			{
+				pull: async () => "/cache/app.apk",
+				run: async () => ({
+					code: 1,
+					stdout:
+						"INSTALL_FAILED_NO_MATCHING_ABIS: Failed to extract native libraries",
+					stderr: "",
+				}),
+			},
+		);
+		expect(r.ok).toBe(false);
+		if (!r.ok) expect(r.error).toContain("INSTALL_FAILED");
+	});
+
 	it("erreur de pull Firebase → ok:false avec message Firebase", async () => {
 		const r = await ensureAppOnDevice(
 			env({
@@ -108,5 +136,20 @@ describe("ensureAppOnDevice", () => {
 		);
 		expect(r.ok).toBe(false);
 		if (!r.ok) expect(r.error.toLowerCase()).toContain("firebase");
+	});
+
+	it("#25 source firebase sans config firebase → ok:false, erreur contient 'Firebase manquante'", async () => {
+		const r = await ensureAppOnDevice(
+			env({
+				app: {
+					appId: "com.ouigo.app",
+					source: "firebase",
+					// firebase intentionnellement absent
+				},
+			}),
+			"emulator-5554",
+		);
+		expect(r.ok).toBe(false);
+		if (!r.ok) expect(r.error).toMatch(/Firebase manquante/i);
 	});
 });

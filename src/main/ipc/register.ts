@@ -147,7 +147,9 @@ export function registerIpc(): void {
 				tunnelId,
 				scenarioId,
 				envId,
-				(channel, payload) => event.sender.send(channel, payload),
+				(channel, payload) => {
+					if (!event.sender.isDestroyed()) event.sender.send(channel, payload);
+				},
 				opts,
 			),
 	);
@@ -168,7 +170,9 @@ export function registerIpc(): void {
 				scenarioId,
 				envId,
 				options,
-				(channel, payload) => event.sender.send(channel, payload),
+				(channel, payload) => {
+					if (!event.sender.isDestroyed()) event.sender.send(channel, payload);
+				},
 			),
 	);
 
@@ -210,9 +214,10 @@ export function registerIpc(): void {
 	ipcMain.handle("mobile:listDevices", () => handleListDevices());
 	ipcMain.handle("mobile:startDevice", () => handleStartDevice());
 	ipcMain.handle("mobile:prepareMaestro", (event) =>
-		handlePrepareMaestro((received, total) =>
-			event.sender.send("maestro:prepare-progress", { received, total }),
-		),
+		handlePrepareMaestro((received, total) => {
+			if (!event.sender.isDestroyed())
+				event.sender.send("maestro:prepare-progress", { received, total });
+		}),
 	);
 	ipcMain.handle(
 		"mobile:installApp",
