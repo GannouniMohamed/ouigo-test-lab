@@ -2,6 +2,7 @@ import { join } from "node:path";
 import { BrowserWindow, app } from "electron";
 import { registerIpc } from "./ipc/register";
 import { migrateWorkspaceIfNeeded } from "./migration";
+import { killAllRecordings } from "./recorder/maestroRecorder";
 import { seedIfEmpty } from "./seed";
 import { ensureWorkspace } from "./workspace";
 
@@ -54,6 +55,10 @@ app.whenReady().then(() => {
 			createWindow();
 		}
 	});
+});
+
+app.on("before-quit", () => {
+	killAllRecordings();
 });
 
 app.on("window-all-closed", () => {
