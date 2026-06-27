@@ -45,21 +45,35 @@ describe("mobileHandlers", () => {
 		Reflect.deleteProperty(process.env, "OTL_MAESTRO_BIN");
 	});
 
-	it("handlePrepareMaestro transmet onProgress au téléchargement", async () => {
-		// Court-circuite en pointant OTL_MAESTRO_BIN vers un binaire réel :
-		// ensureManagedMaestro retourne immédiatement, onProgress n'est PAS appelée
-		// (le chemin download est court-circuité). On vérifie simplement que le spy
-		// est bien câblé (interface respectée) et que handlePrepareMaestro renvoie ok.
-		process.env.OTL_MAESTRO_BIN = process.execPath;
-		const { handlePrepareMaestro } = await import(
-			"../../src/main/ipc/mobileHandlers"
-		);
-		const progressSpy = vi.fn();
-		const res = await handlePrepareMaestro(progressSpy);
-		expect(res.ok).toBe(true);
-		// Le spy n'est pas appelé (court-circuit avant download) — mais aucune erreur
-		// ne doit se produire non plus.
+	it("handlePrepareMaestro transmet onProgress au téléchargement (câblage vérifié)", async () => {
+		// On supprime OTL_MAESTRO_BIN pour que ensureManagedMaestro ne court-circuite
+		// pas et passe effectivement onProgress au corps de la fonction.
+		// On espionne ensureManagedMaestro pour qu'il invoque lui-même onProgress avec
+		// des valeurs connues, et on vérifie que progressSpy les reçoit bien.
 		Reflect.deleteProperty(process.env, "OTL_MAESTRO_BIN");
+		const managedMaestroModule = await import(
+			"../../src/main/mobile/managedMaestro"
+		);
+		const spy = vi
+			.spyOn(managedMaestroModule, "ensureManagedMaestro")
+			.mockImplementationOnce(async (deps) => {
+				// Simule un appel de progression tel que realDownload le ferait.
+				deps?.onProgress?.(512, 1024);
+				return { bin: "/fake/maestro" };
+			});
+		try {
+			const { handlePrepareMaestro } = await import(
+				"../../src/main/ipc/mobileHandlers"
+			);
+			const progressSpy = vi.fn();
+			const res = await handlePrepareMaestro(progressSpy);
+			expect(res.ok).toBe(true);
+			// Le câblage est vérifié : onProgress passé à handlePrepareMaestro
+			// a bien été transmis à ensureManagedMaestro et invoqué.
+			expect(progressSpy).toHaveBeenCalledWith(512, 1024);
+		} finally {
+			spy.mockRestore();
+		}
 	});
 
 	it("handlePrepareMaestro : la closure de progression ne lève pas si le sender est détruit", async () => {

@@ -154,7 +154,9 @@ export const playwrightRecorder = {
 	async stopRecording(recordingId: string): Promise<Scenario> {
 		const session = activeRecordings.get(recordingId);
 		if (!session) {
-			throw new Error(`Recording not found: ${recordingId}`);
+			throw new Error(
+				`Session d'enregistrement introuvable (${recordingId}) — elle a peut-être déjà été arrêtée ou annulée.`,
+			);
 		}
 
 		// IMPORTANT: wait for codegen to have produced its output file BEFORE
