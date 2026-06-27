@@ -1,6 +1,7 @@
-import { homedir } from "node:os";
+import { mkdtempSync, rmSync } from "node:fs";
+import { tmpdir } from "node:os";
 import { basename, join } from "node:path";
-import { describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import {
 	mobileDoctor,
 	parseJavaMajor,
@@ -41,47 +42,57 @@ describe("parseMaestroVersion", () => {
 	});
 });
 
-// Routeur de stub : renvoie une sortie canned selon le binaire appelé. On
-// matche aussi sur le basename pour que maestroBin() résolu en chemin absolu
-// (~/.maestro/bin/maestro) retrouve l'entrée « maestro ».
+// Routeur de stub : renvoie une sortie canned selon le binaire appelé.
 function router(map: Record<string, ExecResult>) {
 	return async (bin: string): Promise<ExecResult> =>
 		map[bin] ??
 		map[basename(bin)] ?? { code: -1, stdout: "", stderr: "not found" };
 }
 
+let tmpWs: string;
+
 describe("mobileDoctor", () => {
-	it("tout vert quand java17+/maestro/adb/studio/appareil sont présents", async () => {
+	beforeEach(() => {
+		tmpWs = mkdtempSync(join(tmpdir(), "oui-test-ws-"));
+		process.env.OTL_WORKSPACE = tmpWs;
+	});
+
+	afterEach(() => {
+		process.env.OTL_WORKSPACE = undefined;
+		rmSync(tmpWs, { recursive: true, force: true });
+	});
+
+	it("tout vert quand java17+/maestro/adb/appareil sont présents", async () => {
+		const run = router({
+			java: { code: 0, stdout: "", stderr: 'openjdk version "17.0.8"' },
+			adb: {
+				code: 0,
+				stdout:
+					"List of devices attached\nemulator-5554 device model:Pixel_6\n",
+				stderr: "",
+			},
+		});
 		const report = await mobileDoctor({
-			run: router({
-				java: { code: 0, stdout: "", stderr: 'openjdk version "17.0.8"' },
-				maestro: { code: 0, stdout: "1.39.0", stderr: "" },
-				adb: {
-					code: 0,
-					stdout:
-						"List of devices attached\nemulator-5554 device model:Pixel_6\n",
-					stderr: "",
-				},
-			}),
-			exists: () => true,
+			run,
+			exists: (p) => p.includes("maestro-2.5.1"),
 		});
 		expect(report.java.ok).toBe(true);
 		expect(report.java.version).toBe("17");
 		expect(report.maestro.ok).toBe(true);
+		expect(report.maestro.version).toBe("2.5.1");
 		expect(report.adb.ok).toBe(true);
-		expect(report.studio.ok).toBe(true);
 		expect(report.device.ok).toBe(true);
 		expect(report.allOk).toBe(true);
 	});
 
 	it("java < 17 → java.ok=false avec un hint, allOk=false", async () => {
+		const run = router({
+			java: { code: 0, stdout: "", stderr: 'java version "1.8.0_381"' },
+			adb: { code: 0, stdout: "List of devices attached\n", stderr: "" },
+		});
 		const report = await mobileDoctor({
-			run: router({
-				java: { code: 0, stdout: "", stderr: 'java version "1.8.0_381"' },
-				maestro: { code: 0, stdout: "1.39.0", stderr: "" },
-				adb: { code: 0, stdout: "List of devices attached\n", stderr: "" },
-			}),
-			exists: () => true,
+			run,
+			exists: (p) => p.includes("maestro-2.5.1"),
 		});
 		expect(report.java.ok).toBe(false);
 		expect(report.java.hint).toBeTruthy();
@@ -89,17 +100,17 @@ describe("mobileDoctor", () => {
 	});
 
 	it("appareil présent mais offline → device.ok=false, allOk=false", async () => {
+		const run = router({
+			java: { code: 0, stdout: "", stderr: 'openjdk version "17.0.1"' },
+			adb: {
+				code: 0,
+				stdout: "List of devices attached\nABCD1234 unauthorized\n",
+				stderr: "",
+			},
+		});
 		const report = await mobileDoctor({
-			run: router({
-				java: { code: 0, stdout: "", stderr: 'openjdk version "17.0.1"' },
-				maestro: { code: 0, stdout: "1.39.0", stderr: "" },
-				adb: {
-					code: 0,
-					stdout: "List of devices attached\nABCD1234 unauthorized\n",
-					stderr: "",
-				},
-			}),
-			exists: () => true,
+			run,
+			exists: (p) => p.includes("maestro-2.5.1"),
 		});
 		expect(report.device.ok).toBe(false);
 		expect(report.allOk).toBe(false);
@@ -111,36 +122,24 @@ describe("mobileDoctor", () => {
 			exists: () => false,
 		});
 		expect(report.maestro.ok).toBe(false);
-		expect(report.maestro.hint).toContain("maestro");
+		expect(report.maestro.hint).toBeTruthy();
 		expect(report.adb.ok).toBe(false);
-		expect(report.studio.ok).toBe(false);
 		expect(report.device.ok).toBe(false);
 		expect(report.allOk).toBe(false);
 	});
 
-	it("résout maestro depuis ~/.maestro/bin quand présent (post-install)", async () => {
-		const localMaestro = join(homedir(), ".maestro", "bin", "maestro");
-		const calls: string[] = [];
-		const run = async (bin: string): Promise<ExecResult> => {
-			calls.push(bin);
-			if (bin === localMaestro)
-				return { code: 0, stdout: "1.39.0", stderr: "" };
-			if (bin === "java")
-				return { code: 0, stdout: "", stderr: 'openjdk version "17.0.8"' };
-			if (bin === "adb")
-				return {
-					code: 0,
-					stdout: "List of devices attached\nemulator-5554 device\n",
-					stderr: "",
-				};
-			return { code: -1, stdout: "", stderr: "not found" };
-		};
-		// exists vrai UNIQUEMENT pour le binaire maestro local (pas Studio).
-		const report = await mobileDoctor({
-			run,
-			exists: (p) => p === localMaestro,
+	it("maestro absent (exists retourne false) → maestro.ok=false, allOk=false", async () => {
+		const run = router({
+			java: { code: 0, stdout: "", stderr: 'openjdk version "17.0.8"' },
+			adb: {
+				code: 0,
+				stdout:
+					"List of devices attached\nemulator-5554 device model:Pixel_6\n",
+				stderr: "",
+			},
 		});
-		expect(calls).toContain(localMaestro);
-		expect(report.maestro.ok).toBe(true);
+		const report = await mobileDoctor({ run, exists: () => false });
+		expect(report.maestro.ok).toBe(false);
+		expect(report.allOk).toBe(false);
 	});
 });

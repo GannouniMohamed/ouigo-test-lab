@@ -1,7 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import {
 	handleInstallApp,
-	handleInstallMaestro,
 	handleListDevices,
 	handleMobileDoctor,
 	handleStartDevice,
@@ -36,14 +35,16 @@ describe("mobileHandlers", () => {
 		expect(typeof res.ok).toBe("boolean");
 	});
 
-	it("handleInstallMaestro délègue à installMaestroCli (seam → succès)", async () => {
-		process.env.OTL_MAESTRO_INSTALL_CMD = "true"; // commande qui réussit
-		const res = await handleInstallMaestro();
+	it("handlePrepareMaestro délègue à ensureManagedMaestro (seam → succès)", async () => {
+		process.env.OTL_MAESTRO_BIN = process.execPath; // court-circuite le download
+		const { handlePrepareMaestro } = await import(
+			"../../src/main/ipc/mobileHandlers"
+		);
+		const res = await handlePrepareMaestro();
 		expect(res.ok).toBe(true);
+		Reflect.deleteProperty(process.env, "OTL_MAESTRO_BIN");
 	});
 });
-
-afterEach(() => Reflect.deleteProperty(process.env, "OTL_MAESTRO_INSTALL_CMD"));
 
 describe("handleInstallApp", () => {
 	let dir: string;

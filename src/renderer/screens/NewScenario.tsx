@@ -32,6 +32,7 @@ export default function NewScenario(): JSX.Element {
 	const [starting, setStarting] = useState(false);
 	const [stopping, setStopping] = useState(false);
 	const [recError, setRecError] = useState("");
+	const [pastedFlow, setPastedFlow] = useState("");
 
 	// Env is inherited from the active project — no per-scenario selection.
 	// Resolve it exactly like the context bar: the actively-selected env, else the
@@ -159,9 +160,13 @@ export default function NewScenario(): JSX.Element {
 		setStopping(true);
 		setRecError("");
 		try {
-			const scenario = await window.api.stopRecording(recordingId);
+			const scenario = await window.api.stopRecording(
+				recordingId,
+				isMobile ? pastedFlow : undefined,
+			);
 			// Enregistrement consommé : on libère pour éviter un double-stop.
 			setRecordingId(null);
+			setPastedFlow("");
 			const env =
 				activeEnvByProject[scenario.projectId] ||
 				scenario.defaultEnvironmentId ||
@@ -198,6 +203,18 @@ export default function NewScenario(): JSX.Element {
 		} finally {
 			setStopping(false);
 		}
+	}
+
+	async function handleCancel() {
+		if (!recordingId) return;
+		try {
+			await window.api.cancelRecording(recordingId);
+		} catch {
+			/* annulation best-effort */
+		}
+		setRecordingId(null);
+		setPastedFlow("");
+		setRecError("");
 	}
 
 	return (
@@ -497,7 +514,7 @@ export default function NewScenario(): JSX.Element {
 							<div className="otl-method__title">Enregistrer en naviguant</div>
 							<div className="otl-method__desc">
 								{isMobile
-									? "Maestro Studio s'ouvre : enregistre ton parcours sur l'appareil, puis reviens cliquer « Arrêter »."
+									? "Maestro Studio s'ouvre dans ton navigateur : enregistre ton parcours, clique « Copy », puis colle-le ici."
 									: "Naviguez dans le navigateur, les actions sont capturées automatiquement."}
 							</div>
 						</div>
@@ -512,13 +529,45 @@ export default function NewScenario(): JSX.Element {
 						>
 							{starting ? "Démarrage…" : "Démarrer l'enregistrement"}
 						</button>
+					) : isMobile ? (
+						<div className="otl-method__recording">
+							<div className="otl-recording-indicator">
+								<span className="otl-recording-indicator__dot" />
+								Studio ouvert dans le navigateur — enregistre ton parcours,
+								clique « Copy », puis colle-le ci-dessous.
+							</div>
+							<textarea
+								className="otl-input otl-method__paste"
+								aria-label="Parcours enregistré"
+								placeholder="Colle ici le parcours copié depuis Maestro Studio…"
+								value={pastedFlow}
+								onChange={(e) => setPastedFlow(e.target.value)}
+								rows={8}
+							/>
+							<div className="otl-method__rec-actions">
+								<button
+									type="button"
+									className="otl-btn-primary otl-method__btn"
+									disabled={!pastedFlow.trim() || stopping}
+									onClick={handleStop}
+								>
+									{stopping ? "Création…" : "Créer le scénario"}
+								</button>
+								<button
+									type="button"
+									className="otl-tab"
+									disabled={stopping}
+									onClick={handleCancel}
+								>
+									Annuler
+								</button>
+							</div>
+						</div>
 					) : (
 						<div className="otl-method__recording">
 							<div className="otl-recording-indicator">
 								<span className="otl-recording-indicator__dot" />
-								{isMobile
-									? "Enregistrement dans Maestro Studio…"
-									: "Enregistrement en cours…"}
+								Enregistrement en cours…
 							</div>
 							<button
 								type="button"

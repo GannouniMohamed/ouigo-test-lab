@@ -1,4 +1,5 @@
-import { homedir } from "node:os";
+import { mkdtempSync } from "node:fs";
+import { homedir, tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 import {
@@ -87,5 +88,32 @@ describe("maestroBin", () => {
 
 	it("retombe sur « maestro » (PATH) si rien d'autre", () => {
 		expect(maestroBin(() => false)).toBe("maestro");
+	});
+});
+
+describe("maestroBin — binaire géré par l'app", () => {
+	afterEach(() => {
+		Reflect.deleteProperty(process.env, "OTL_WORKSPACE");
+		Reflect.deleteProperty(process.env, "OTL_MAESTRO_BIN");
+	});
+
+	it("préfère le binaire géré au PATH quand il existe", () => {
+		const ws = mkdtempSync(join(tmpdir(), "otl-mbin-"));
+		process.env.OTL_WORKSPACE = ws;
+		const managed = join(
+			ws,
+			"tools",
+			"maestro-2.5.1",
+			"maestro",
+			"bin",
+			process.platform === "win32" ? "maestro.bat" : "maestro",
+		);
+		expect(maestroBin((p) => p === managed)).toBe(managed);
+	});
+
+	it("OTL_MAESTRO_BIN reste prioritaire sur le binaire géré", () => {
+		process.env.OTL_WORKSPACE = mkdtempSync(join(tmpdir(), "otl-mbin-"));
+		process.env.OTL_MAESTRO_BIN = "/custom/maestro";
+		expect(maestroBin(() => true)).toBe("/custom/maestro");
 	});
 });
