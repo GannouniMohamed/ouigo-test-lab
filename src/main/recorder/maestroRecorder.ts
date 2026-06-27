@@ -3,6 +3,7 @@ import { randomUUID } from "node:crypto";
 import { parseFlowSteps, rebaseFlowAppId } from "../../shared/flow";
 import type { Scenario } from "../../shared/types";
 import { ensureAppOnDevice } from "../mobile/ensureAppOnDevice";
+import { quoteArgForCmd, quoteForCmd } from "../mobile/exec";
 import { ensureManagedMaestro } from "../mobile/managedMaestro";
 import { getEnvironment } from "../stores/projectStore";
 import { getScenario, saveScenario } from "../stores/scenarioStore";
@@ -47,11 +48,39 @@ function killProc(child: ChildProcess): void {
 	}
 }
 
+// Construit les paramètres de spawn pour Maestro Studio, en version Windows-safe
+// (quoting + shell:true) ou POSIX (brut + shell:false). Toujours stdio:"ignore"
+// car Studio est long-running et rien ne lit ses sorties (évite le blocage du
+// buffer OS). Exporté pour tests unitaires purs (pas de spawn réel).
+export function studioSpawnInvocation(
+	bin: string,
+	deviceId: string,
+	isWin = isWindows,
+): {
+	cmd: string;
+	args: string[];
+	options: { detached: boolean; shell: boolean; stdio: "ignore" };
+} {
+	const rawArgs = ["--device", deviceId, "studio", "--no-window"];
+	if (isWin) {
+		return {
+			cmd: quoteForCmd(bin),
+			args: rawArgs.map(quoteArgForCmd),
+			options: { detached: false, shell: true, stdio: "ignore" },
+		};
+	}
+	return {
+		cmd: bin,
+		args: rawArgs,
+		options: { detached: true, shell: false, stdio: "ignore" },
+	};
+}
+
 // Lance le serveur Studio web (long-running). Le flag --device cible l'appareil.
 function defaultSpawnStudio(bin: string, deviceId: string): StudioHandle {
-	const child = spawn(bin, ["--device", deviceId, "studio", "--no-window"], {
-		detached: !isWindows,
-	});
+	const inv = studioSpawnInvocation(bin, deviceId);
+	const child = spawn(inv.cmd, inv.args, inv.options);
+	child.on("error", () => {});
 	return { pid: child.pid, kill: () => killProc(child) };
 }
 

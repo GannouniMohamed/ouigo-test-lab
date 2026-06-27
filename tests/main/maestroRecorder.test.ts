@@ -2,7 +2,10 @@ import { mkdtempSync, readFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { maestroRecorder } from "../../src/main/recorder/maestroRecorder";
+import {
+	maestroRecorder,
+	studioSpawnInvocation,
+} from "../../src/main/recorder/maestroRecorder";
 import * as projectStore from "../../src/main/stores/projectStore";
 import { getScenario } from "../../src/main/stores/scenarioStore";
 import type { Project } from "../../src/shared/types";
@@ -221,5 +224,79 @@ describe("maestroRecorder.cancelRecording", () => {
 
 	it("recordingId inconnu → no-op", () => {
 		expect(() => maestroRecorder.cancelRecording("nope")).not.toThrow();
+	});
+});
+
+describe("studioSpawnInvocation", () => {
+	const posixBin = "/usr/local/bin/maestro";
+	const winBin =
+		"C:\\Users\\First Last\\AppData\\Local\\maestro\\bin\\maestro.bat";
+	const deviceId = "emulator-5554";
+	const spacyDeviceId = "emulator 1";
+
+	describe("POSIX (isWin=false)", () => {
+		it("cmd est le bin brut (non cité)", () => {
+			const inv = studioSpawnInvocation(posixBin, deviceId, false);
+			expect(inv.cmd).toBe(posixBin);
+		});
+
+		it("args sont bruts (non cités)", () => {
+			const inv = studioSpawnInvocation(posixBin, deviceId, false);
+			expect(inv.args).toEqual(["--device", deviceId, "studio", "--no-window"]);
+		});
+
+		it("options.shell === false", () => {
+			const inv = studioSpawnInvocation(posixBin, deviceId, false);
+			expect(inv.options.shell).toBe(false);
+		});
+
+		it("options.stdio === 'ignore'", () => {
+			const inv = studioSpawnInvocation(posixBin, deviceId, false);
+			expect(inv.options.stdio).toBe("ignore");
+		});
+
+		it("options.detached === true", () => {
+			const inv = studioSpawnInvocation(posixBin, deviceId, false);
+			expect(inv.options.detached).toBe(true);
+		});
+	});
+
+	describe("Windows (isWin=true)", () => {
+		it("cmd est le bin cité (chemin avec espaces)", () => {
+			const inv = studioSpawnInvocation(winBin, deviceId, true);
+			expect(inv.cmd).toBe(`"${winBin}"`);
+		});
+
+		it("options.shell === true", () => {
+			const inv = studioSpawnInvocation(winBin, deviceId, true);
+			expect(inv.options.shell).toBe(true);
+		});
+
+		it("options.stdio === 'ignore'", () => {
+			const inv = studioSpawnInvocation(winBin, deviceId, true);
+			expect(inv.options.stdio).toBe("ignore");
+		});
+
+		it("options.detached === false", () => {
+			const inv = studioSpawnInvocation(winBin, deviceId, true);
+			expect(inv.options.detached).toBe(false);
+		});
+
+		it("deviceId sans espace n'est pas cité", () => {
+			const inv = studioSpawnInvocation(winBin, deviceId, true);
+			expect(inv.args).toContain(deviceId);
+		});
+
+		it("deviceId avec espace est cité", () => {
+			const inv = studioSpawnInvocation(winBin, spacyDeviceId, true);
+			expect(inv.args).toContain(`"${spacyDeviceId}"`);
+		});
+
+		it("les drapeaux --device/studio/--no-window restent non cités", () => {
+			const inv = studioSpawnInvocation(winBin, spacyDeviceId, true);
+			expect(inv.args).toContain("--device");
+			expect(inv.args).toContain("studio");
+			expect(inv.args).toContain("--no-window");
+		});
 	});
 });
