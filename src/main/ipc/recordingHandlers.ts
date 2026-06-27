@@ -30,10 +30,18 @@ export async function handleStartRecording(
 
 export async function handleStopRecording(
 	recordingId: string,
+	pastedFlow?: string,
 ): Promise<Scenario> {
 	const kind = recorderByRecording.get(recordingId);
 	recorderByRecording.delete(recordingId);
 	return kind === "mobile"
-		? maestroRecorder.stopRecording(recordingId)
+		? maestroRecorder.stopRecording(recordingId, pastedFlow)
 		: playwrightRecorder.stopRecording(recordingId);
+}
+
+export function handleCancelRecording(recordingId: string): void {
+	const kind = recorderByRecording.get(recordingId);
+	recorderByRecording.delete(recordingId);
+	// Seul le chemin mobile a un serveur Studio à stopper ; web = no-op.
+	if (kind === "mobile") maestroRecorder.cancelRecording(recordingId);
 }

@@ -205,7 +205,10 @@ contextBridge.exposeInMainWorld("api", {
 	}) {
 		return ipcRenderer.invoke("recording:start", opts);
 	},
-	stopRecording(recordingId: string) {
-		return ipcRenderer.invoke("recording:stop", recordingId);
+	stopRecording(recordingId: string, pastedFlow?: string) {
+		return ipcRenderer.invoke("recording:stop", recordingId, pastedFlow);
+	},
+	cancelRecording(recordingId: string) {
+		return ipcRenderer.invoke("recording:cancel", recordingId);
 	},
 });

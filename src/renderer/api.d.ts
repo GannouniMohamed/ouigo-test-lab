@@ -108,7 +108,8 @@ interface OtlApi {
 		platform?: Platform;
 		deviceId?: string;
 	}): Promise<{ recordingId: string }>;
-	stopRecording(recordingId: string): Promise<Scenario>;
+	stopRecording(recordingId: string, pastedFlow?: string): Promise<Scenario>;
+	cancelRecording(recordingId: string): Promise<void>;
 }
 
 declare global {

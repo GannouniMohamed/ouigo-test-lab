@@ -40,7 +40,11 @@ import {
 	handleMobileDoctor,
 	handleStartDevice,
 } from "./mobileHandlers";
-import { handleStartRecording, handleStopRecording } from "./recordingHandlers";
+import {
+	handleCancelRecording,
+	handleStartRecording,
+	handleStopRecording,
+} from "./recordingHandlers";
 
 export function registerIpc(): void {
 	ipcMain.on("window:minimize", (e) =>
@@ -194,7 +198,12 @@ export function registerIpc(): void {
 	);
 
 	ipcMain.handle("recording:start", (_e, opts) => handleStartRecording(opts));
-	ipcMain.handle("recording:stop", (_e, id: string) => handleStopRecording(id));
+	ipcMain.handle("recording:stop", (_e, id: string, pastedFlow?: string) =>
+		handleStopRecording(id, pastedFlow),
+	);
+	ipcMain.handle("recording:cancel", (_e, id: string) =>
+		handleCancelRecording(id),
+	);
 
 	// Mobile (Maestro)
 	ipcMain.handle("mobile:doctor", () => handleMobileDoctor());

@@ -1,8 +1,9 @@
-import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import {
+	handleCancelRecording,
 	handleStartRecording,
 	handleStopRecording,
 } from "../../src/main/ipc/recordingHandlers";
@@ -17,6 +18,7 @@ beforeEach(() => {
 	dir = mkdtempSync(join(tmpdir(), "otl-rdisp-"));
 	process.env.OTL_WORKSPACE = dir;
 	process.env.OTL_SKIP_STUDIO_LAUNCH = "1";
+	process.env.OTL_MAESTRO_BIN = process.execPath;
 	// pointe le recorder web vers le faux codegen (pas de vrai navigateur)
 	process.env.OTL_CODEGEN = "node";
 	process.env.OTL_CODEGEN_ARGS = resolve(
@@ -54,6 +56,7 @@ afterEach(() => {
 	for (const k of [
 		"OTL_WORKSPACE",
 		"OTL_SKIP_STUDIO_LAUNCH",
+		"OTL_MAESTRO_BIN",
 		"OTL_CODEGEN",
 		"OTL_CODEGEN_ARGS",
 	])
@@ -61,7 +64,7 @@ afterEach(() => {
 });
 
 describe("dispatch d'enregistrement par plateforme", () => {
-	it("platform mobile → maestroRecorder (crée un scénario mobile)", async () => {
+	it("platform mobile → maestroRecorder (crée un scénario mobile depuis le YAML collé)", async () => {
 		const { recordingId } = await handleStartRecording({
 			name: "Parcours",
 			browser: "chromium",
@@ -71,11 +74,28 @@ describe("dispatch d'enregistrement par plateforme", () => {
 			platform: "mobile",
 			deviceId: "emulator-5554",
 		});
-		const folder = join(dir, "recordings", recordingId);
-		writeFileSync(join(folder, "rec.yaml"), "appId: x\n---\n- launchApp\n");
-		const scenario = await handleStopRecording(recordingId);
+		const scenario = await handleStopRecording(
+			recordingId,
+			"appId: x\n---\n- launchApp\n",
+		);
 		expect(scenario.platform).toBe("mobile");
 		expect(scenario.specFile.endsWith(".flow.yaml")).toBe(true);
+	});
+
+	it("cancel mobile → libère le recordingId (stop ensuite échoue)", async () => {
+		const { recordingId } = await handleStartRecording({
+			name: "Annulé",
+			browser: "chromium",
+			environmentId: "preprod",
+			projectId: "p1",
+			tunnelId: "general",
+			platform: "mobile",
+			deviceId: "emulator-5554",
+		});
+		handleCancelRecording(recordingId);
+		await expect(
+			handleStopRecording(recordingId, "appId: x\n---\n- launchApp\n"),
+		).rejects.toThrow(/not found/i);
 	});
 
 	it("platform absente → playwrightRecorder (crée un scénario web), start+stop routés via la Map", async () => {
