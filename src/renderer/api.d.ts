@@ -28,7 +28,10 @@ interface OtlApi {
 	mobileDoctor(): Promise<MobileDoctorReport>;
 	listDevices(): Promise<MobileDevice[]>;
 	startDevice(): Promise<{ ok: boolean; error?: string }>;
-	installMaestro(): Promise<{ ok: boolean; error?: string }>;
+	prepareMaestro(): Promise<{ ok: boolean; error?: string }>;
+	onMaestroProgress(
+		cb: (p: { received: number; total: number }) => void,
+	): () => void;
 	installApp(
 		projectId: string,
 		environmentId: string,

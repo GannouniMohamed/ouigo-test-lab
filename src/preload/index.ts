@@ -38,8 +38,17 @@ contextBridge.exposeInMainWorld("api", {
 	startDevice() {
 		return ipcRenderer.invoke("mobile:startDevice");
 	},
-	installMaestro() {
-		return ipcRenderer.invoke("mobile:installMaestro");
+	prepareMaestro() {
+		return ipcRenderer.invoke("mobile:prepareMaestro");
+	},
+	onMaestroProgress(cb: (p: { received: number; total: number }) => void) {
+		const listener = (
+			_e: Electron.IpcRendererEvent,
+			payload: { received: number; total: number },
+		) => cb(payload);
+		ipcRenderer.on("maestro:prepare-progress", listener);
+		return () =>
+			ipcRenderer.removeListener("maestro:prepare-progress", listener);
 	},
 	installApp(projectId: string, environmentId: string, deviceId: string) {
 		return ipcRenderer.invoke(

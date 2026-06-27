@@ -35,9 +35,9 @@ import {
 } from "./handlers";
 import {
 	handleInstallApp,
-	handleInstallMaestro,
 	handleListDevices,
 	handleMobileDoctor,
+	handlePrepareMaestro,
 	handleStartDevice,
 } from "./mobileHandlers";
 import {
@@ -209,7 +209,11 @@ export function registerIpc(): void {
 	ipcMain.handle("mobile:doctor", () => handleMobileDoctor());
 	ipcMain.handle("mobile:listDevices", () => handleListDevices());
 	ipcMain.handle("mobile:startDevice", () => handleStartDevice());
-	ipcMain.handle("mobile:installMaestro", () => handleInstallMaestro());
+	ipcMain.handle("mobile:prepareMaestro", (event) =>
+		handlePrepareMaestro((received, total) =>
+			event.sender.send("maestro:prepare-progress", { received, total }),
+		),
+	);
 	ipcMain.handle(
 		"mobile:installApp",
 		(_e, projectId: string, environmentId: string, deviceId: string) =>
