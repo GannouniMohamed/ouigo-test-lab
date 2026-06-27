@@ -33,6 +33,8 @@ export default function NewScenario(): JSX.Element {
 	const [stopping, setStopping] = useState(false);
 	const [recError, setRecError] = useState("");
 	const [pastedFlow, setPastedFlow] = useState("");
+	// #18: track whether stopRecording succeeded but runScenario failed
+	const [runFailed, setRunFailed] = useState(false);
 
 	// Env is inherited from the active project — no per-scenario selection.
 	// Resolve it exactly like the context bar: the actively-selected env, else the
@@ -49,6 +51,10 @@ export default function NewScenario(): JSX.Element {
 	const isMobile = platform === "mobile";
 	const isFirebase = inheritedEnv?.app?.source === "firebase";
 	const mobileReady = !isMobile || (hasApp && !!deviceId);
+
+	// #17: avertissement de format si le flow collé ne contient pas "appId:"
+	const flowFormatWarning =
+		isMobile && pastedFlow.trim().length > 0 && !pastedFlow.includes("appId:");
 
 	useEffect(() => {
 		if (!activeProjectId) return;
@@ -133,6 +139,7 @@ export default function NewScenario(): JSX.Element {
 		// Sans ce try/catch, l'erreur était avalée → « rien ne se passe ».
 		setStarting(true);
 		setRecError("");
+		setRunFailed(false);
 		try {
 			const { recordingId: id } = await window.api.startRecording({
 				name,
@@ -159,14 +166,16 @@ export default function NewScenario(): JSX.Element {
 		if (!recordingId) return;
 		setStopping(true);
 		setRecError("");
+		let stopSucceeded = false;
 		try {
 			const scenario = await window.api.stopRecording(
 				recordingId,
 				isMobile ? pastedFlow : undefined,
 			);
 			// Enregistrement consommé : on libère pour éviter un double-stop.
+			stopSucceeded = true;
 			setRecordingId(null);
-			setPastedFlow("");
+			// #18: ne pas effacer pastedFlow avant que le run réussisse
 			const env =
 				activeEnvByProject[scenario.projectId] ||
 				scenario.defaultEnvironmentId ||
@@ -189,12 +198,20 @@ export default function NewScenario(): JSX.Element {
 							scenario.id,
 							env,
 						);
+			// Run réussi : on peut effacer le contenu collé
+			setPastedFlow("");
+			setRunFailed(false);
 			navigate(`/run/${runId}`, { state: { auto: true, steps } });
 		} catch (err) {
 			// On reste sur le formulaire avec un message clair plutôt que de
 			// rediriger en silence. « Aucun flow détecté » est le cas le plus
 			// courant (rien enregistré) — l'utilisateur peut réessayer.
 			setFirstRunScenarioId(null);
+			// #18: si stopRecording a réussi mais runScenario a échoué, conserver
+			// le textarea visible avec le contenu collé.
+			if (stopSucceeded && isMobile) {
+				setRunFailed(true);
+			}
 			setRecError(
 				err instanceof Error
 					? err.message
@@ -215,7 +232,11 @@ export default function NewScenario(): JSX.Element {
 		setRecordingId(null);
 		setPastedFlow("");
 		setRecError("");
+		setRunFailed(false);
 	}
+
+	// #18: afficher le bloc mobile quand enregistrement actif OU après un run raté
+	const showMobileRecording = isMobile && (recordingId !== null || runFailed);
 
 	return (
 		<div className="ns-page">
@@ -421,11 +442,21 @@ export default function NewScenario(): JSX.Element {
 								{deviceError}
 							</p>
 						)}
+						{/* #14: escape hatch with actionable link to environments */}
 						{!hasApp && (
-							<p className="otl-mobilebar__hint">
+							<p id="no-app-hint" className="otl-mobilebar__hint">
 								Configure une application mobile sur l'environnement{" "}
 								<strong>{inheritedEnvLabel}</strong> pour enregistrer un
-								parcours mobile.
+								parcours mobile.{" "}
+								<button
+									type="button"
+									className="otl-breadcrumb__link"
+									onClick={() =>
+										navigate(`/projects/${activeProjectId}/environments`)
+									}
+								>
+									Configurer l'environnement
+								</button>
 							</p>
 						)}
 						{hasApp && !deviceId && (
@@ -520,22 +551,37 @@ export default function NewScenario(): JSX.Element {
 						</div>
 					</div>
 
-					{!recordingId ? (
+					{!recordingId && !runFailed ? (
 						<button
 							type="button"
 							className="otl-btn-primary otl-method__btn"
 							disabled={!name.trim() || !mobileReady || starting}
+							// #14: aria-describedby pointing at the no-app hint
+							{...(isMobile && !hasApp
+								? {
+										"aria-describedby": "no-app-hint",
+										title:
+											"Configure l'App ID dans Environnements pour activer l'enregistrement mobile",
+									}
+								: {})}
 							onClick={handleStart}
 						>
 							{starting ? "Démarrage…" : "Démarrer l'enregistrement"}
 						</button>
-					) : isMobile ? (
+					) : showMobileRecording ? (
 						<div className="otl-method__recording">
 							<div className="otl-recording-indicator">
 								<span className="otl-recording-indicator__dot" />
 								Studio ouvert dans le navigateur — enregistre ton parcours,
 								clique « Copy », puis colle-le ci-dessous.
 							</div>
+							{/* #17: afficher l'URL Studio */}
+							<p className="otl-mobilebar__hint">
+								Studio Maestro :{" "}
+								<span className="otl-method__studio-url">
+									http://localhost:9999
+								</span>
+							</p>
 							<textarea
 								className="otl-input otl-method__paste"
 								aria-label="Parcours enregistré"
@@ -544,23 +590,39 @@ export default function NewScenario(): JSX.Element {
 								onChange={(e) => setPastedFlow(e.target.value)}
 								rows={8}
 							/>
+							{/* #17: indice de format */}
+							<p className="otl-mobilebar__hint">
+								Le flow doit commencer par <code>appId:</code> et contenir au
+								moins une action.
+							</p>
+							{/* #17: avertissement de format */}
+							{flowFormatWarning && (
+								<p className="otl-mobilebar__hint otl-mobilebar__hint--error">
+									Le flow doit commencer par <code>appId:</code> — vérifie le
+									contenu collé.
+								</p>
+							)}
 							<div className="otl-method__rec-actions">
-								<button
-									type="button"
-									className="otl-btn-primary otl-method__btn"
-									disabled={!pastedFlow.trim() || stopping}
-									onClick={handleStop}
-								>
-									{stopping ? "Création…" : "Créer le scénario"}
-								</button>
-								<button
-									type="button"
-									className="otl-tab"
-									disabled={stopping}
-									onClick={handleCancel}
-								>
-									Annuler
-								</button>
+								{!runFailed && (
+									<>
+										<button
+											type="button"
+											className="otl-btn-primary otl-method__btn"
+											disabled={!pastedFlow.trim() || stopping}
+											onClick={handleStop}
+										>
+											{stopping ? "Création…" : "Créer le scénario"}
+										</button>
+										<button
+											type="button"
+											className="otl-tab"
+											disabled={stopping}
+											onClick={handleCancel}
+										>
+											Annuler
+										</button>
+									</>
+								)}
 							</div>
 						</div>
 					) : (

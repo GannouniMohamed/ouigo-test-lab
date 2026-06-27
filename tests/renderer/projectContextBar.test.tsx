@@ -96,4 +96,21 @@ describe("ProjectContextBar", () => {
 		// …mais sans écrire dans le store (les runs gardent leur env hérité).
 		expect(useAppStore.getState().activeEnvByProject.ouigo).toBeUndefined();
 	});
+
+	// #31: context bar should still show on /projects/:id/environments
+	it("est masquée sur /projects/new mais visible sur /projects/:id/environments", () => {
+		const { container: c1 } = render(
+			<MemoryRouter initialEntries={["/projects/new"]}>
+				<ProjectContextBar />
+			</MemoryRouter>,
+		);
+		expect(c1.querySelector(".otl-ctxbar")).toBeNull();
+
+		const { container: c2 } = render(
+			<MemoryRouter initialEntries={["/projects/ouigo/environments"]}>
+				<ProjectContextBar />
+			</MemoryRouter>,
+		);
+		expect(c2.querySelector(".otl-ctxbar")).not.toBeNull();
+	});
 });

@@ -72,6 +72,18 @@ describe("ProjectEnvironments", () => {
 			),
 		);
 	});
+
+	// #32: aria-labels on table inputs
+	it("les champs Libellé et URL ont des aria-labels accessibles", async () => {
+		renderAt();
+		await screen.findByDisplayValue("Préprod");
+		// Each row's label input has aria-label containing "Libellé"
+		const labelInputs = screen.getAllByLabelText(/libellé de l'environnement/i);
+		expect(labelInputs.length).toBeGreaterThanOrEqual(1);
+		// Each row's URL input has aria-label containing "URL"
+		const urlInputs = screen.getAllByLabelText(/url de l'environnement/i);
+		expect(urlInputs.length).toBeGreaterThanOrEqual(1);
+	});
 });
 
 describe("ProjectEnvironments — application mobile", () => {
@@ -167,5 +179,37 @@ describe("ProjectEnvironments — application mobile", () => {
 		fireEvent.click(screen.getByLabelText(/application mobile/i));
 		fireEvent.click(screen.getByRole("button", { name: /enregistrer/i }));
 		await waitFor(() => expect(savedArg().app).toBeUndefined());
+	});
+
+	// #16: empty appId blocks save
+	it("app activée sans appId → save bloqué avec message d'erreur", async () => {
+		window.api.getProject = vi.fn().mockResolvedValue(singleEnvProject());
+		renderAt();
+		await screen.findByDisplayValue("Préprod");
+		// Activate mobile app (appId will be empty)
+		fireEvent.click(screen.getByLabelText(/application mobile/i));
+		// Don't fill appId
+		fireEvent.click(screen.getByRole("button", { name: /enregistrer/i }));
+		// Should show an error
+		await waitFor(() =>
+			expect(screen.getByText(/app id.*requis/i)).toBeInTheDocument(),
+		);
+		// saveEnvironment should NOT have been called
+		expect(
+			window.api.saveEnvironment as unknown as ReturnType<typeof vi.fn>,
+		).not.toHaveBeenCalled();
+	});
+
+	// #33: Firebase inputs have aria-labels / field labels
+	it("les champs Firebase ont des labels accessibles", async () => {
+		window.api.getProject = vi.fn().mockResolvedValue(singleEnvProject());
+		renderAt();
+		await screen.findByDisplayValue("Préprod");
+		fireEvent.click(screen.getByLabelText(/application mobile/i));
+		fireEvent.click(screen.getByRole("radio", { name: /firebase/i }));
+		// Each Firebase field should have a visible label (not just placeholder)
+		expect(screen.getByText(/numéro de projet firebase/i)).toBeInTheDocument();
+		expect(screen.getByText(/app id firebase/i)).toBeInTheDocument();
+		expect(screen.getByText(/compte de service/i)).toBeInTheDocument();
 	});
 });

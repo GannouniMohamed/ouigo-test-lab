@@ -117,6 +117,7 @@ export default function MobileDoctor(): JSX.Element {
 	}
 
 	// Construit l'action d'une ligne en échec selon le prérequis.
+	// #34: fallback pour les clés inconnues via LINKS, puis null.
 	function actionFor(key: (typeof CHECK_KEYS)[number]): ReactNode {
 		if (key === "maestro")
 			return (
@@ -175,6 +176,19 @@ export default function MobileDoctor(): JSX.Element {
 			<p className="otl-hub-subtitle">
 				Vérifie les prérequis pour enregistrer et exécuter des tests mobiles
 				avec Maestro.
+			</p>
+
+			{/* #15: conseil d'onboarding vers Environnements */}
+			<p className="otl-hub-subtitle">
+				Avant d'enregistrer, configure l'App ID de ton application dans{" "}
+				<button
+					type="button"
+					className="otl-breadcrumb__link"
+					onClick={() => navigate("/projects")}
+				>
+					Environnements
+				</button>
+				.
 			</p>
 
 			<div className="otl-surface otl-doctor">

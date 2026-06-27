@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from "@testing-library/react";
+import { act, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter } from "react-router-dom";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -149,6 +149,106 @@ describe("MobileDoctor", () => {
 		);
 		await waitFor(() =>
 			expect(screen.getByText(/réseau indisponible/i)).toBeInTheDocument(),
+		);
+	});
+
+	// #15: onboarding tip
+	it("affiche un conseil d'onboarding vers Environnements", async () => {
+		mobileDoctor.mockResolvedValue({
+			allOk: true,
+			java: ok("Java 17+"),
+			maestro: ok("Maestro CLI"),
+			adb: ok("adb"),
+			device: ok("Appareil joignable"),
+		});
+		renderDoctor();
+		await screen.findByText("Java 17+");
+		expect(screen.getByText(/configure.*app id/i)).toBeInTheDocument();
+	});
+
+	// #34: LINKS branch test (java absent → openExternal)
+	it("java absent → « Ouvrir la page » appelle openExternal avec l'URL Java", async () => {
+		mobileDoctor.mockResolvedValue({
+			allOk: false,
+			java: bad("Java 17+", "Installe Java 17"),
+			maestro: ok("Maestro CLI"),
+			adb: ok("adb"),
+			device: ok("Appareil joignable"),
+		});
+		renderDoctor();
+		await screen.findByText("Java 17+");
+		await userEvent.click(
+			screen.getByRole("button", { name: /ouvrir la page/i }),
+		);
+		expect(openExternal).toHaveBeenCalledWith(
+			"https://adoptium.net/temurin/releases/?version=17",
+		);
+	});
+
+	// #41: progress bar during preparation
+	it("préparation en cours → affiche le pourcentage de progression", async () => {
+		let progressCallback:
+			| ((p: { received: number; total: number }) => void)
+			| undefined;
+		onMaestroProgress.mockImplementation(
+			(cb: (p: { received: number; total: number }) => void) => {
+				progressCallback = cb;
+				return () => {};
+			},
+		);
+
+		let resolvePrepare!: (v: { ok: boolean }) => void;
+		prepareMaestro.mockReturnValue(
+			new Promise<{ ok: boolean }>((resolve) => {
+				resolvePrepare = resolve;
+			}),
+		);
+
+		mobileDoctor
+			.mockResolvedValueOnce({
+				allOk: false,
+				java: ok("Java 17+"),
+				maestro: bad("Maestro CLI", "Installe…"),
+				adb: ok("adb"),
+				device: ok("Appareil joignable"),
+			})
+			.mockResolvedValueOnce({
+				allOk: true,
+				java: ok("Java 17+"),
+				maestro: ok("Maestro CLI"),
+				adb: ok("adb"),
+				device: ok("Appareil joignable"),
+			});
+
+		renderDoctor();
+		await screen.findByText("Maestro CLI");
+
+		// Click Préparer — prepare is pending
+		await userEvent.click(screen.getByRole("button", { name: /Préparer/i }));
+
+		// Ensure the progress callback is wired
+		await waitFor(() => expect(progressCallback).toBeDefined());
+
+		// Fire progress callback with 50%
+		act(() => {
+			progressCallback?.({ received: 50, total: 100 });
+		});
+
+		// Button should show 50%
+		await waitFor(() =>
+			expect(screen.getByRole("button", { name: /50%/i })).toBeInTheDocument(),
+		);
+
+		// Resolve prepare
+		act(() => {
+			resolvePrepare({ ok: true });
+		});
+
+		// Progress should clear after completion
+		await waitFor(() =>
+			expect(
+				screen.queryByRole("button", { name: /50%/i }),
+			).not.toBeInTheDocument(),
 		);
 	});
 });

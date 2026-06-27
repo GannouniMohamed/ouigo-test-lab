@@ -153,6 +153,7 @@ export default function Projects(): JSX.Element {
 								<button
 									type="button"
 									className="otl-tab"
+									aria-label={`Configurer les environnements de ${p.name}`}
 									onClick={() => navigate(`/projects/${p.id}/environments`)}
 								>
 									Environnements
