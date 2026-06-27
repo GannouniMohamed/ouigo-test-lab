@@ -14,6 +14,7 @@ import type {
 } from "../../shared/types";
 import { ensureAppOnDevice } from "../mobile/ensureAppOnDevice";
 import { maestroBin, quoteArgForCmd, quoteForCmd } from "../mobile/exec";
+import { ensureManagedMaestro } from "../mobile/managedMaestro";
 import { saveReport } from "../stores/reportStore";
 import { updateLastRun } from "../stores/scenarioStore";
 import { getWorkspaceDir } from "../workspace";
@@ -130,6 +131,18 @@ export const maestroRunner: TestRunner = {
 		// Prépare l'app sur l'appareil : "installed" no-op, "firebase" pull+install.
 		const prep = await ensureAppOnDevice(env, deviceId);
 		if (!prep.ok) return guard(prep.error);
+
+		// Garantit le binaire Maestro géré (no-op si déjà présent ou si
+		// OTL_MAESTRO_BIN est défini en test). Échec → rapport d'échec mappé.
+		try {
+			await ensureManagedMaestro();
+		} catch (err) {
+			return guard(
+				err instanceof Error
+					? err.message
+					: "Maestro indisponible — réessaie depuis le Diagnostic mobile.",
+			);
+		}
 
 		// Flow effectif : rebase l'appId d'en-tête vers l'app de l'env de run.
 		const scenarioDir = join(

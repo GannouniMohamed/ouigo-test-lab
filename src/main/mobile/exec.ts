@@ -2,6 +2,7 @@ import { spawn } from "node:child_process";
 import { existsSync } from "node:fs";
 import { homedir } from "node:os";
 import { join } from "node:path";
+import { managedMaestroBin } from "./managedMaestro";
 
 export interface ExecResult {
 	code: number;
@@ -78,6 +79,8 @@ export function maestroBin(
 ): string {
 	const override = process.env.OTL_MAESTRO_BIN;
 	if (override) return override;
+	const managed = managedMaestroBin(exists);
+	if (managed) return managed;
 	const local = join(homedir(), ".maestro", "bin", "maestro");
 	if (exists(local)) return local;
 	return "maestro";
