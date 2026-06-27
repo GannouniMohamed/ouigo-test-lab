@@ -2,30 +2,32 @@ import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter } from "react-router-dom";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import MobileDoctor, {
-	studioDownloadUrl,
-} from "../../src/renderer/screens/MobileDoctor";
+import MobileDoctor from "../../src/renderer/screens/MobileDoctor";
 
 const ok = (label: string) => ({ ok: true, label, version: "x" });
 const bad = (label: string, hint: string) => ({ ok: false, label, hint });
 
 const mobileDoctor = vi.fn();
 const startDevice = vi.fn();
-const installMaestro = vi.fn();
+const prepareMaestro = vi.fn();
+const onMaestroProgress = vi.fn(() => () => {});
 const openExternal = vi.fn();
 
 beforeEach(() => {
 	mobileDoctor.mockReset();
 	startDevice.mockReset();
-	installMaestro.mockReset();
-	installMaestro.mockResolvedValue({ ok: true });
+	prepareMaestro.mockReset();
+	prepareMaestro.mockResolvedValue({ ok: true });
+	onMaestroProgress.mockReset();
+	onMaestroProgress.mockImplementation(() => () => {});
 	openExternal.mockReset();
 	// biome-ignore lint/suspicious/noExplicitAny: test stub
 	(globalThis as any).window.api = {
 		platform: "darwin",
 		mobileDoctor,
 		startDevice,
-		installMaestro,
+		prepareMaestro,
+		onMaestroProgress,
 		openExternal,
 	};
 });
@@ -43,13 +45,12 @@ function renderDoctor() {
 }
 
 describe("MobileDoctor", () => {
-	it("affiche les 5 contrôles et leurs conseils", async () => {
+	it("affiche les 4 contrôles et leurs conseils", async () => {
 		mobileDoctor.mockResolvedValue({
 			allOk: false,
 			java: ok("Java 17+"),
 			maestro: bad("Maestro CLI", "Installe Maestro : curl -Ls …"),
 			adb: ok("adb"),
-			studio: ok("Maestro Studio"),
 			device: bad(
 				"Appareil joignable",
 				"Branche un téléphone ou démarre un émulateur.",
@@ -59,7 +60,6 @@ describe("MobileDoctor", () => {
 		expect(await screen.findByText("Java 17+")).toBeInTheDocument();
 		expect(screen.getByText("Maestro CLI")).toBeInTheDocument();
 		expect(screen.getByText("adb")).toBeInTheDocument();
-		expect(screen.getByText("Maestro Studio")).toBeInTheDocument();
 		expect(screen.getByText("Appareil joignable")).toBeInTheDocument();
 		expect(screen.getByText(/Installe Maestro/)).toBeInTheDocument();
 		expect(screen.getByText(/Branche un téléphone/)).toBeInTheDocument();
@@ -72,7 +72,6 @@ describe("MobileDoctor", () => {
 				java: ok("Java 17+"),
 				maestro: ok("Maestro CLI"),
 				adb: ok("adb"),
-				studio: ok("Maestro Studio"),
 				device: bad("Appareil joignable", "…"),
 			})
 			.mockResolvedValueOnce({
@@ -80,7 +79,6 @@ describe("MobileDoctor", () => {
 				java: ok("Java 17+"),
 				maestro: ok("Maestro CLI"),
 				adb: ok("adb"),
-				studio: ok("Maestro Studio"),
 				device: ok("Appareil joignable"),
 			});
 		startDevice.mockResolvedValue({ ok: true });
@@ -99,7 +97,6 @@ describe("MobileDoctor", () => {
 			java: ok("Java 17+"),
 			maestro: ok("Maestro CLI"),
 			adb: ok("adb"),
-			studio: ok("Maestro Studio"),
 			device: ok("Appareil joignable"),
 		});
 		renderDoctor();
@@ -108,14 +105,13 @@ describe("MobileDoctor", () => {
 		await waitFor(() => expect(mobileDoctor).toHaveBeenCalledTimes(2));
 	});
 
-	it("Maestro CLI en échec → bouton Installer lance installMaestro puis revérifie", async () => {
+	it("Maestro absent → bouton « Préparer » lance prepareMaestro puis revérifie", async () => {
 		mobileDoctor
 			.mockResolvedValueOnce({
 				allOk: false,
 				java: ok("Java 17+"),
 				maestro: bad("Maestro CLI", "Installe…"),
 				adb: ok("adb"),
-				studio: ok("Maestro Studio"),
 				device: ok("Appareil joignable"),
 			})
 			.mockResolvedValueOnce({
@@ -123,18 +119,19 @@ describe("MobileDoctor", () => {
 				java: ok("Java 17+"),
 				maestro: ok("Maestro CLI"),
 				adb: ok("adb"),
-				studio: ok("Maestro Studio"),
 				device: ok("Appareil joignable"),
 			});
 		renderDoctor();
 		await screen.findByText("Maestro CLI");
-		await userEvent.click(screen.getByRole("button", { name: /^installer$/i }));
-		await waitFor(() => expect(installMaestro).toHaveBeenCalledTimes(1));
+		await userEvent.click(
+			await screen.findByRole("button", { name: /Préparer/i }),
+		);
+		await waitFor(() => expect(prepareMaestro).toHaveBeenCalledTimes(1));
 		await waitFor(() => expect(mobileDoctor).toHaveBeenCalledTimes(2));
 	});
 
-	it("install CLI échoue → message d'erreur affiché", async () => {
-		installMaestro.mockResolvedValue({
+	it("préparation échoue → message d'erreur affiché", async () => {
+		prepareMaestro.mockResolvedValue({
 			ok: false,
 			error: "réseau indisponible",
 		});
@@ -143,45 +140,15 @@ describe("MobileDoctor", () => {
 			java: ok("Java 17+"),
 			maestro: bad("Maestro CLI", "Installe…"),
 			adb: ok("adb"),
-			studio: ok("Maestro Studio"),
 			device: ok("Appareil joignable"),
 		});
 		renderDoctor();
 		await screen.findByText("Maestro CLI");
-		await userEvent.click(screen.getByRole("button", { name: /^installer$/i }));
+		await userEvent.click(
+			await screen.findByRole("button", { name: /Préparer/i }),
+		);
 		await waitFor(() =>
 			expect(screen.getByText(/réseau indisponible/i)).toBeInTheDocument(),
-		);
-	});
-
-	it("Maestro Studio en échec → Télécharger ouvre le .dmg (macOS)", async () => {
-		mobileDoctor.mockResolvedValue({
-			allOk: false,
-			java: ok("Java 17+"),
-			maestro: ok("Maestro CLI"),
-			adb: ok("adb"),
-			studio: bad("Maestro Studio", "Installe…"),
-			device: ok("Appareil joignable"),
-		});
-		renderDoctor();
-		await screen.findByText("Maestro Studio");
-		await userEvent.click(screen.getByRole("button", { name: /télécharger/i }));
-		expect(openExternal).toHaveBeenCalledWith(
-			"https://studio.maestro.dev/MaestroStudio.dmg",
-		);
-	});
-});
-
-describe("studioDownloadUrl", () => {
-	it("mappe l'OS vers le bon artefact", () => {
-		expect(studioDownloadUrl("darwin")).toBe(
-			"https://studio.maestro.dev/MaestroStudio.dmg",
-		);
-		expect(studioDownloadUrl("win32")).toBe(
-			"https://studio.maestro.dev/MaestroStudio.exe",
-		);
-		expect(studioDownloadUrl("linux")).toBe(
-			"https://studio.maestro.dev/MaestroStudio.AppImage",
 		);
 	});
 });

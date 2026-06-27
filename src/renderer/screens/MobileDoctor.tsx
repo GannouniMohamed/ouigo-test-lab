@@ -13,7 +13,6 @@ const CHECK_KEYS: Array<keyof Omit<MobileDoctorReport, "allOk">> = [
 	"java",
 	"maestro",
 	"adb",
-	"studio",
 	"device",
 ];
 
@@ -22,15 +21,6 @@ const LINKS: Record<string, string> = {
 	java: "https://adoptium.net/temurin/releases/?version=17",
 	adb: "https://developer.android.com/tools/releases/platform-tools",
 };
-
-// Téléchargement direct de Maestro Studio selon l'OS (le .dmg/.exe/.AppImage
-// du bucket studio.maestro.dev).
-export function studioDownloadUrl(platform: string): string {
-	const base = "https://studio.maestro.dev/";
-	if (platform === "darwin") return `${base}MaestroStudio.dmg`;
-	if (platform === "win32") return `${base}MaestroStudio.exe`;
-	return `${base}MaestroStudio.AppImage`;
-}
 
 function CheckRow({
 	check,
@@ -69,8 +59,9 @@ export default function MobileDoctor(): JSX.Element {
 	const navigate = useNavigate();
 	const [report, setReport] = useState<MobileDoctorReport | null>(null);
 	const [loading, setLoading] = useState(false);
-	const [installing, setInstalling] = useState(false);
-	const [installError, setInstallError] = useState("");
+	const [preparing, setPreparing] = useState(false);
+	const [prepareError, setPrepareError] = useState("");
+	const [progress, setProgress] = useState<number | null>(null);
 	const cancelled = useRef(false);
 
 	const refresh = useCallback(async (): Promise<void> => {
@@ -91,6 +82,13 @@ export default function MobileDoctor(): JSX.Element {
 		};
 	}, [refresh]);
 
+	useEffect(() => {
+		const off = window.api.onMaestroProgress(({ received, total }) => {
+			setProgress(total > 0 ? Math.round((received / total) * 100) : null);
+		});
+		return off;
+	}, []);
+
 	async function bootEmulator(): Promise<void> {
 		setLoading(true);
 		try {
@@ -101,19 +99,20 @@ export default function MobileDoctor(): JSX.Element {
 		}
 	}
 
-	// Installe le Maestro CLI (script). Spinner simple + re-vérification auto ;
-	// message court en cas d'échec.
-	async function installCli(): Promise<void> {
-		setInstalling(true);
-		setInstallError("");
+	// Télécharge le binaire Maestro géré (spinner + % via onMaestroProgress).
+	async function prepareMaestro(): Promise<void> {
+		setPreparing(true);
+		setPrepareError("");
+		setProgress(null);
 		try {
-			const res = await window.api.installMaestro();
-			if (!res?.ok) setInstallError(res?.error ?? "Échec de l'installation.");
+			const res = await window.api.prepareMaestro();
+			if (!res?.ok) setPrepareError(res?.error ?? "Échec de la préparation.");
 		} catch {
-			setInstallError("Échec de l'installation.");
+			setPrepareError("Échec de la préparation.");
 		} finally {
+			setProgress(null);
 			await refresh();
-			setInstalling(false);
+			setPreparing(false);
 		}
 	}
 
@@ -124,10 +123,14 @@ export default function MobileDoctor(): JSX.Element {
 				<button
 					type="button"
 					className="otl-tab"
-					disabled={installing}
-					onClick={installCli}
+					disabled={preparing}
+					onClick={prepareMaestro}
 				>
-					{installing ? "Installation…" : "Installer"}
+					{preparing
+						? progress !== null
+							? `Préparation… ${progress}%`
+							: "Préparation…"
+						: "Préparer"}
 				</button>
 			);
 		if (key === "device")
@@ -139,18 +142,6 @@ export default function MobileDoctor(): JSX.Element {
 					onClick={bootEmulator}
 				>
 					Démarrer un émulateur
-				</button>
-			);
-		if (key === "studio")
-			return (
-				<button
-					type="button"
-					className="otl-tab"
-					onClick={() =>
-						window.api.openExternal(studioDownloadUrl(window.api.platform))
-					}
-				>
-					Télécharger
 				</button>
 			);
 		if (LINKS[key])
@@ -196,7 +187,7 @@ export default function MobileDoctor(): JSX.Element {
 								check={check}
 								action={check.ok ? undefined : actionFor(k)}
 								extraError={
-									k === "maestro" && installError ? installError : undefined
+									k === "maestro" && prepareError ? prepareError : undefined
 								}
 							/>
 						);
