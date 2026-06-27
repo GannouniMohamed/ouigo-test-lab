@@ -75,7 +75,6 @@ export interface MobileDoctorReport {
 	java: DoctorCheck;
 	maestro: DoctorCheck;
 	adb: DoctorCheck;
-	studio: DoctorCheck;
 	device: DoctorCheck; // au moins un appareil/émulateur joignable
 }
 

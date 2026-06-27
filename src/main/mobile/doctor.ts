@@ -1,7 +1,8 @@
 import { existsSync } from "node:fs";
 import type { DoctorCheck, MobileDoctorReport } from "../../shared/types";
 import { listDevices } from "./devices";
-import { type ToolRunner, maestroBin, runTool, toolBin } from "./exec";
+import { type ToolRunner, runTool, toolBin } from "./exec";
+import { isManagedMaestroReady } from "./managedMaestro";
 
 const MIN_JAVA = 17;
 
@@ -30,24 +31,6 @@ export function parseJavaMajor(versionOutput: string): number | null {
 	return major;
 }
 
-// Emplacements probables de l'app Maestro Studio desktop par OS.
-function studioPaths(): string[] {
-	if (process.platform === "darwin")
-		return ["/Applications/Maestro Studio.app"];
-	if (process.platform === "win32")
-		return [
-			`${process.env.LOCALAPPDATA ?? ""}\\Programs\\Maestro Studio\\Maestro Studio.exe`,
-		];
-	return [`${process.env.HOME ?? ""}/.local/bin/maestro-studio`];
-}
-
-// L'app Maestro Studio desktop est-elle installée ? (recorder + doctor)
-export function studioInstalled(
-	exists: (p: string) => boolean = existsSync,
-): boolean {
-	return studioPaths().some((p) => exists(p));
-}
-
 export async function mobileDoctor(deps?: {
 	run?: ToolRunner;
 	exists?: (p: string) => boolean;
@@ -68,19 +51,15 @@ export async function mobileDoctor(deps?: {
 			: "Installe un JDK 17+ (ex. `brew install openjdk@17` ou Adoptium Temurin) et configure JAVA_HOME.",
 	};
 
-	// Maestro CLI
-	const maestroOut = await run(maestroBin(exists), ["--version"]);
+	// Maestro est géré par l'app (binaire 2.5.1 téléchargé et mis en cache).
+	const maestroReady = isManagedMaestroReady(exists);
 	const maestro: DoctorCheck = {
-		label: "Maestro CLI",
-		ok: maestroOut.code === 0,
-		version:
-			maestroOut.code === 0
-				? parseMaestroVersion(maestroOut.stdout)
-				: undefined,
-		hint:
-			maestroOut.code === 0
-				? undefined
-				: "Installe maestro : `curl -fsSL https://get.maestro.mobile.dev | bash`.",
+		label: "Maestro (géré par l'app)",
+		ok: maestroReady,
+		version: maestroReady ? "2.5.1" : undefined,
+		hint: maestroReady
+			? undefined
+			: "L'app téléchargera Maestro automatiquement au premier enregistrement, ou clique « Préparer ».",
 	};
 
 	// adb (Android SDK platform-tools)
@@ -96,16 +75,6 @@ export async function mobileDoctor(deps?: {
 				: "Installe l'Android SDK platform-tools et ajoute `adb` au PATH.",
 	};
 
-	// Maestro Studio desktop (présence du fichier)
-	const studioOk = studioInstalled(exists);
-	const studio: DoctorCheck = {
-		label: "Maestro Studio (desktop)",
-		ok: studioOk,
-		hint: studioOk
-			? undefined
-			: "Installe l'app Maestro Studio desktop (nécessaire pour enregistrer un parcours).",
-	};
-
 	// Au moins un appareil/émulateur joignable
 	const devices = await listDevices(run);
 	const bootedCount = devices.filter((d) => d.state === "booted").length;
@@ -119,6 +88,6 @@ export async function mobileDoctor(deps?: {
 				: "Branche un téléphone (débogage USB activé) ou démarre un émulateur.",
 	};
 
-	const allOk = java.ok && maestro.ok && adb.ok && studio.ok && device.ok;
-	return { allOk, java, maestro, adb, studio, device };
+	const allOk = java.ok && maestro.ok && adb.ok && device.ok;
+	return { allOk, java, maestro, adb, device };
 }
