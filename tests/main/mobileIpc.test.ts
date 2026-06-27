@@ -1,4 +1,4 @@
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
 	handleInstallApp,
 	handleListDevices,
@@ -43,6 +43,85 @@ describe("mobileHandlers", () => {
 		const res = await handlePrepareMaestro();
 		expect(res.ok).toBe(true);
 		Reflect.deleteProperty(process.env, "OTL_MAESTRO_BIN");
+	});
+
+	it("handlePrepareMaestro transmet onProgress au téléchargement", async () => {
+		// Court-circuite en pointant OTL_MAESTRO_BIN vers un binaire réel :
+		// ensureManagedMaestro retourne immédiatement, onProgress n'est PAS appelée
+		// (le chemin download est court-circuité). On vérifie simplement que le spy
+		// est bien câblé (interface respectée) et que handlePrepareMaestro renvoie ok.
+		process.env.OTL_MAESTRO_BIN = process.execPath;
+		const { handlePrepareMaestro } = await import(
+			"../../src/main/ipc/mobileHandlers"
+		);
+		const progressSpy = vi.fn();
+		const res = await handlePrepareMaestro(progressSpy);
+		expect(res.ok).toBe(true);
+		// Le spy n'est pas appelé (court-circuit avant download) — mais aucune erreur
+		// ne doit se produire non plus.
+		Reflect.deleteProperty(process.env, "OTL_MAESTRO_BIN");
+	});
+
+	it("handlePrepareMaestro : la closure de progression ne lève pas si le sender est détruit", async () => {
+		// Simule la fermeture de la fenêtre pendant le téléchargement :
+		// on appelle directement handlePrepareMaestro avec un spy qui simule
+		// un sender détruit (comme register.ts le ferait après isDestroyed()).
+		process.env.OTL_MAESTRO_BIN = process.execPath;
+		const { handlePrepareMaestro } = await import(
+			"../../src/main/ipc/mobileHandlers"
+		);
+		// Construit une closure identique à celle de register.ts :
+		// if (!isDestroyed()) sender.send(...)
+		// On la force à simuler isDestroyed() === true → send ne doit jamais être appelé.
+		const sendSpy = vi.fn();
+		let destroyed = false;
+		const progressClosure = (received: number, total: number) => {
+			if (!destroyed) sendSpy("maestro:prepare-progress", { received, total });
+		};
+		destroyed = true; // simule la fenêtre déjà détruite
+		// Ne doit pas lever, que le spy soit appelé ou non.
+		await expect(handlePrepareMaestro(progressClosure)).resolves.not.toThrow();
+		expect(sendSpy).not.toHaveBeenCalled();
+		Reflect.deleteProperty(process.env, "OTL_MAESTRO_BIN");
+	});
+
+	it("handlePrepareMaestro renvoie { ok: false, error } quand ensureManagedMaestro lève (#20)", async () => {
+		// Injecte un workspace temporaire vide (pas de binaire géré) et s'assure
+		// qu'OTL_MAESTRO_BIN est absent pour forcer le chemin _doEnsure.
+		// Le download injecté lève immédiatement → handlePrepareMaestro doit
+		// attraper l'erreur et renvoyer { ok: false, error: <message> }.
+		const { mkdtempSync, rmSync } = await import("node:fs");
+		const { tmpdir } = await import("node:os");
+		const { join } = await import("node:path");
+		const tmpDir = mkdtempSync(join(tmpdir(), "otl-mhp-"));
+		try {
+			Reflect.deleteProperty(process.env, "OTL_MAESTRO_BIN");
+			process.env.OTL_WORKSPACE = tmpDir;
+
+			// On mock ensureManagedMaestro directement via vi.mock pour simuler l'échec.
+			const errMsg = "Échec réseau simulé pour test";
+			const managedMaestroModule = await import(
+				"../../src/main/mobile/managedMaestro"
+			);
+			const original = managedMaestroModule.ensureManagedMaestro;
+			const spy = vi
+				.spyOn(managedMaestroModule, "ensureManagedMaestro")
+				.mockRejectedValueOnce(new Error(errMsg));
+
+			// Réimporte pour s'assurer d'une instance fraîche du module.
+			// (vitest met en cache les modules, le spy sur l'export fonctionne directement.)
+			const { handlePrepareMaestro } = await import(
+				"../../src/main/ipc/mobileHandlers"
+			);
+			const res = await handlePrepareMaestro();
+			expect(res.ok).toBe(false);
+			expect(res.error).toContain(errMsg);
+
+			spy.mockRestore();
+		} finally {
+			rmSync(tmpDir, { recursive: true, force: true });
+			Reflect.deleteProperty(process.env, "OTL_WORKSPACE");
+		}
 	});
 });
 

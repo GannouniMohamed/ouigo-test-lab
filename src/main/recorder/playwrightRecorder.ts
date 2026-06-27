@@ -144,6 +144,13 @@ export const playwrightRecorder = {
 		return { recordingId };
 	},
 
+	cancelRecording(recordingId: string): void {
+		const session = activeRecordings.get(recordingId);
+		if (!session) return;
+		killProcessTree(session.child);
+		activeRecordings.delete(recordingId);
+	},
+
 	async stopRecording(recordingId: string): Promise<Scenario> {
 		const session = activeRecordings.get(recordingId);
 		if (!session) {

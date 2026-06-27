@@ -95,7 +95,27 @@ describe("dispatch d'enregistrement par plateforme", () => {
 		handleCancelRecording(recordingId);
 		await expect(
 			handleStopRecording(recordingId, "appId: x\n---\n- launchApp\n"),
-		).rejects.toThrow(/not found/i);
+		).rejects.toThrow(/introuvable/i);
+	});
+
+	it("stop avec id inconnu → rejette avec message français (introuvable)", async () => {
+		await expect(handleStopRecording("completely-unknown-id")).rejects.toThrow(
+			/Enregistrement introuvable ou déjà annulé/,
+		);
+	});
+
+	it("cancel web → libère le recordingId (stop ensuite rejette avec introuvable)", async () => {
+		const { recordingId } = await handleStartRecording({
+			name: "Annulé web",
+			browser: "chromium",
+			environmentId: "preprod",
+			projectId: "p1",
+			tunnelId: "general",
+		});
+		handleCancelRecording(recordingId);
+		await expect(handleStopRecording(recordingId)).rejects.toThrow(
+			/introuvable/i,
+		);
 	});
 
 	it("platform absente → playwrightRecorder (crée un scénario web), start+stop routés via la Map", async () => {
