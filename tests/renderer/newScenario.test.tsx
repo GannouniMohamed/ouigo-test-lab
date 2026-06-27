@@ -84,7 +84,7 @@ describe("NewScenario", () => {
 		);
 		await userEvent.click(screen.getByRole("button", { name: /arrêter/i }));
 		await waitFor(() => {
-			expect(window.api.stopRecording).toHaveBeenCalledWith("rec-1");
+			expect(window.api.stopRecording).toHaveBeenCalledWith("rec-1", undefined);
 			expect(navigateMock).toHaveBeenCalledWith("/run/run-9", {
 				state: { auto: true },
 			});
@@ -435,7 +435,12 @@ describe("NewScenario — mobile", () => {
 			screen.getByRole("button", { name: /démarrer l'enregistrement/i }),
 		);
 		await waitFor(() => expect(window.api.startRecording).toHaveBeenCalled());
-		await userEvent.click(screen.getByRole("button", { name: /arrêter/i }));
+		// mobile flow: paste textarea appears, type content then click "Créer le scénario"
+		const area = await screen.findByLabelText("Parcours enregistré");
+		await userEvent.type(area, "appId: com.ouigo.app\n---\n- launchApp\n");
+		await userEvent.click(
+			screen.getByRole("button", { name: /créer le scénario/i }),
+		);
 		await waitFor(() =>
 			expect(runScenario).toHaveBeenCalledWith(
 				"p1",
@@ -548,6 +553,77 @@ describe("NewScenario — mobile", () => {
 		await waitFor(() =>
 			expect(screen.getByText(/app installée/i)).toBeInTheDocument(),
 		);
+	});
+
+	it("mobile : après démarrage, colle le parcours puis crée le scénario", async () => {
+		// Arrange: env mobile + un appareil démarré
+		const stop = vi.fn().mockResolvedValue({
+			id: "resa",
+			projectId: "p1",
+			tunnelId: "general",
+			name: "Resa",
+			platform: "mobile",
+			defaultEnvironmentId: "preprod",
+			specFile: "resa.flow.yaml",
+		});
+		const run = vi.fn().mockResolvedValue({ runId: "r1", steps: [] });
+		// biome-ignore lint/suspicious/noExplicitAny: test stub
+		(globalThis as any).window.api.startRecording = vi
+			.fn()
+			.mockResolvedValue({ recordingId: "rec1" });
+		// biome-ignore lint/suspicious/noExplicitAny: test stub
+		(globalThis as any).window.api.stopRecording = stop;
+		// biome-ignore lint/suspicious/noExplicitAny: test stub
+		(globalThis as any).window.api.runScenario = run;
+		// biome-ignore lint/suspicious/noExplicitAny: test stub
+		(globalThis as any).window.api.listDevices = vi
+			.fn()
+			.mockResolvedValue([
+				{ id: "emulator-5554", name: "Pixel", state: "booted" },
+			]);
+		// biome-ignore lint/suspicious/noExplicitAny: test stub
+		(globalThis as any).window.api.listEnvironments = vi
+			.fn()
+			.mockResolvedValue([
+				{
+					id: "preprod",
+					label: "Préprod",
+					baseURL: "",
+					variables: {},
+					app: { appId: "com.ouigo.app", source: "installed" },
+				},
+			]);
+		useAppStore.setState({
+			activeProjectId: "default",
+			activeEnvByProject: { default: "preprod" },
+		});
+
+		render(
+			<MemoryRouter>
+				<NewScenario />
+			</MemoryRouter>,
+		);
+		// sélectionne Mobile + nomme
+		await userEvent.click(await screen.findByText("Mobile"));
+		await userEvent.type(
+			screen.getByPlaceholderText("Nom du scénario"),
+			"Resa",
+		);
+		await userEvent.click(
+			await screen.findByRole("button", { name: /Démarrer l'enregistrement/i }),
+		);
+
+		// colle le parcours
+		const area = await screen.findByLabelText("Parcours enregistré");
+		await userEvent.type(area, "appId: x\n---\n- launchApp\n");
+		await userEvent.click(
+			screen.getByRole("button", { name: /Créer le scénario/i }),
+		);
+
+		await waitFor(() =>
+			expect(stop).toHaveBeenCalledWith("rec1", "appId: x\n---\n- launchApp\n"),
+		);
+		expect(run).toHaveBeenCalled();
 	});
 
 	it("env installed → pas de bouton « Installer l'app (Firebase) »", async () => {
