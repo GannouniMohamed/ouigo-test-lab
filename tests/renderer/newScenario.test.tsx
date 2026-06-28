@@ -320,6 +320,36 @@ describe("NewScenario — mobile", () => {
 		await userEvent.click(mobileCard);
 	}
 
+	async function startMobileRecording() {
+		// biome-ignore lint/suspicious/noExplicitAny: test stub
+		(globalThis as any).window.api.listEnvironments = vi
+			.fn()
+			.mockResolvedValue(envWithApp());
+		// biome-ignore lint/suspicious/noExplicitAny: test stub
+		(globalThis as any).window.api.listDevices = vi
+			.fn()
+			.mockResolvedValue([bootedDevice]);
+		useAppStore.setState({
+			activeProjectId: "default",
+			activeEnvByProject: { default: "preprod" },
+		});
+		render(
+			<MemoryRouter>
+				<NewScenario />
+			</MemoryRouter>,
+		);
+		await screen.findByText("Général");
+		await pickMobile();
+		await userEvent.type(
+			screen.getByPlaceholderText("Nom du scénario"),
+			"Parcours",
+		);
+		await userEvent.click(
+			screen.getByRole("button", { name: /démarrer l'enregistrement/i }),
+		);
+		await waitFor(() => expect(window.api.startRecording).toHaveBeenCalled());
+	}
+
 	// #14: escape hatch test
 	it("sans app → le message inclut un bouton vers /projects/:id/environments", async () => {
 		// biome-ignore lint/suspicious/noExplicitAny: test stub
@@ -457,6 +487,7 @@ describe("NewScenario — mobile", () => {
 		);
 	});
 
+	// Updated: new UX — click "Terminer l'enregistrement" then "Lancer"
 	it("arrêter un enregistrement mobile → runScenario reçoit deviceId", async () => {
 		// biome-ignore lint/suspicious/noExplicitAny: test stub
 		(globalThis as any).window.api.listEnvironments = vi
@@ -499,12 +530,17 @@ describe("NewScenario — mobile", () => {
 			screen.getByRole("button", { name: /démarrer l'enregistrement/i }),
 		);
 		await waitFor(() => expect(window.api.startRecording).toHaveBeenCalled());
-		// mobile flow: paste textarea appears, type content then click "Créer le scénario"
-		const area = await screen.findByLabelText("Parcours enregistré");
-		await userEvent.type(area, "appId: com.ouigo.app\n---\n- launchApp\n");
+		// New UX: click "Terminer l'enregistrement" (no paste needed — uses clipboard)
 		await userEvent.click(
-			screen.getByRole("button", { name: /créer le scénario/i }),
+			screen.getByRole("button", { name: /terminer l'enregistrement/i }),
 		);
+		// After stop, "Lancer" button appears — click it to run
+		await waitFor(() =>
+			expect(
+				screen.getByRole("button", { name: /lancer/i }),
+			).toBeInTheDocument(),
+		);
+		await userEvent.click(screen.getByRole("button", { name: /lancer/i }));
 		await waitFor(() =>
 			expect(runScenario).toHaveBeenCalledWith(
 				"p1",
@@ -619,6 +655,7 @@ describe("NewScenario — mobile", () => {
 		);
 	});
 
+	// Updated: new UX — "Terminer l'enregistrement" + optional paste via "Coller manuellement"
 	it("mobile : après démarrage, colle le parcours puis crée le scénario", async () => {
 		// Arrange: env mobile + un appareil démarré
 		const stop = vi.fn().mockResolvedValue({
@@ -677,17 +714,28 @@ describe("NewScenario — mobile", () => {
 			await screen.findByRole("button", { name: /Démarrer l'enregistrement/i }),
 		);
 
-		// colle le parcours
+		// New UX: expand "Coller manuellement" and paste
+		const collerBtn = await screen.findByRole("button", {
+			name: /coller manuellement/i,
+		});
+		await userEvent.click(collerBtn);
 		const area = await screen.findByLabelText("Parcours enregistré");
 		await userEvent.type(area, "appId: x\n---\n- launchApp\n");
 		await userEvent.click(
-			screen.getByRole("button", { name: /Créer le scénario/i }),
+			screen.getByRole("button", { name: /terminer l'enregistrement/i }),
 		);
 
 		await waitFor(() =>
-			expect(stop).toHaveBeenCalledWith("rec1", "appId: x\n---\n- launchApp\n"),
+			expect(stop).toHaveBeenCalledWith("rec1", "appId: x\n---\n- launchApp"),
 		);
-		expect(run).toHaveBeenCalled();
+		// After success, click Lancer to run
+		await waitFor(() =>
+			expect(
+				screen.getByRole("button", { name: /lancer/i }),
+			).toBeInTheDocument(),
+		);
+		await userEvent.click(screen.getByRole("button", { name: /lancer/i }));
+		await waitFor(() => expect(run).toHaveBeenCalled());
 	});
 
 	it("env installed → pas de bouton « Installer l'app (Firebase) »", async () => {
@@ -718,7 +766,7 @@ describe("NewScenario — mobile", () => {
 	});
 
 	// #17: Studio URL + format hint
-	it("enregistrement mobile actif → affiche l'URL Studio et un indice de format", async () => {
+	it("enregistrement mobile actif → affiche le hint Studio et le bouton Terminer", async () => {
 		// biome-ignore lint/suspicious/noExplicitAny: test stub
 		(globalThis as any).window.api.listEnvironments = vi
 			.fn()
@@ -746,13 +794,21 @@ describe("NewScenario — mobile", () => {
 			screen.getByRole("button", { name: /démarrer l'enregistrement/i }),
 		);
 		await waitFor(() => expect(window.api.startRecording).toHaveBeenCalled());
-		// Studio URL visible
-		expect(await screen.findByText(/localhost:9999/)).toBeInTheDocument();
-		// Format hint visible
-		expect(screen.getByText(/Le flow doit commencer par/i)).toBeInTheDocument();
+		// Hint visible (mentions Maestro Studio)
+		expect(
+			await screen.findByText(/fenêtre Maestro Studio/i),
+		).toBeInTheDocument();
+		// "Terminer l'enregistrement" button visible
+		expect(
+			screen.getByRole("button", { name: /terminer l'enregistrement/i }),
+		).toBeInTheDocument();
+		// "Annuler" button visible
+		expect(
+			screen.getByRole("button", { name: /annuler/i }),
+		).toBeInTheDocument();
 	});
 
-	// #17: format warning
+	// #17: format warning — now triggered from the manual paste fallback
 	it("flow sans appId: → avertissement avant soumission", async () => {
 		// biome-ignore lint/suspicious/noExplicitAny: test stub
 		(globalThis as any).window.api.listEnvironments = vi
@@ -781,6 +837,11 @@ describe("NewScenario — mobile", () => {
 			screen.getByRole("button", { name: /démarrer l'enregistrement/i }),
 		);
 		await waitFor(() => expect(window.api.startRecording).toHaveBeenCalled());
+		// Expand the manual paste fallback
+		const collerBtn = await screen.findByRole("button", {
+			name: /coller manuellement/i,
+		});
+		await userEvent.click(collerBtn);
 		const area = await screen.findByLabelText("Parcours enregistré");
 		await userEvent.type(area, "launchApp\n");
 		// Warning should appear (no appId: in content) — the error variant
@@ -788,7 +849,107 @@ describe("NewScenario — mobile", () => {
 		expect(warnings.length).toBeGreaterThanOrEqual(1);
 	});
 
-	// #18: preserve pastedFlow on run failure
+	// Task 3 — new tests: embedded Studio UX
+
+	it("mobile Terminer avec paste vide → stopRecording appelé avec (recordingId, undefined)", async () => {
+		await startMobileRecording();
+		// Click "Terminer l'enregistrement" with empty paste box
+		await userEvent.click(
+			screen.getByRole("button", { name: /terminer l'enregistrement/i }),
+		);
+		await waitFor(() =>
+			expect(window.api.stopRecording).toHaveBeenCalledWith("rec-1", undefined),
+		);
+	});
+
+	it("confirmer avant run : après stop réussi, runScenario pas encore appelé; bouton Lancer visible", async () => {
+		// biome-ignore lint/suspicious/noExplicitAny: test stub
+		(globalThis as any).window.api.stopRecording = vi.fn().mockResolvedValue({
+			id: "scn-m",
+			projectId: "p1",
+			tunnelId: "t1",
+			name: "Mon Parcours",
+			platform: "mobile",
+			browser: "chromium",
+			defaultEnvironmentId: "preprod",
+			tags: [],
+			specFile: "s.yaml",
+			createdAt: "2026-06-26T00:00:00Z",
+			lastRun: { status: "never" },
+		});
+		await startMobileRecording();
+		await userEvent.click(
+			screen.getByRole("button", { name: /terminer l'enregistrement/i }),
+		);
+		// Wait for stop to complete
+		await waitFor(() => expect(window.api.stopRecording).toHaveBeenCalled());
+		// runScenario should NOT have been called yet
+		expect(runScenario).not.toHaveBeenCalled();
+		// "Lancer" button should be present
+		const lancerBtn = await screen.findByRole("button", { name: /lancer/i });
+		expect(lancerBtn).toBeInTheDocument();
+		// Clicking "Lancer" should call runScenario and navigate
+		await userEvent.click(lancerBtn);
+		await waitFor(() => expect(runScenario).toHaveBeenCalled());
+		await waitFor(() => expect(navigateMock).toHaveBeenCalled());
+	});
+
+	it("fallback manuel : paste avec contenu → Terminer passe pastedFlow", async () => {
+		// biome-ignore lint/suspicious/noExplicitAny: test stub
+		(globalThis as any).window.api.stopRecording = vi.fn().mockResolvedValue({
+			id: "scn-m",
+			projectId: "p1",
+			tunnelId: "t1",
+			name: "Mon Parcours",
+			platform: "mobile",
+			browser: "chromium",
+			defaultEnvironmentId: "preprod",
+			tags: [],
+			specFile: "s.yaml",
+			createdAt: "2026-06-26T00:00:00Z",
+			lastRun: { status: "never" },
+		});
+		await startMobileRecording();
+		// Expand manual paste fallback and type content
+		const collerBtn = await screen.findByRole("button", {
+			name: /coller manuellement/i,
+		});
+		await userEvent.click(collerBtn);
+		const area = await screen.findByLabelText("Parcours enregistré");
+		await userEvent.type(area, "appId: com.ouigo.app\n---\n- launchApp\n");
+		// Click "Terminer l'enregistrement" — should pass the typed content (trimmed)
+		await userEvent.click(
+			screen.getByRole("button", { name: /terminer l'enregistrement/i }),
+		);
+		await waitFor(() =>
+			expect(window.api.stopRecording).toHaveBeenCalledWith(
+				"rec-1",
+				"appId: com.ouigo.app\n---\n- launchApp",
+			),
+		);
+	});
+
+	it("stopRecording rejette avec /étape/ → message affiché et fallback manuel révélé", async () => {
+		// biome-ignore lint/suspicious/noExplicitAny: test stub
+		(globalThis as any).window.api.stopRecording = vi
+			.fn()
+			.mockRejectedValue(
+				new Error(
+					"Aucune étape détectée — enregistre dans le Studio, clique Copy, puis Terminer.",
+				),
+			);
+		await startMobileRecording();
+		await userEvent.click(
+			screen.getByRole("button", { name: /terminer l'enregistrement/i }),
+		);
+		await waitFor(() =>
+			expect(screen.getByText(/aucune étape/i)).toBeInTheDocument(),
+		);
+		// The manual paste fallback textarea should be auto-revealed
+		expect(screen.getByLabelText("Parcours enregistré")).toBeInTheDocument();
+	});
+
+	// #18: preserve pastedFlow on run failure (updated: via Terminer → Lancer flow)
 	it("run échoue → pastedFlow conservé, message d'erreur affiché", async () => {
 		// biome-ignore lint/suspicious/noExplicitAny: test stub
 		(globalThis as any).window.api.listEnvironments = vi
@@ -835,21 +996,34 @@ describe("NewScenario — mobile", () => {
 			screen.getByRole("button", { name: /démarrer l'enregistrement/i }),
 		);
 		await waitFor(() => expect(window.api.startRecording).toHaveBeenCalled());
+		// Expand fallback, paste content
+		const collerBtn = await screen.findByRole("button", {
+			name: /coller manuellement/i,
+		});
+		await userEvent.click(collerBtn);
 		const area = await screen.findByLabelText("Parcours enregistré");
 		await userEvent.type(area, "appId: x\n---\n- launchApp\n");
+		// Terminer
 		await userEvent.click(
-			screen.getByRole("button", { name: /créer le scénario/i }),
+			screen.getByRole("button", { name: /terminer l'enregistrement/i }),
 		);
+		// Wait for stop; then click Lancer
+		await waitFor(() =>
+			expect(
+				screen.getByRole("button", { name: /lancer/i }),
+			).toBeInTheDocument(),
+		);
+		await userEvent.click(screen.getByRole("button", { name: /lancer/i }));
 		await waitFor(() =>
 			expect(screen.getByText(/appareil déconnecté/i)).toBeInTheDocument(),
 		);
-		// pastedFlow should still be in the textarea
+		// pastedFlow should still be in the textarea (shown in retry state)
 		expect(screen.getByLabelText("Parcours enregistré")).toHaveValue(
 			"appId: x\n---\n- launchApp\n",
 		);
 	});
 
-	// #18: retry button after run failure
+	// #18: retry button after run failure (updated: Terminer → Lancer → run fails → retry)
 	it("run échoue → bouton « Réessayer l'exécution » visible et relance le run", async () => {
 		const runMock = vi
 			.fn()
@@ -898,11 +1072,25 @@ describe("NewScenario — mobile", () => {
 			screen.getByRole("button", { name: /démarrer l'enregistrement/i }),
 		);
 		await waitFor(() => expect(window.api.startRecording).toHaveBeenCalled());
+		// Expand fallback, paste content
+		const collerBtn = await screen.findByRole("button", {
+			name: /coller manuellement/i,
+		});
+		await userEvent.click(collerBtn);
 		const area = await screen.findByLabelText("Parcours enregistré");
 		await userEvent.type(area, "appId: x\n---\n- launchApp\n");
+		// Terminer
 		await userEvent.click(
-			screen.getByRole("button", { name: /créer le scénario/i }),
+			screen.getByRole("button", { name: /terminer l'enregistrement/i }),
 		);
+		// Wait for Lancer button then click it
+		await waitFor(() =>
+			expect(
+				screen.getByRole("button", { name: /lancer/i }),
+			).toBeInTheDocument(),
+		);
+		// pastedFlow still present in the fallback textarea (shown in Lancer state)
+		await userEvent.click(screen.getByRole("button", { name: /lancer/i }));
 		// Wait for run failure state — retry button should appear
 		await waitFor(() =>
 			expect(

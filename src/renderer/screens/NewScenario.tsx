@@ -43,6 +43,11 @@ export default function NewScenario(): JSX.Element {
 		platform: string;
 	} | null>(null);
 	const [savedEnv, setSavedEnv] = useState<string>("");
+	// Task 3: after a successful mobile stop, show captured scenario read-only
+	// before running (confirm-before-run). Stores the scenario name + a note.
+	const [capturedFlowText, setCapturedFlowText] = useState<string | null>(null);
+	// Task 3: whether to reveal the manual paste fallback textarea
+	const [showPasteFallback, setShowPasteFallback] = useState(false);
 
 	// Env is inherited from the active project — no per-scenario selection.
 	// Resolve it exactly like the context bar: the actively-selected env, else the
@@ -148,6 +153,8 @@ export default function NewScenario(): JSX.Element {
 		setStarting(true);
 		setRecError("");
 		setRunFailed(false);
+		setCapturedFlowText(null);
+		setShowPasteFallback(false);
 		try {
 			const { recordingId: id } = await window.api.startRecording({
 				name,
@@ -176,71 +183,86 @@ export default function NewScenario(): JSX.Element {
 		setRecError("");
 		let stopSucceeded = false;
 		try {
-			const scenario = await window.api.stopRecording(
-				recordingId,
-				isMobile ? pastedFlow : undefined,
-			);
-			// Enregistrement consommé : on libère pour éviter un double-stop.
-			stopSucceeded = true;
-			setRecordingId(null);
-			// #18: ne pas effacer pastedFlow avant que le run réussisse
-			const env =
-				activeEnvByProject[scenario.projectId] ||
-				scenario.defaultEnvironmentId ||
-				environments[0]?.id ||
-				"local";
-			// #18: mémoriser le scénario sauvegardé pour permettre la relance
-			setSavedScenario({
-				id: scenario.id,
-				projectId: scenario.projectId,
-				tunnelId: scenario.tunnelId,
-				platform: scenario.platform,
-			});
-			setSavedEnv(env);
-			setFirstRunScenarioId(scenario.id);
-			setCurrentScenarioName(scenario.name);
-			const { runId, steps } =
-				scenario.platform === "mobile"
-					? await window.api.runScenario(
-							scenario.projectId,
-							scenario.tunnelId,
-							scenario.id,
-							env,
-							{ deviceId },
-						)
-					: await window.api.runScenario(
-							scenario.projectId,
-							scenario.tunnelId,
-							scenario.id,
-							env,
-						);
-			// Run réussi : on peut effacer le contenu collé
-			setPastedFlow("");
-			setRunFailed(false);
-			setSavedScenario(null);
-			navigate(`/run/${runId}`, { state: { auto: true, steps } });
+			if (isMobile) {
+				// Task 3: mobile path — pass pastedFlow (or undefined for clipboard path);
+				// do NOT auto-run; show confirm-before-run view instead.
+				const flowArg = pastedFlow.trim() || undefined;
+				const scenario = await window.api.stopRecording(recordingId, flowArg);
+				stopSucceeded = true;
+				setRecordingId(null);
+				const env =
+					activeEnvByProject[scenario.projectId] ||
+					scenario.defaultEnvironmentId ||
+					environments[0]?.id ||
+					"local";
+				setSavedScenario({
+					id: scenario.id,
+					projectId: scenario.projectId,
+					tunnelId: scenario.tunnelId,
+					platform: scenario.platform,
+				});
+				setSavedEnv(env);
+				setFirstRunScenarioId(scenario.id);
+				setCurrentScenarioName(scenario.name);
+				// Show the captured scenario info read-only. The Scenario type does not
+				// include the raw flow text — only metadata. Display the name + note.
+				setCapturedFlowText(scenario.name);
+			} else {
+				// Web/responsive: keep existing auto-run path unchanged.
+				const scenario = await window.api.stopRecording(recordingId, undefined);
+				stopSucceeded = true;
+				setRecordingId(null);
+				const env =
+					activeEnvByProject[scenario.projectId] ||
+					scenario.defaultEnvironmentId ||
+					environments[0]?.id ||
+					"local";
+				setSavedScenario({
+					id: scenario.id,
+					projectId: scenario.projectId,
+					tunnelId: scenario.tunnelId,
+					platform: scenario.platform,
+				});
+				setSavedEnv(env);
+				setFirstRunScenarioId(scenario.id);
+				setCurrentScenarioName(scenario.name);
+				const { runId, steps } = await window.api.runScenario(
+					scenario.projectId,
+					scenario.tunnelId,
+					scenario.id,
+					env,
+				);
+				setPastedFlow("");
+				setRunFailed(false);
+				setSavedScenario(null);
+				navigate(`/run/${runId}`, { state: { auto: true, steps } });
+			}
 		} catch (err) {
 			// On reste sur le formulaire avec un message clair plutôt que de
-			// rediriger en silence. « Aucun flow détecté » est le cas le plus
-			// courant (rien enregistré) — l'utilisateur peut réessayer.
+			// rediriger en silence. « Aucune étape » est le cas le plus courant
+			// (rien enregistré, clipboard vide) — on révèle la saisie manuelle.
 			setFirstRunScenarioId(null);
-			// #18: si stopRecording a réussi mais runScenario a échoué, conserver
-			// le textarea visible avec le contenu collé.
-			if (stopSucceeded && isMobile) {
-				setRunFailed(true);
-			}
-			setRecError(
+			const msg =
 				err instanceof Error
 					? err.message
-					: "Impossible d'arrêter l'enregistrement.",
-			);
+					: "Impossible d'arrêter l'enregistrement.";
+			setRecError(msg);
+			// Task 3: auto-reveal the paste fallback on "Aucune étape" error
+			if (/étape/i.test(msg) && isMobile) {
+				setShowPasteFallback(true);
+			}
+			// #18: if stopRecording succeeded but runScenario failed (web path)
+			if (stopSucceeded && !isMobile) {
+				setRunFailed(true);
+			}
 		} finally {
 			setStopping(false);
 		}
 	}
 
-	// #18: relance l'exécution du scénario déjà sauvegardé après un échec de run.
-	async function handleRetry() {
+	// Shared run logic: called after confirm (Lancer) for mobile, and for retry
+	// after run failure. Renamed from handleRetry.
+	async function runSavedScenario() {
 		if (!savedScenario) return;
 		setStopping(true);
 		setRecError("");
@@ -255,8 +277,12 @@ export default function NewScenario(): JSX.Element {
 			setPastedFlow("");
 			setRunFailed(false);
 			setSavedScenario(null);
+			setCapturedFlowText(null);
 			navigate(`/run/${runId}`, { state: { auto: true, steps } });
 		} catch (err) {
+			// Run failed — show retry affordance
+			setRunFailed(true);
+			setCapturedFlowText(null);
 			setRecError(
 				err instanceof Error
 					? err.message
@@ -278,10 +304,15 @@ export default function NewScenario(): JSX.Element {
 		setPastedFlow("");
 		setRecError("");
 		setRunFailed(false);
+		setCapturedFlowText(null);
+		setShowPasteFallback(false);
 	}
 
 	// #18: afficher le bloc mobile quand enregistrement actif OU après un run raté
-	const showMobileRecording = isMobile && (recordingId !== null || runFailed);
+	// Task 3: also show when capturedFlowText is set (confirm-before-run state)
+	const showMobileRecording =
+		isMobile &&
+		(recordingId !== null || runFailed || capturedFlowText !== null);
 
 	return (
 		<div className="ns-page">
@@ -590,13 +621,13 @@ export default function NewScenario(): JSX.Element {
 							<div className="otl-method__title">Enregistrer en naviguant</div>
 							<div className="otl-method__desc">
 								{isMobile
-									? "Maestro Studio s'ouvre dans ton navigateur : enregistre ton parcours, clique « Copy », puis colle-le ici."
+									? "Maestro Studio s'ouvre dans une fenêtre de l'app : enregistre ton parcours, clique « Copy », puis « Terminer »."
 									: "Naviguez dans le navigateur, les actions sont capturées automatiquement."}
 							</div>
 						</div>
 					</div>
 
-					{!recordingId && !runFailed ? (
+					{!recordingId && !runFailed && capturedFlowText === null ? (
 						<button
 							type="button"
 							className="otl-btn-primary otl-method__btn"
@@ -615,80 +646,144 @@ export default function NewScenario(): JSX.Element {
 						</button>
 					) : showMobileRecording ? (
 						<div className="otl-method__recording">
-							<div className="otl-recording-indicator">
-								<span className="otl-recording-indicator__dot" />
-								Studio ouvert dans le navigateur — enregistre ton parcours,
-								clique « Copy », puis colle-le ci-dessous.
-							</div>
-							{/* #17: afficher l'URL Studio */}
-							<p className="otl-mobilebar__hint">
-								Studio Maestro :{" "}
-								<span className="otl-method__studio-url">
-									http://localhost:9999
-								</span>
-							</p>
-							<textarea
-								className="otl-input otl-method__paste"
-								aria-label="Parcours enregistré"
-								placeholder="Colle ici le parcours copié depuis Maestro Studio…"
-								value={pastedFlow}
-								onChange={(e) => setPastedFlow(e.target.value)}
-								rows={8}
-							/>
-							{/* #17: indice de format */}
-							<p className="otl-mobilebar__hint">
-								Le flow doit commencer par <code>appId:</code> et contenir au
-								moins une action.
-							</p>
-							{/* #17: avertissement de format */}
-							{flowFormatWarning && (
-								<p className="otl-mobilebar__hint otl-mobilebar__hint--error">
-									Le flow doit commencer par <code>appId:</code> — vérifie le
-									contenu collé.
-								</p>
+							{/* Task 3: confirm-before-run state — scenario saved, awaiting Lancer */}
+							{capturedFlowText !== null ? (
+								<>
+									<div className="otl-recording-indicator">
+										<span className="otl-recording-indicator__dot" />
+										Scénario enregistré : <strong>{capturedFlowText}</strong>
+									</div>
+									<p className="otl-mobilebar__hint">
+										Vérifie le scénario puis lance l'exécution.
+									</p>
+									{/* Retain the paste fallback area for visibility / retry context */}
+									{pastedFlow && (
+										<textarea
+											className="otl-input otl-method__paste"
+											aria-label="Parcours enregistré"
+											readOnly
+											value={pastedFlow}
+											rows={8}
+										/>
+									)}
+									<div className="otl-method__rec-actions">
+										<button
+											type="button"
+											className="otl-btn-primary otl-method__btn"
+											disabled={stopping}
+											onClick={runSavedScenario}
+										>
+											{stopping ? "Lancement…" : "Lancer"}
+										</button>
+										<button
+											type="button"
+											className="otl-tab"
+											disabled={stopping}
+											onClick={handleCancel}
+										>
+											Annuler
+										</button>
+									</div>
+								</>
+							) : (
+								<>
+									{runFailed ? (
+										<>
+											<div className="otl-recording-indicator">
+												<span className="otl-recording-indicator__dot" />
+												Scénario sauvegardé — relance l'exécution.
+											</div>
+											{/* Keep paste textarea visible for retry context */}
+											<textarea
+												className="otl-input otl-method__paste"
+												aria-label="Parcours enregistré"
+												placeholder="Colle ici le parcours copié depuis Maestro Studio…"
+												value={pastedFlow}
+												onChange={(e) => setPastedFlow(e.target.value)}
+												rows={8}
+											/>
+											<div className="otl-method__rec-actions">
+												{/* #18: retry affordance après un échec de run */}
+												<button
+													type="button"
+													className="otl-btn-primary otl-method__btn"
+													disabled={stopping}
+													onClick={runSavedScenario}
+												>
+													{stopping ? "Relance…" : "Réessayer l'exécution"}
+												</button>
+												<button
+													type="button"
+													className="otl-tab"
+													disabled={stopping}
+													onClick={handleCancel}
+												>
+													Annuler
+												</button>
+											</div>
+										</>
+									) : (
+										<>
+											{/* Task 3: active recording state — new embedded Studio UX */}
+											<div className="otl-recording-indicator">
+												<span className="otl-recording-indicator__dot" />
+												Enregistre dans la fenêtre Maestro Studio, clique{" "}
+												<strong>Copy</strong>, puis <strong>Terminer</strong>.
+											</div>
+											{/* Collapsible manual paste fallback */}
+											<button
+												type="button"
+												className="otl-tab"
+												onClick={() => setShowPasteFallback((prev) => !prev)}
+											>
+												Coller manuellement
+											</button>
+											{showPasteFallback && (
+												<>
+													<textarea
+														className="otl-input otl-method__paste"
+														aria-label="Parcours enregistré"
+														placeholder="Colle ici le parcours copié depuis Maestro Studio…"
+														value={pastedFlow}
+														onChange={(e) => setPastedFlow(e.target.value)}
+														rows={8}
+													/>
+													{/* #17: indice de format */}
+													<p className="otl-mobilebar__hint">
+														Le flow doit commencer par <code>appId:</code> et
+														contenir au moins une action.
+													</p>
+													{/* #17: avertissement de format */}
+													{flowFormatWarning && (
+														<p className="otl-mobilebar__hint otl-mobilebar__hint--error">
+															Le flow doit commencer par <code>appId:</code> —
+															vérifie le contenu collé.
+														</p>
+													)}
+												</>
+											)}
+											<div className="otl-method__rec-actions">
+												<button
+													type="button"
+													className="otl-btn-primary otl-method__btn"
+													disabled={stopping}
+													onClick={handleStop}
+												>
+													{stopping ? "Arrêt…" : "Terminer l'enregistrement"}
+												</button>
+												<button
+													type="button"
+													className="otl-tab"
+													disabled={stopping}
+													onClick={handleCancel}
+												>
+													Annuler
+												</button>
+											</div>
+										</>
+									)}
+								</>
 							)}
-							<div className="otl-method__rec-actions">
-								{runFailed ? (
-									<>
-										{/* #18: retry affordance après un échec de run */}
-										<button
-											type="button"
-											className="otl-btn-primary otl-method__btn"
-											disabled={stopping}
-											onClick={handleRetry}
-										>
-											{stopping ? "Relance…" : "Réessayer l'exécution"}
-										</button>
-										<button
-											type="button"
-											className="otl-tab"
-											disabled={stopping}
-											onClick={handleCancel}
-										>
-											Annuler
-										</button>
-									</>
-								) : (
-									<>
-										<button
-											type="button"
-											className="otl-btn-primary otl-method__btn"
-											disabled={!pastedFlow.trim() || stopping}
-											onClick={handleStop}
-										>
-											{stopping ? "Création…" : "Créer le scénario"}
-										</button>
-										<button
-											type="button"
-											className="otl-tab"
-											disabled={stopping}
-											onClick={handleCancel}
-										>
-											Annuler
-										</button>
-									</>
-								)}
-							</div>
 						</div>
 					) : (
 						<div className="otl-method__recording">
