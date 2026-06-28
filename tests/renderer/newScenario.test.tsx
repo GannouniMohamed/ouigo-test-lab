@@ -50,6 +50,9 @@ beforeEach(() => {
 			lastRun: { status: "never" },
 		}),
 		runScenario,
+		getScenarioSpec: vi
+			.fn()
+			.mockResolvedValue("appId: com.ouigo.app\n---\n- launchApp\n"),
 		openExternal: vi.fn(),
 	} as unknown as typeof window.api;
 	useAppStore.setState({ activeProjectId: "default" });
@@ -1112,5 +1115,97 @@ describe("NewScenario — mobile", () => {
 				state: { auto: true, steps: [] },
 			}),
 		);
+	});
+
+	// I1 — fix: "Annuler" in the confirm-before-run state resets the form
+	it("annuler dans l'état confirm-before-run réinitialise l'UI vers Démarrer", async () => {
+		// biome-ignore lint/suspicious/noExplicitAny: test stub
+		(globalThis as any).window.api.stopRecording = vi.fn().mockResolvedValue({
+			id: "scn-m",
+			projectId: "p1",
+			tunnelId: "t1",
+			name: "Mon Parcours",
+			platform: "mobile",
+			browser: "chromium",
+			defaultEnvironmentId: "preprod",
+			tags: [],
+			specFile: "s.yaml",
+			createdAt: "2026-06-28T00:00:00Z",
+			lastRun: { status: "never" },
+		});
+		await startMobileRecording();
+		// Stop recording — enters confirm-before-run state
+		await userEvent.click(
+			screen.getByRole("button", { name: /terminer l'enregistrement/i }),
+		);
+		// Wait for "Lancer" to appear (confirm state)
+		await waitFor(() =>
+			expect(
+				screen.getByRole("button", { name: /lancer/i }),
+			).toBeInTheDocument(),
+		);
+		// "Annuler" should be visible
+		const annulerBtn = screen.getByRole("button", { name: /annuler/i });
+		expect(annulerBtn).toBeInTheDocument();
+		// Click "Annuler" — should reset to initial state (no recordingId, no capturedFlowText)
+		await userEvent.click(annulerBtn);
+		// After cancel: "Démarrer l'enregistrement" should be visible again
+		await waitFor(() =>
+			expect(
+				screen.getByRole("button", { name: /démarrer l'enregistrement/i }),
+			).toBeInTheDocument(),
+		);
+		// "Lancer" must no longer be in the DOM
+		expect(
+			screen.queryByRole("button", { name: /lancer/i }),
+		).not.toBeInTheDocument();
+	});
+
+	// I2 — fix: confirm view shows captured YAML from getScenarioSpec
+	it("après stop réussi, le YAML capturé est affiché en lecture seule et Lancer fonctionne toujours", async () => {
+		const capturedYaml =
+			"appId: com.ouigo.app\n---\n- launchApp\n- tapOn:\n    text: Connexion\n";
+		// biome-ignore lint/suspicious/noExplicitAny: test stub
+		(globalThis as any).window.api.stopRecording = vi.fn().mockResolvedValue({
+			id: "scn-m",
+			projectId: "p1",
+			tunnelId: "t1",
+			name: "Mon Parcours",
+			platform: "mobile",
+			browser: "chromium",
+			defaultEnvironmentId: "preprod",
+			tags: [],
+			specFile: "s.yaml",
+			createdAt: "2026-06-28T00:00:00Z",
+			lastRun: { status: "never" },
+		});
+		// biome-ignore lint/suspicious/noExplicitAny: test stub
+		(globalThis as any).window.api.getScenarioSpec = vi
+			.fn()
+			.mockResolvedValue(capturedYaml);
+		await startMobileRecording();
+		// Stop recording — enters confirm-before-run state
+		await userEvent.click(
+			screen.getByRole("button", { name: /terminer l'enregistrement/i }),
+		);
+		// Wait for stop and spec fetch to complete — YAML textarea should appear
+		const specArea = await screen.findByLabelText("Parcours capturé");
+		expect(specArea).toBeInTheDocument();
+		// Must be read-only
+		expect(specArea).toHaveAttribute("readonly");
+		// Must contain the captured YAML
+		expect(specArea).toHaveValue(capturedYaml);
+		// getScenarioSpec should have been called with the correct ids
+		expect(window.api.getScenarioSpec).toHaveBeenCalledWith(
+			"p1",
+			"t1",
+			"scn-m",
+		);
+		// "Lancer" still present and functional
+		const lancerBtn = screen.getByRole("button", { name: /lancer/i });
+		expect(lancerBtn).toBeInTheDocument();
+		await userEvent.click(lancerBtn);
+		await waitFor(() => expect(runScenario).toHaveBeenCalled());
+		await waitFor(() => expect(navigateMock).toHaveBeenCalled());
 	});
 });

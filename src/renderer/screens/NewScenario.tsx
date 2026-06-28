@@ -44,8 +44,10 @@ export default function NewScenario(): JSX.Element {
 	} | null>(null);
 	const [savedEnv, setSavedEnv] = useState<string>("");
 	// Task 3: after a successful mobile stop, show captured scenario read-only
-	// before running (confirm-before-run). Stores the scenario name + a note.
+	// before running (confirm-before-run). Stores the scenario name.
 	const [capturedFlowText, setCapturedFlowText] = useState<string | null>(null);
+	// Task 3: YAML returned by getScenarioSpec after a successful mobile stop.
+	const [capturedFlowYaml, setCapturedFlowYaml] = useState<string | null>(null);
 	// Task 3: whether to reveal the manual paste fallback textarea
 	const [showPasteFallback, setShowPasteFallback] = useState(false);
 
@@ -154,6 +156,7 @@ export default function NewScenario(): JSX.Element {
 		setRecError("");
 		setRunFailed(false);
 		setCapturedFlowText(null);
+		setCapturedFlowYaml(null);
 		setShowPasteFallback(false);
 		try {
 			const { recordingId: id } = await window.api.startRecording({
@@ -204,9 +207,20 @@ export default function NewScenario(): JSX.Element {
 				setSavedEnv(env);
 				setFirstRunScenarioId(scenario.id);
 				setCurrentScenarioName(scenario.name);
-				// Show the captured scenario info read-only. The Scenario type does not
-				// include the raw flow text — only metadata. Display the name + note.
+				// Show the captured scenario info read-only. Fetch the raw YAML via
+				// getScenarioSpec so the PO can visually inspect the recorded commands.
 				setCapturedFlowText(scenario.name);
+				try {
+					const yaml = await window.api.getScenarioSpec(
+						scenario.projectId,
+						scenario.tunnelId,
+						scenario.id,
+					);
+					setCapturedFlowYaml(yaml);
+				} catch {
+					// Non-fatal: the PO can still launch without seeing the YAML.
+					setCapturedFlowYaml(null);
+				}
 			} else {
 				// Web/responsive: keep existing auto-run path unchanged.
 				const scenario = await window.api.stopRecording(recordingId, undefined);
@@ -278,11 +292,13 @@ export default function NewScenario(): JSX.Element {
 			setRunFailed(false);
 			setSavedScenario(null);
 			setCapturedFlowText(null);
+			setCapturedFlowYaml(null);
 			navigate(`/run/${runId}`, { state: { auto: true, steps } });
 		} catch (err) {
 			// Run failed — show retry affordance
 			setRunFailed(true);
 			setCapturedFlowText(null);
+			setCapturedFlowYaml(null);
 			setRecError(
 				err instanceof Error
 					? err.message
@@ -294,17 +310,24 @@ export default function NewScenario(): JSX.Element {
 	}
 
 	async function handleCancel() {
-		if (!recordingId) return;
-		try {
-			await window.api.cancelRecording(recordingId);
-		} catch {
-			/* annulation best-effort */
+		// IPC cancelRecording only when an active recording is in progress.
+		// The state reset always runs so the PO can back out of the
+		// confirm-before-run state even when recordingId is already null.
+		if (recordingId) {
+			try {
+				await window.api.cancelRecording(recordingId);
+			} catch {
+				/* annulation best-effort */
+			}
 		}
 		setRecordingId(null);
 		setPastedFlow("");
 		setRecError("");
 		setRunFailed(false);
 		setCapturedFlowText(null);
+		setCapturedFlowYaml(null);
+		setSavedScenario(null);
+		setSavedEnv("");
 		setShowPasteFallback(false);
 	}
 
@@ -656,6 +679,17 @@ export default function NewScenario(): JSX.Element {
 									<p className="otl-mobilebar__hint">
 										Vérifie le scénario puis lance l'exécution.
 									</p>
+									{/* I2: show the captured YAML flow read-only so the PO can
+									    inspect recorded commands before committing to the run. */}
+									{capturedFlowYaml !== null && (
+										<textarea
+											className="otl-input otl-method__paste"
+											aria-label="Parcours capturé"
+											readOnly
+											value={capturedFlowYaml}
+											rows={8}
+										/>
+									)}
 									{/* Retain the paste fallback area for visibility / retry context */}
 									{pastedFlow && (
 										<textarea
