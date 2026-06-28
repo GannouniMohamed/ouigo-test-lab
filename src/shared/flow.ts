@@ -39,6 +39,20 @@ export function rebaseFlowAppId(flow: string, appId: string): string {
 // Item de commande de premier niveau : `- ` en colonne 0 (sans indentation).
 const TOP_LEVEL_ITEM_RE = /^-\s+(.*)$/;
 
+// Reconstruit un flow Maestro valide à partir d'un contenu hétérogène :
+// - sortie « Copy » du Studio (commandes seules, sans en-tête),
+// - flow complet (appId + --- + commandes),
+// - cas « appId sans --- » (bug latent de rebaseFlowAppId).
+// Garantit toujours `appId: <appId>\n---\n<corps>\n`.
+export function normalizeFlow(raw: string, appId: string): string {
+	const lines = toLines(raw);
+	const sep = lines.findIndex((l) => SEPARATOR_RE.test(l));
+	const bodyLines =
+		sep !== -1 ? lines.slice(sep + 1) : lines.filter((l) => !APPID_RE.test(l));
+	const body = bodyLines.join("\n").trim();
+	return `appId: ${appId}\n---\n${body}\n`;
+}
+
 // Parse la liste de commandes (après `---`) en étapes, une par commande de
 // premier niveau. Le titre est le texte de la commande sans le tiret de tête.
 // Parallèle de parseRecordedSteps : alimente recordedStepCount.

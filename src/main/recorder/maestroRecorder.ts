@@ -1,6 +1,6 @@
 import { type ChildProcess, spawn } from "node:child_process";
 import { randomUUID } from "node:crypto";
-import { parseFlowSteps, rebaseFlowAppId } from "../../shared/flow";
+import { normalizeFlow, parseFlowSteps } from "../../shared/flow";
 import type { Environment, Scenario } from "../../shared/types";
 import { ensureAppOnDevice } from "../mobile/ensureAppOnDevice";
 import { quoteArgForCmd, quoteForCmd } from "../mobile/exec";
@@ -101,11 +101,23 @@ async function defaultWaitForPort(
 	throw new Error("timeout");
 }
 
-// Ouvre l'URL dans le navigateur système (pas d'import electron → testable).
-function defaultOpenExternal(url: string): void {
-	if (process.platform === "darwin") spawn("open", [url], { detached: true });
-	else if (isWindows) spawn("cmd", ["/c", "start", "", url], { shell: true });
-	else spawn("xdg-open", [url], { detached: true });
+// Ouvre Studio dans une fenêtre de l'app (lazy require → module reste
+// electron-free à l'import ; les tests injectent openStudio).
+function defaultOpenStudio(
+	url: string,
+	opts: { onClosed: () => void },
+): { close: () => void } {
+	const { openStudioWindow } = require("./studioWindow");
+	return openStudioWindow(url, opts);
+}
+
+// Lit le presse-papier OS (sortie du bouton Copy du Studio). Lazy require.
+function defaultReadClipboard(): string {
+	try {
+		return require("electron").clipboard.readText() ?? "";
+	} catch {
+		return "";
+	}
 }
 
 function uniqueId(projectId: string, tunnelId: string, base: string): string {
@@ -146,7 +158,10 @@ export const maestroRecorder = {
 			ensureMaestro?: () => Promise<{ bin: string }>;
 			spawnStudio?: (bin: string, deviceId: string) => StudioHandle;
 			waitForPort?: (url: string, timeoutMs: number) => Promise<void>;
-			openExternal?: (url: string) => void;
+			openStudio?: (
+				url: string,
+				opts: { onClosed: () => void },
+			) => { close: () => void };
 			ensureAppOnDevice?: (
 				env: Environment,
 				deviceId: string,
@@ -179,9 +194,8 @@ export const maestroRecorder = {
 		if (process.env.OTL_SKIP_STUDIO_LAUNCH !== "1") {
 			const spawnStudio = deps?.spawnStudio ?? defaultSpawnStudio;
 			const waitForPort = deps?.waitForPort ?? defaultWaitForPort;
-			const openExternal = deps?.openExternal ?? defaultOpenExternal;
+			const openStudio = deps?.openStudio ?? defaultOpenStudio;
 			const handle = spawnStudio(bin, opts.deviceId);
-			kill = handle.kill;
 			try {
 				await waitForPort(STUDIO_URL, STUDIO_TIMEOUT_MS);
 			} catch {
@@ -190,7 +204,13 @@ export const maestroRecorder = {
 					"Maestro Studio n'a pas démarré à temps. Vérifie qu'un appareil est connecté et réessaie.",
 				);
 			}
-			openExternal(STUDIO_URL);
+			const win = openStudio(STUDIO_URL, {
+				onClosed: () => maestroRecorder.cancelRecording(recordingId),
+			});
+			kill = () => {
+				handle.kill();
+				win.close();
+			};
 		}
 
 		activeRecordings.set(recordingId, {
@@ -207,6 +227,7 @@ export const maestroRecorder = {
 	async stopRecording(
 		recordingId: string,
 		pastedFlow?: string,
+		deps?: { readClipboard?: () => string },
 	): Promise<Scenario> {
 		const session = activeRecordings.get(recordingId);
 		if (!session)
@@ -214,20 +235,21 @@ export const maestroRecorder = {
 				`Session d'enregistrement introuvable (${recordingId}) — elle a peut-être déjà été arrêtée ou annulée.`,
 			);
 
-		// #8 Valider AVANT de tuer Studio : si le flow est vide ou sans étapes,
-		// on lève une erreur sans toucher à la session → l'utilisateur peut corriger
-		// et réessayer en rappelant stopRecording avec le bon YAML.
-		const raw = (pastedFlow ?? "").trim();
-		if (!raw || parseFlowSteps(raw).length === 0) {
+		const pasted = (pastedFlow ?? "").trim();
+		const raw =
+			pasted || (deps?.readClipboard ?? defaultReadClipboard)().trim();
+		const flow = normalizeFlow(raw, session.appId);
+
+		// #8 valider AVANT de tuer/fermer : 0 étape → on laisse la session pour réessayer.
+		if (parseFlowSteps(flow).length === 0) {
 			throw new Error(
-				"Aucune étape détectée — colle bien le parcours copié depuis Maestro Studio.",
+				"Aucune étape détectée — enregistre dans le Studio, clique Copy, puis Terminer.",
 			);
 		}
 
-		session.kill(); // stoppe le serveur Studio
+		session.kill(); // stoppe le serveur Studio ET ferme la fenêtre
 		activeRecordings.delete(recordingId);
 
-		const flow = rebaseFlowAppId(raw, session.appId);
 		const steps = parseFlowSteps(flow);
 
 		const id = uniqueId(

@@ -65,14 +65,21 @@ function fakeDeps(overrides?: {
 		{ ok: true } | { ok: false; error: string }
 	>;
 }) {
-	const kill = vi.fn();
+	const kill = vi.fn(); // process Studio
+	const close = vi.fn(); // fenêtre embarquée
+	let onClosed = () => {};
 	return {
 		kill,
+		close,
+		fireWindowClosed: () => onClosed(),
 		deps: {
 			ensureMaestro: vi.fn(async () => ({ bin: "/fake/maestro" })),
 			spawnStudio: vi.fn(() => ({ pid: 4242, kill })),
 			waitForPort: vi.fn(async () => {}),
-			openExternal: vi.fn(),
+			openStudio: vi.fn((_url: string, o: { onClosed: () => void }) => {
+				onClosed = o.onClosed;
+				return { close };
+			}),
 			ensureAppOnDevice:
 				overrides?.ensureAppOnDevice ??
 				vi.fn(async () => ({ ok: true as const })),
@@ -91,7 +98,7 @@ afterEach(() => {
 });
 
 describe("maestroRecorder.startRecording", () => {
-	it("lance Studio web (ensure + spawn + attente port + ouverture navigateur)", async () => {
+	it("ouvre la fenêtre embarquée (pas navigateur externe) : openStudio appelé avec url + onClosed", async () => {
 		const { deps } = fakeDeps();
 		const { recordingId } = await maestroRecorder.startRecording(
 			{
@@ -113,7 +120,10 @@ describe("maestroRecorder.startRecording", () => {
 			"http://localhost:9999",
 			expect.any(Number),
 		);
-		expect(deps.openExternal).toHaveBeenCalledWith("http://localhost:9999");
+		expect(deps.openStudio).toHaveBeenCalledWith(
+			"http://localhost:9999",
+			expect.objectContaining({ onClosed: expect.any(Function) }),
+		);
 	});
 
 	it("sans deviceId → erreur", async () => {
@@ -190,8 +200,8 @@ describe("maestroRecorder.startRecording", () => {
 });
 
 describe("maestroRecorder.stopRecording", () => {
-	async function start() {
-		const { kill, deps } = fakeDeps();
+	async function start(overrideDeps?: ReturnType<typeof fakeDeps>) {
+		const fd = overrideDeps ?? fakeDeps();
 		const { recordingId } = await maestroRecorder.startRecording(
 			{
 				name: "Réservation",
@@ -200,9 +210,14 @@ describe("maestroRecorder.stopRecording", () => {
 				tunnelId: "general",
 				deviceId: "emulator-5554",
 			},
-			deps,
+			fd.deps,
 		);
-		return { recordingId, kill };
+		return {
+			recordingId,
+			kill: fd.kill,
+			close: fd.close,
+			fireWindowClosed: fd.fireWindowClosed,
+		};
 	}
 
 	it("crée le scénario depuis le YAML collé, rebase l'appId, stoppe Studio", async () => {
@@ -234,11 +249,97 @@ describe("maestroRecorder.stopRecording", () => {
 		expect(spec).not.toContain("com.autre.enregistre");
 	});
 
-	it("YAML vide → erreur, kill NOT appelé, retry fonctionne", async () => {
+	it("stop via presse-papier (sans pastedFlow) : scénario sauvé avec appId+--- et kill+close appelés", async () => {
+		const fd = fakeDeps();
+		const { recordingId, kill, close } = await start(fd);
+		const clipboardFlow = "- tapOn:\n    id: x\n- tapOn: Y\n";
+		const scenario = await maestroRecorder.stopRecording(
+			recordingId,
+			undefined,
+			{ readClipboard: () => clipboardFlow },
+		);
+		expect(scenario.recordedStepCount).toBe(2);
+		const spec = readFileSync(
+			join(
+				dir,
+				"projects",
+				"p1",
+				"tunnels",
+				"general",
+				"scenarios",
+				scenario.id,
+				scenario.specFile,
+			),
+			"utf-8",
+		);
+		expect(spec).toContain("appId: com.ouigo.app");
+		expect(spec).toContain("---");
+		expect(kill).toHaveBeenCalledTimes(1);
+		expect(close).toHaveBeenCalledTimes(1);
+	});
+
+	it("pastedFlow explicite a priorité sur le presse-papier", async () => {
+		const fd = fakeDeps();
+		const { recordingId } = await start(fd);
+		const pastedFlow = "appId: com.autre\n---\n- launchApp\n- tapOn: Paste\n";
+		const clipboardFlow = "- tapOn: Clipboard\n";
+		const scenario = await maestroRecorder.stopRecording(
+			recordingId,
+			pastedFlow,
+			{ readClipboard: () => clipboardFlow },
+		);
+		// Le contenu collé a 2 étapes (launchApp + tapOn: Paste), le clipboard a 1 étape
+		expect(scenario.recordedStepCount).toBe(2);
+		const spec = readFileSync(
+			join(
+				dir,
+				"projects",
+				"p1",
+				"tunnels",
+				"general",
+				"scenarios",
+				scenario.id,
+				scenario.specFile,
+			),
+			"utf-8",
+		);
+		// L'appId doit être rebased vers com.ouigo.app (pas com.autre)
+		expect(spec).toContain("appId: com.ouigo.app");
+		expect(spec).toContain("tapOn: Paste");
+		expect(spec).not.toContain("tapOn: Clipboard");
+	});
+
+	it("presse-papier vide et aucun paste → rejette /étape/i, kill+close NOT appelés, retry réussit", async () => {
+		const fd = fakeDeps();
+		const { recordingId, kill, close } = await start(fd);
+
+		// Premier appel : presse-papier vide → erreur, session préservée
+		await expect(
+			maestroRecorder.stopRecording(recordingId, undefined, {
+				readClipboard: () => "",
+			}),
+		).rejects.toThrow(/étape/i);
+		expect(kill).not.toHaveBeenCalled();
+		expect(close).not.toHaveBeenCalled();
+
+		// Retry avec presse-papier valide → succès
+		const scenario = await maestroRecorder.stopRecording(
+			recordingId,
+			undefined,
+			{ readClipboard: () => "- launchApp\n- tapOn: OK\n" },
+		);
+		expect(scenario.platform).toBe("mobile");
+		expect(kill).toHaveBeenCalledTimes(1);
+		expect(close).toHaveBeenCalledTimes(1);
+	});
+
+	it("YAML vide (pastedFlow) → erreur, kill NOT appelé, retry fonctionne", async () => {
 		const { recordingId, kill } = await start();
 		// Premier appel → erreur, kill pas appelé
 		await expect(
-			maestroRecorder.stopRecording(recordingId, "   "),
+			maestroRecorder.stopRecording(recordingId, "   ", {
+				readClipboard: () => "",
+			}),
 		).rejects.toThrow(/étape/i);
 		expect(kill).not.toHaveBeenCalled();
 
@@ -255,7 +356,11 @@ describe("maestroRecorder.stopRecording", () => {
 		const { recordingId, kill } = await start();
 		// Premier appel → erreur, kill pas appelé
 		await expect(
-			maestroRecorder.stopRecording(recordingId, "appId: com.x\n---\n# rien\n"),
+			maestroRecorder.stopRecording(
+				recordingId,
+				"appId: com.x\n---\n# rien\n",
+				{ readClipboard: () => "" },
+			),
 		).rejects.toThrow(/étape/i);
 		expect(kill).not.toHaveBeenCalled();
 
@@ -271,6 +376,26 @@ describe("maestroRecorder.stopRecording", () => {
 	it("recordingId inconnu → erreur en français (introuvable)", async () => {
 		await expect(
 			maestroRecorder.stopRecording("nope", "appId: x\n---\n- launchApp\n"),
+		).rejects.toThrow(/introuvable/i);
+	});
+
+	it("fenêtre fermée par l'utilisateur → session annulée, stopRecording rejette /introuvable/i, kill+close déclenchés", async () => {
+		const fd = fakeDeps();
+		const { recordingId, kill, close, fireWindowClosed } = await start(fd);
+
+		// L'utilisateur ferme la fenêtre Studio
+		fireWindowClosed();
+
+		// kill (process) + close (fenêtre) auraient dû être appelés via cancelRecording
+		// cancelRecording appelle session.kill() qui appelle handle.kill() + win.close()
+		expect(kill).toHaveBeenCalledTimes(1);
+		expect(close).toHaveBeenCalledTimes(1);
+
+		// Un stopRecording ultérieur échoue avec introuvable
+		await expect(
+			maestroRecorder.stopRecording(recordingId, undefined, {
+				readClipboard: () => "- launchApp\n",
+			}),
 		).rejects.toThrow(/introuvable/i);
 	});
 
